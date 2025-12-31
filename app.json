@@ -1,21 +1,22 @@
 {
   "expo": {
-    "name": "PokerGPT Mobile Assistant",
-    "slug": "pokergpt-mobile-assistant",
+    "name": "PokerGPT",
+    "slug": "pokergpt",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
-    "scheme": "rork-app",
-    "userInterfaceStyle": "automatic",
+    "icon": "./assets/images/pokergpt_logo.png",
+    "scheme": "pokergpt",
+    "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/splash-icon.png",
+      "image": "./assets/images/pokergpt_logo.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#1A0505"
     },
     "ios": {
-      "supportsTablet": false,
-      "bundleIdentifier": "app.rork.pokergpt-mobile-assistant",
+      "supportsTablet": true,
+      "bundleIdentifier": "com.pokergpt.app",
+      "icon": "./assets/images/pokergpt_logo.png",
       "infoPlist": {
         "UIBackgroundModes": [
           "audio"
@@ -25,10 +26,10 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/images/pokergpt_logo.png",
+        "backgroundColor": "#1A0505"
       },
-      "package": "app.rork.pokergpt_mobile_assistant",
+      "package": "com.pokergpt.app",
       "permissions": [
         "RECORD_AUDIO"
       ]
@@ -37,12 +38,7 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-      [
-        "expo-router",
-        {
-          "origin": "https://rork.com/"
-        }
-      ],
+      "expo-router",
       "expo-font",
       "expo-web-browser",
       [

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, type ViewStyle, type TextStyle } from 'react-native';
 import type { ConversationMessage } from '@/types/poker';
+import { colors } from '@/constants/colors';
 
 interface ChatBubbleProps {
   message: ConversationMessage;
@@ -95,11 +96,11 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   } as ViewStyle,
   userBubble: {
-    backgroundColor: '#007AFF',
+    backgroundColor: colors.accent.primary,
     borderBottomRightRadius: 4,
   } as ViewStyle,
   assistantBubble: {
-    backgroundColor: '#2A2A2A',
+    backgroundColor: colors.background.tertiary,
     borderBottomLeftRadius: 4,
   } as ViewStyle,
   text: {
@@ -107,11 +108,11 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   } as TextStyle,
   userText: {
-    color: '#FFFFFF',
+    color: colors.text.primary,
     fontWeight: '500' as const,
   } as TextStyle,
   assistantText: {
-    color: '#FFFFFF',
+    color: colors.text.primary,
   } as TextStyle,
   chipShadow: {
     position: 'absolute' as const,
@@ -119,7 +120,7 @@ const styles = StyleSheet.create({
     right: 24,
     width: 80,
     height: 30,
-    backgroundColor: '#D4AF37',
+    backgroundColor: colors.accent.primary,
     borderRadius: 15,
     transform: [
       { scaleX: 1.2 },

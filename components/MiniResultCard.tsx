@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, type ViewStyle, type TextStyle } from 'react-native';
 import { ChevronRight } from 'lucide-react-native';
 import type { AnalysisResult } from '@/types/poker';
+import { colors } from '@/constants/colors';
 
 interface MiniResultCardProps {
   analysis: AnalysisResult;
@@ -24,7 +25,7 @@ export function MiniResultCard({ analysis, onPress }: MiniResultCardProps) {
       
       <View style={styles.footer}>
         <Text style={styles.viewMore}>View Full Breakdown</Text>
-        <ChevronRight size={16} color="#D4AF37" />
+        <ChevronRight size={16} color={colors.accent.primary} />
       </View>
     </TouchableOpacity>
   );
@@ -32,10 +33,10 @@ export function MiniResultCard({ analysis, onPress }: MiniResultCardProps) {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: colors.background.secondary,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#D4AF37',
+    borderColor: colors.accent.primary,
     padding: 16,
     marginHorizontal: 16,
     marginVertical: 8,
@@ -49,10 +50,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 16,
     fontWeight: '700' as const,
-    color: '#D4AF37',
+    color: colors.accent.primary,
   } as TextStyle,
   confidenceBadge: {
-    backgroundColor: '#2A2A2A',
+    backgroundColor: colors.background.tertiary,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
@@ -60,12 +61,12 @@ const styles = StyleSheet.create({
   confidenceText: {
     fontSize: 12,
     fontWeight: '600' as const,
-    color: '#FFF',
+    color: colors.text.primary,
   } as TextStyle,
   recommendation: {
     fontSize: 15,
     lineHeight: 22,
-    color: '#FFF',
+    color: colors.text.primary,
     marginBottom: 12,
   } as TextStyle,
   footer: {
@@ -76,6 +77,6 @@ const styles = StyleSheet.create({
   viewMore: {
     fontSize: 14,
     fontWeight: '600' as const,
-    color: '#D4AF37',
+    color: colors.accent.primary,
   } as TextStyle,
 });

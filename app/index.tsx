@@ -1,95 +1,109 @@
-import React, { useRef, useEffect, useState } from 'react';
-import { View, FlatList, StyleSheet, ActivityIndicator, Text, TouchableOpacity, PanResponder, Animated, Dimensions, type ViewStyle, type TextStyle } from 'react-native';
-import { Stack } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import React, { useState, useCallback, useEffect } from 'react';
+import { View, StyleSheet, Text, TouchableOpacity, FlatList, Animated, type ViewStyle, type TextStyle } from 'react-native';
+import { Stack, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Plus } from 'lucide-react-native';
-import { usePokerFlow } from '@/hooks/usePokerFlow';
-import { ChatBubble } from '@/components/ChatBubble';
-import { InputBar } from '@/components/InputBar';
+import { Settings } from 'lucide-react-native';
+import { SpotifyHandCard } from '@/components/SpotifyHandCard';
+import { SearchBottomBar } from '@/components/SearchBottomBar';
 import { FullResultCard } from '@/components/FullResultCard';
+import { LoadingIndicator } from '@/components/LoadingIndicator';
+import { ComposeModal } from '@/components/ComposeModal';
+import { FloatingChatWidget } from '@/components/FloatingChatWidget';
+import CardPicker from '@/components/CardPicker';
 import { Onboarding, checkOnboardingComplete } from '@/components/Onboarding';
+import { useHandHistory, type StoredHandEntryWithName } from '@/hooks/useHandHistory';
+import { useAuth } from '@/contexts/AuthContext';
+import { colors } from '@/constants/colors';
 
-const { height: screenHeight } = Dimensions.get('window');
+const { height: screenHeight } = require('react-native').Dimensions.get('window');
 
-export default function ChatScreen() {
-  const { messages, sendMessage, isAnalyzing, isParsing, startNewHand } = usePokerFlow();
-  const flatListRef = useRef<FlatList>(null);
+export default function HomeScreen() {
+  const router = useRouter();
+  const { isAuthenticated } = useAuth();
 
-  const insets = useSafeAreaInsets();
-  const [selectedAnalysis, setSelectedAnalysis] = useState<{analysis: any, handData: any} | null>(null);
-  const slideAnim = useRef(new Animated.Value(screenHeight)).current;
+  // Onboarding state
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [isCheckingOnboarding, setIsCheckingOnboarding] = useState(true);
 
+  // Hand history
+  const { hands, isLoading, error, refresh, searchQuery, setSearchQuery, submitSearch } = useHandHistory();
+
+  // Selected hand for detail view
+  const [selectedHand, setSelectedHand] = useState<StoredHandEntryWithName | null>(null);
+  const [slideAnim] = useState(new Animated.Value(screenHeight));
+
+  // Compose modal state
+  const [showComposeModal, setShowComposeModal] = useState(false);
+
+  // Card picker state
+  const [showCardPicker, setShowCardPicker] = useState(false);
+
+  // Check onboarding - guests always see it, authenticated users can skip
   useEffect(() => {
     async function checkOnboarding() {
-      const complete = await checkOnboardingComplete();
+      const complete = await checkOnboardingComplete(isAuthenticated);
       setShowOnboarding(!complete);
       setIsCheckingOnboarding(false);
     }
     checkOnboarding();
-  }, []);
+  }, [isAuthenticated]);
 
-  useEffect(() => {
-    if (messages.length > 0) {
-      setTimeout(() => {
-        flatListRef.current?.scrollToEnd({ animated: true });
-      }, 100);
-    }
-  }, [messages]);
+  // Handle hand selection
+  const handleSelectHand = useCallback((hand: StoredHandEntryWithName) => {
+    setSelectedHand(hand);
+    Animated.spring(slideAnim, {
+      toValue: 0,
+      useNativeDriver: true,
+      tension: 50,
+      friction: 9,
+    }).start();
+  }, [slideAnim]);
 
-  const showAnalysisCard = (messageId: string) => {
-    const message = messages.find(m => m.id === messageId);
-    if (message?.analysis && message?.handData) {
-      setSelectedAnalysis({ analysis: message.analysis, handData: message.handData });
-      Animated.spring(slideAnim, {
-        toValue: 0,
-        useNativeDriver: true,
-        tension: 50,
-        friction: 9,
-      }).start();
-    }
-  };
-
-  const hideAnalysisCard = () => {
+  // Hide result card
+  const hideResultCard = useCallback(() => {
     Animated.spring(slideAnim, {
       toValue: screenHeight,
       useNativeDriver: true,
       tension: 50,
       friction: 9,
     }).start(() => {
-      setSelectedAnalysis(null);
+      setSelectedHand(null);
     });
-  };
+  }, [slideAnim]);
 
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: (_, gestureState) => Math.abs(gestureState.dy) > 5,
-      onPanResponderMove: (_, gestureState) => {
-        if (gestureState.dy > 0) {
-          slideAnim.setValue(gestureState.dy);
-        }
-      },
-      onPanResponderRelease: (_, gestureState) => {
-        if (gestureState.dy > 100) {
-          hideAnalysisCard();
-        } else {
-          Animated.spring(slideAnim, {
-            toValue: 0,
-            useNativeDriver: true,
-          }).start();
-        }
-      },
-    })
-  ).current;
+  // Handle compose modal options
+  const handleComposeText = useCallback(() => {
+    setShowComposeModal(false);
+    router.push('/poker-chat');
+  }, [router]);
+
+  const handleComposeTalk = useCallback(() => {
+    setShowComposeModal(false);
+    router.push('/analysis');
+  }, [router]);
+
+  const handleComposeCards = useCallback(() => {
+    setShowComposeModal(false);
+    setShowCardPicker(true);
+  }, []);
+
+  const handleCardsSelected = useCallback((cards: string[]) => {
+    setShowCardPicker(false);
+    if (cards.length > 0) {
+      // Format cards as a string and pass to poker chat
+      const heroHand = cards.join(' ').toUpperCase();
+      router.push({
+        pathname: '/poker-chat',
+        params: { heroHand },
+      });
+    }
+  }, [router]);
 
   if (isCheckingOnboarding) {
     return (
       <View style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#D4AF37" />
+          <LoadingIndicator variant={2} size="medium" />
         </View>
       </View>
     );
@@ -99,84 +113,156 @@ export default function ChatScreen() {
     return <Onboarding onComplete={() => setShowOnboarding(false)} />;
   }
 
+  const renderEmptyState = () => (
+    <View style={styles.emptyState}>
+      <Text style={styles.emptyTitle}>No hands yet</Text>
+      <Text style={styles.emptyText}>
+        Your analyzed hands will appear here
+      </Text>
+    </View>
+  );
+
+  const renderErrorState = () => (
+    <View style={styles.emptyState}>
+      <Text style={styles.emptyTitle}>Something went wrong</Text>
+      <Text style={styles.emptyText}>
+        {error?.message || 'Failed to load hands'}
+      </Text>
+      <TouchableOpacity style={styles.retryButton} onPress={refresh}>
+        <Text style={styles.retryText}>Try Again</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
   return (
     <View style={styles.container}>
-      <Stack.Screen 
+      <Stack.Screen
         options={{
+          headerShown: true,
           title: 'PokerGPT',
           headerStyle: {
-            backgroundColor: '#000000',
+            backgroundColor: colors.background.primary,
           },
-          headerTintColor: '#D4AF37',
+          headerTintColor: colors.accent.primary,
           headerTitleStyle: {
-            fontWeight: '600' as const,
+            fontWeight: '700' as const,
             fontSize: 20,
-            opacity: 0.9,
           },
           headerRight: () => (
-            <TouchableOpacity onPress={startNewHand} style={styles.newHandButton}>
-              <Plus size={24} color="#D4AF37" />
+            <TouchableOpacity
+              style={styles.headerButton}
+              onPress={() => router.push('/settings')}
+            >
+              <Settings size={22} color={colors.text.muted} />
             </TouchableOpacity>
           ),
-        }} 
+        }}
       />
 
       <LinearGradient
-        colors={['#3d1a1a', '#2d0f0f', '#1a0808', '#0f0303']}
-        locations={[0, 0.3, 0.7, 1]}
+        colors={[colors.background.secondary, colors.background.primary, '#0D0202']}
+        locations={[0, 0.5, 1]}
         style={styles.gradient}
       >
-        <FlatList
-          ref={flatListRef}
-          data={messages}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <View>
-              <ChatBubble message={item} />
-              {item.analysis && (
-                <TouchableOpacity
-                  onPress={() => showAnalysisCard(item.id)}
-                  style={styles.swipeHint}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.swipeIndicator} />
-                  <Text style={styles.swipeText}>Swipe up for full analysis</Text>
-                </TouchableOpacity>
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <LoadingIndicator variant={2} size="medium" text="Loading hands..." />
+          </View>
+        ) : error ? (
+          <View style={styles.content}>
+            <Text style={styles.sectionHeader}>Hand History</Text>
+            {renderErrorState()}
+          </View>
+        ) : (
+          <View style={styles.content}>
+            {/* Section Header */}
+            <Text style={styles.sectionHeader}>Hand History</Text>
+
+            <FlatList
+              data={hands}
+              keyExtractor={(item) => item.handData.id || `hand-${Math.random()}`}
+              renderItem={({ item }) => (
+                <SpotifyHandCard
+                  heroHand={item.handData.heroHand || '?? ??'}
+                  handName={item.handName}
+                  position={item.handData.heroPosition}
+                  villainPosition={item.handData.villainPosition}
+                  createdAt={item.createdAt}
+                  confidence={item.analysis.confidence}
+                  onPress={() => handleSelectHand(item)}
+                />
               )}
-            </View>
-          )}
-          contentContainerStyle={styles.messageList}
-          ListFooterComponent={
-            (isAnalyzing || isParsing) ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#D4AF37" />
-                <Text style={styles.loadingText}>
-                  {isAnalyzing ? 'Analyzing your hand...' : 'Processing...'}
-                </Text>
-              </View>
-            ) : null
-          }
-        />
-        
-        <View style={{ paddingBottom: insets.bottom }}>
-          <InputBar onSendMessage={sendMessage} disabled={isAnalyzing || isParsing} />
-        </View>
+              contentContainerStyle={[
+                styles.listContent,
+                hands.length === 0 && styles.emptyListContent,
+              ]}
+              ListEmptyComponent={renderEmptyState}
+              showsVerticalScrollIndicator={false}
+            />
+
+            {/* Search Bar */}
+            <SearchBottomBar
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              onSubmit={submitSearch}
+              onCompose={() => setShowComposeModal(true)}
+              placeholder="Search"
+            />
+          </View>
+        )}
       </LinearGradient>
 
-      {selectedAnalysis && (
-        <Animated.View
-          style={[
-            styles.analysisOverlay,
-            {
-              transform: [{ translateY: slideAnim }],
-            },
-          ]}
-          {...panResponder.panHandlers}
-        >
-          <View style={styles.analysisHandle} />
-          <FullResultCard analysis={selectedAnalysis.analysis} handData={selectedAnalysis.handData} />
-        </Animated.View>
+      {/* Result Overlay */}
+      {selectedHand && (
+        <>
+          <TouchableOpacity
+            style={styles.overlay}
+            activeOpacity={1}
+            onPress={hideResultCard}
+          />
+          <Animated.View
+            style={[
+              styles.resultOverlay,
+              {
+                transform: [{ translateY: slideAnim }],
+              },
+            ]}
+          >
+            <TouchableOpacity
+              style={styles.resultHandle}
+              onPress={hideResultCard}
+              activeOpacity={0.8}
+            >
+              <View style={styles.handleBar} />
+            </TouchableOpacity>
+            <FullResultCard
+              analysis={selectedHand.analysis}
+              handData={selectedHand.handData}
+            />
+          </Animated.View>
+        </>
       )}
+
+      {/* Floating Chat Widget */}
+      <FloatingChatWidget />
+
+      {/* Compose Modal */}
+      <ComposeModal
+        visible={showComposeModal}
+        onClose={() => setShowComposeModal(false)}
+        onSelectText={handleComposeText}
+        onSelectTalk={handleComposeTalk}
+        onSelectCards={handleComposeCards}
+      />
+
+      {/* Card Picker */}
+      <CardPicker
+        visible={showCardPicker}
+        onClose={() => setShowCardPicker(false)}
+        onSelect={handleCardsSelected}
+        maxCards={2}
+        title="Select Your Hole Cards"
+      />
     </View>
   );
 }
@@ -184,57 +270,84 @@ export default function ChatScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: colors.background.primary,
   } as ViewStyle,
   gradient: {
     flex: 1,
-    position: 'relative' as const,
-  } as ViewStyle,
-  messageList: {
-    paddingVertical: 16,
   } as ViewStyle,
   loadingContainer: {
+    flex: 1,
     alignItems: 'center',
-    paddingVertical: 20,
+    justifyContent: 'center',
   } as ViewStyle,
-  loadingText: {
-    marginTop: 12,
-    fontSize: 14,
-    color: '#999',
+  content: {
+    flex: 1,
+  } as ViewStyle,
+  sectionHeader: {
+    fontSize: 22,
+    fontWeight: '700' as const,
+    color: colors.text.primary,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 8,
   } as TextStyle,
-  newHandButton: {
+  headerButton: {
     width: 40,
     height: 40,
+    alignItems: 'center',
     justifyContent: 'center',
+    marginHorizontal: 8,
+  } as ViewStyle,
+  listContent: {
+    paddingTop: 4,
+    paddingBottom: 20,
+  } as ViewStyle,
+  emptyListContent: {
+    flex: 1,
+    justifyContent: 'center',
+  } as ViewStyle,
+  emptyState: {
     alignItems: 'center',
-    marginRight: 8,
+    paddingHorizontal: 40,
   } as ViewStyle,
-  swipeHint: {
-    alignItems: 'center',
-    paddingVertical: 12,
-    marginHorizontal: 16,
-    marginTop: 8,
-  } as ViewStyle,
-  swipeIndicator: {
-    width: 40,
-    height: 4,
-    backgroundColor: '#D4AF37',
-    borderRadius: 2,
-    marginBottom: 4,
-    opacity: 0.6,
-  } as ViewStyle,
-  swipeText: {
-    fontSize: 12,
-    color: '#D4AF37',
-    opacity: 0.6,
+  emptyTitle: {
+    fontSize: 22,
+    fontWeight: '600' as const,
+    color: colors.text.primary,
+    marginBottom: 8,
   } as TextStyle,
-  analysisOverlay: {
-    position: 'absolute' as const,
+  emptyText: {
+    fontSize: 16,
+    color: colors.text.muted,
+    textAlign: 'center',
+  } as TextStyle,
+  retryButton: {
+    marginTop: 20,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    backgroundColor: colors.accent.primary,
+    borderRadius: 20,
+  } as ViewStyle,
+  retryText: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+    color: colors.text.primary,
+  } as TextStyle,
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  } as ViewStyle,
+  resultOverlay: {
+    position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
     height: '90%',
-    backgroundColor: '#000',
+    backgroundColor: colors.background.primary,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     shadowColor: '#000',
@@ -246,13 +359,14 @@ const styles = StyleSheet.create({
     shadowRadius: 3.84,
     elevation: 5,
   } as ViewStyle,
-  analysisHandle: {
+  resultHandle: {
+    paddingVertical: 12,
+    alignItems: 'center',
+  } as ViewStyle,
+  handleBar: {
     width: 50,
     height: 5,
-    backgroundColor: '#333',
+    backgroundColor: colors.background.tertiary,
     borderRadius: 3,
-    alignSelf: 'center',
-    marginTop: 8,
-    marginBottom: 12,
   } as ViewStyle,
 });

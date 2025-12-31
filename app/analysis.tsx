@@ -5,7 +5,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft } from 'lucide-react-native';
 import { FullResultCard } from '@/components/FullResultCard';
+import { LoadingIndicator } from '@/components/LoadingIndicator';
 import { getHandHistory } from '@/services/storageService';
+import { colors } from '@/constants/colors';
 
 export default function AnalysisScreen() {
   const router = useRouter();
@@ -22,16 +24,16 @@ export default function AnalysisScreen() {
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <Stack.Screen 
+        <Stack.Screen
           options={{
             title: 'Analysis',
             headerStyle: {
-              backgroundColor: '#000000',
+              backgroundColor: colors.background.primary,
             },
-            headerTintColor: '#D4AF37',
-          }} 
+            headerTintColor: colors.accent.primary,
+          }}
         />
-        <Text style={styles.loadingText}>Loading analysis...</Text>
+        <LoadingIndicator variant={4} size="medium" text="Loading analysis..." />
       </View>
     );
   }
@@ -39,18 +41,18 @@ export default function AnalysisScreen() {
   if (!hand) {
     return (
       <View style={styles.errorContainer}>
-        <Stack.Screen 
+        <Stack.Screen
           options={{
             title: 'Analysis',
             headerStyle: {
-              backgroundColor: '#000000',
+              backgroundColor: colors.background.primary,
             },
-            headerTintColor: '#D4AF37',
-          }} 
+            headerTintColor: colors.accent.primary,
+          }}
         />
         <Text style={styles.errorText}>Hand not found</Text>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <ArrowLeft size={20} color="#000" />
+          <ArrowLeft size={20} color={colors.text.dark} />
           <Text style={styles.backButtonText}>Go Back</Text>
         </TouchableOpacity>
       </View>
@@ -59,17 +61,17 @@ export default function AnalysisScreen() {
 
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
-      <Stack.Screen 
+      <Stack.Screen
         options={{
           title: 'Hand Analysis',
           headerStyle: {
-            backgroundColor: '#000000',
+            backgroundColor: colors.background.primary,
           },
-          headerTintColor: '#D4AF37',
+          headerTintColor: colors.accent.primary,
           headerTitleStyle: {
             fontWeight: '700' as const,
           },
-        }} 
+        }}
       />
       <FullResultCard analysis={hand.analysis} handData={hand.handData} />
     </View>
@@ -79,35 +81,31 @@ export default function AnalysisScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: colors.background.primary,
   } as ViewStyle,
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#000000',
+    backgroundColor: colors.background.primary,
   } as ViewStyle,
-  loadingText: {
-    fontSize: 16,
-    color: '#999',
-  } as TextStyle,
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#000000',
+    backgroundColor: colors.background.primary,
     padding: 20,
   } as ViewStyle,
   errorText: {
     fontSize: 18,
-    color: '#FF5555',
+    color: colors.error,
     marginBottom: 20,
   } as TextStyle,
   backButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#D4AF37',
+    backgroundColor: colors.accent.primary,
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 8,
@@ -115,6 +113,6 @@ const styles = StyleSheet.create({
   backButtonText: {
     fontSize: 16,
     fontWeight: '600' as const,
-    color: '#000',
+    color: colors.text.primary,
   } as TextStyle,
 });

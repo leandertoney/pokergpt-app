@@ -1,9 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { HandData, AnalysisResult, StoredHand, UserTier } from '@/types/poker';
+import type { HandData, AnalysisResult, StoredHand, UserTier, UserIdentity } from '@/types/poker';
 import { MAX_FREE_HANDS } from '@/types/poker';
 
 const HANDS_STORAGE_KEY = '@poker_hands';
 const USER_TIER_KEY = '@user_tier';
+const USER_IDENTITY_KEY = '@user_identity';
 
 export async function storeHand(handData: HandData, analysis: AnalysisResult): Promise<void> {
   try {
@@ -86,5 +87,32 @@ export async function clearAllHands(): Promise<void> {
     await AsyncStorage.removeItem(HANDS_STORAGE_KEY);
   } catch (error) {
     console.error('Error clearing hands:', error);
+  }
+}
+
+// Identity-Anchored Conversion Flow™ Storage
+export async function getUserIdentity(): Promise<UserIdentity | null> {
+  try {
+    const stored = await AsyncStorage.getItem(USER_IDENTITY_KEY);
+    return stored ? JSON.parse(stored) : null;
+  } catch (error) {
+    console.error('Error getting user identity:', error);
+    return null;
+  }
+}
+
+export async function setUserIdentity(identity: UserIdentity): Promise<void> {
+  try {
+    await AsyncStorage.setItem(USER_IDENTITY_KEY, JSON.stringify(identity));
+  } catch (error) {
+    console.error('Error setting user identity:', error);
+  }
+}
+
+export async function clearUserIdentity(): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(USER_IDENTITY_KEY);
+  } catch (error) {
+    console.error('Error clearing user identity:', error);
   }
 }
