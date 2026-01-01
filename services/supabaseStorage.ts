@@ -66,7 +66,7 @@ export async function getOrCreateUser(): Promise<User | null> {
       .single();
 
     if (insertError) {
-      console.error("Error creating auth user:", insertError);
+      console.error("Error creating auth user:", JSON.stringify(insertError, null, 2));
       return null;
     }
 
@@ -93,8 +93,16 @@ export async function getOrCreateUser(): Promise<User | null> {
     .select()
     .single();
 
+  // Debug: log full response
+  console.log("Insert response - data:", newUser, "error:", insertError);
+
   if (insertError) {
-    console.error("Error creating user:", insertError);
+    console.error("Error creating user:", insertError.message, insertError.code, insertError.details);
+    return null;
+  }
+
+  if (!newUser) {
+    console.error("Insert succeeded but no user returned");
     return null;
   }
 

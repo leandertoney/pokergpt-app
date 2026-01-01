@@ -43,11 +43,25 @@ export const colors = {
     diamonds: '#3B82F6',     // Blue (traditional 4-color deck)
   },
 
+  // Onboarding colors (Money & Royalty theme)
+  onboarding: {
+    gold: '#D4A84B',           // Metallic gold for TEXT/ICONS only (not buttons)
+    goldDark: '#B8923F',       // Darker gold for accents
+    profit: '#22C55E',         // Green for profit/money TEXT
+    profitLight: '#4ADE80',    // Light green for accents
+    data: '#3B82F6',           // Blue for data/graphs
+    dataLight: '#60A5FA',      // Light blue for accents
+    celebration: '#D4A84B',    // Confetti/sparkle color (metallic gold)
+  },
+
   // Gradients (for LinearGradient components)
   gradients: {
     background: ['#4A0E0E', '#4A0E0E', '#3A0808'] as const,
     card: ['#5A1818', '#4A0E0E'] as const,
     premium: ['#E63333', '#B82828'] as const,
+    goldButton: ['#FFD700', '#DAA520'] as const,
+    profitGraph: ['#22C55E', '#16A34A'] as const,
+    dataGraph: ['#3B82F6', '#2563EB'] as const,
   },
 
   // Semantic colors

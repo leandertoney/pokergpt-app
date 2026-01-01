@@ -10,7 +10,7 @@ import { LoadingIndicator } from '@/components/LoadingIndicator';
 import { ComposeModal } from '@/components/ComposeModal';
 import { FloatingChatWidget } from '@/components/FloatingChatWidget';
 import CardPicker from '@/components/CardPicker';
-import { Onboarding, checkOnboardingComplete } from '@/components/Onboarding';
+import { OnboardingV2, checkOnboardingComplete } from '@/components/OnboardingV2';
 import { useHandHistory, type StoredHandEntryWithName } from '@/hooks/useHandHistory';
 import { useAuth } from '@/contexts/AuthContext';
 import { colors } from '@/constants/colors';
@@ -110,7 +110,7 @@ export default function HomeScreen() {
   }
 
   if (showOnboarding) {
-    return <Onboarding onComplete={() => setShowOnboarding(false)} />;
+    return <OnboardingV2 onComplete={() => setShowOnboarding(false)} />;
   }
 
   const renderEmptyState = () => (
