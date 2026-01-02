@@ -1,7 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, Animated, Easing, type ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Mic, MicOff, Volume2, Wifi } from 'lucide-react-native';
 import { colors } from '@/constants/colors';
 
 export type VoiceOrbState = 'idle' | 'connecting' | 'listening' | 'processing' | 'speaking' | 'error';
@@ -13,9 +12,21 @@ interface VoiceOrbProps {
 }
 
 const SIZE_MAP = {
-  small: { orb: 80, icon: 32, glow: 100 },
-  medium: { orb: 120, icon: 48, glow: 160 },
-  large: { orb: 160, icon: 64, glow: 220 },
+  small: { orb: 80, bar: { width: 4, maxHeight: 24, gap: 3 }, glow: 100 },
+  medium: { orb: 120, bar: { width: 5, maxHeight: 36, gap: 4 }, glow: 160 },
+  large: { orb: 160, bar: { width: 6, maxHeight: 48, gap: 5 }, glow: 220 },
+};
+
+const NUM_BARS = 5;
+
+// Animation configurations per state
+const STATE_CONFIGS = {
+  idle: { minHeight: 0.15, maxHeight: 0.35, duration: 1500, randomness: 0.1 },
+  connecting: { minHeight: 0.2, maxHeight: 0.5, duration: 400, randomness: 0.3 },
+  listening: { minHeight: 0.25, maxHeight: 0.9, duration: 200, randomness: 0.5 },
+  processing: { minHeight: 0.3, maxHeight: 0.7, duration: 150, randomness: 0.2 },
+  speaking: { minHeight: 0.2, maxHeight: 0.85, duration: 300, randomness: 0.3 },
+  error: { minHeight: 0.1, maxHeight: 0.2, duration: 2000, randomness: 0 },
 };
 
 export function VoiceOrb({ state, size = 'large', onPress }: VoiceOrbProps) {
@@ -24,7 +35,54 @@ export function VoiceOrb({ state, size = 'large', onPress }: VoiceOrbProps) {
   const rotateAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
+  // Create animated values for each bar
+  const barAnims = useRef(
+    Array.from({ length: NUM_BARS }, () => new Animated.Value(0.2))
+  ).current;
+
   const dimensions = SIZE_MAP[size];
+
+  // Sound wave bar animations
+  useEffect(() => {
+    const config = STATE_CONFIGS[state];
+    const animations: Animated.CompositeAnimation[] = [];
+
+    barAnims.forEach((anim, index) => {
+      // Create phase offset for wave effect
+      const phaseOffset = index * (Math.PI / NUM_BARS);
+
+      const animate = () => {
+        // Calculate target height with randomness
+        const baseHeight = config.minHeight +
+          (config.maxHeight - config.minHeight) *
+          (0.5 + 0.5 * Math.sin(Date.now() / config.duration + phaseOffset));
+
+        const targetHeight = baseHeight +
+          (Math.random() - 0.5) * config.randomness * 2;
+
+        const clampedHeight = Math.max(config.minHeight, Math.min(config.maxHeight, targetHeight));
+
+        Animated.timing(anim, {
+          toValue: clampedHeight,
+          duration: config.duration + Math.random() * 50,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: false,
+        }).start(() => {
+          if (state !== 'error') {
+            animate();
+          }
+        });
+      };
+
+      // Stagger start times
+      const timeoutId = setTimeout(animate, index * 50);
+      return () => clearTimeout(timeoutId);
+    });
+
+    return () => {
+      animations.forEach(a => a.stop());
+    };
+  }, [state, barAnims]);
 
   // Pulse animation for listening and speaking states
   useEffect(() => {
@@ -32,7 +90,7 @@ export function VoiceOrb({ state, size = 'large', onPress }: VoiceOrbProps) {
       const pulse = Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, {
-            toValue: state === 'speaking' ? 1.1 : 1.15,
+            toValue: state === 'speaking' ? 1.08 : 1.12,
             duration: state === 'speaking' ? 600 : 800,
             easing: Easing.inOut(Easing.ease),
             useNativeDriver: true,
@@ -138,14 +196,14 @@ export function VoiceOrb({ state, size = 'large', onPress }: VoiceOrbProps) {
     }
   };
 
-  const getIconComponent = () => {
-    if (state === 'error') return MicOff;
-    if (state === 'speaking') return Volume2;
-    if (state === 'connecting') return Wifi;
-    return Mic;
+  const getBarColor = () => {
+    switch (state) {
+      case 'error':
+        return 'rgba(255, 255, 255, 0.4)';
+      default:
+        return colors.text.primary;
+    }
   };
-
-  const IconComponent = getIconComponent();
 
   return (
     <Animated.View
@@ -220,11 +278,26 @@ export function VoiceOrb({ state, size = 'large', onPress }: VoiceOrbProps) {
             },
           ]}
         >
-          <IconComponent
-            size={dimensions.icon}
-            color={colors.text.primary}
-            strokeWidth={2}
-          />
+          {/* Sound Wave Bars */}
+          <View style={styles.barsContainer}>
+            {barAnims.map((anim, index) => (
+              <Animated.View
+                key={index}
+                style={[
+                  styles.bar,
+                  {
+                    width: dimensions.bar.width,
+                    marginHorizontal: dimensions.bar.gap / 2,
+                    backgroundColor: getBarColor(),
+                    height: anim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [dimensions.bar.maxHeight * 0.15, dimensions.bar.maxHeight],
+                    }),
+                  },
+                ]}
+              />
+            ))}
+          </View>
         </LinearGradient>
       </Animated.View>
 
@@ -271,6 +344,14 @@ const styles = StyleSheet.create({
   orb: {
     alignItems: 'center',
     justifyContent: 'center',
+  } as ViewStyle,
+  barsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  } as ViewStyle,
+  bar: {
+    borderRadius: 3,
   } as ViewStyle,
   highlight: {
     position: 'absolute',

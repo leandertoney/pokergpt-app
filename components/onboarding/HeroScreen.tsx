@@ -79,7 +79,7 @@ export function HeroScreen({ onNext }: HeroScreenProps) {
           },
         ]}
       >
-        <Star size={14} color="#FFD700" fill="#FFD700" />
+        <Star size={14} color={colors.onboarding.gold} fill={colors.onboarding.gold} />
         <Text style={styles.badgeText}>Loved by poker players</Text>
       </Animated.View>
 
@@ -97,8 +97,12 @@ export function HeroScreen({ onNext }: HeroScreenProps) {
           ],
         }}
       >
-        <Text style={styles.headline}>Win more.</Text>
-        <Text style={styles.headline}>Tilt less.</Text>
+        <Text style={styles.headline}>
+          Win <Text style={styles.emphasisWord}>MORE.</Text>
+        </Text>
+        <Text style={styles.headline}>
+          Tilt <Text style={styles.emphasisWord}>LESS.</Text>
+        </Text>
       </Animated.View>
 
       {/* Supporting Text */}
@@ -135,7 +139,7 @@ export function HeroScreen({ onNext }: HeroScreenProps) {
           onPress={handlePress}
           activeOpacity={0.8}
         >
-          <Text style={styles.buttonText}>See how it works</Text>
+          <Text style={styles.buttonText}>See it in action</Text>
           <ChevronRight size={20} color="#000" />
         </TouchableOpacity>
       </Animated.View>
@@ -153,7 +157,7 @@ const styles = StyleSheet.create({
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 215, 0, 0.15)',
+    backgroundColor: 'rgba(212, 168, 75, 0.15)',
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
@@ -163,14 +167,19 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FFD700',
+    color: colors.onboarding.gold,
   } as TextStyle,
   headline: {
-    fontSize: 42,
-    fontWeight: '800',
+    fontSize: 36,
+    fontWeight: '700',
     color: '#fff',
     textAlign: 'center',
-    lineHeight: 48,
+    lineHeight: 56,
+  } as TextStyle,
+  emphasisWord: {
+    fontSize: 52,
+    fontWeight: '900',
+    color: colors.onboarding.gold,
   } as TextStyle,
   subtext: {
     fontSize: 17,

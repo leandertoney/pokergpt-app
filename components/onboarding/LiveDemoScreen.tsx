@@ -8,62 +8,90 @@ import {
   type ViewStyle,
   type TextStyle,
 } from 'react-native';
-import { Check, ChevronRight, TrendingUp } from 'lucide-react-native';
+import { Check, ChevronRight, TrendingUp, Target, Calculator } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { VoiceOrb, type VoiceOrbState } from '@/components/VoiceOrb';
+import { PlayingCard, EmptyCard } from '@/components/PlayingCard';
 import { colors } from '@/constants/colors';
 
 type LiveDemoScreenProps = {
   onNext: () => void;
 };
 
-const DEMO_TRANSCRIPT = "I have ace-king on the button, villain 3-bets from the small blind...";
 const DEMO_RESULT = {
   action: 'CALL',
   confidence: 73,
+  equity: 54,
   ev: 42,
-  reasoning: "You have great implied odds with position and a strong hand.",
+  potOdds: '2.7:1',
+  reasoning: "Strong implied odds with position. Villain's range is capped here.",
 };
 
 export function LiveDemoScreen({ onNext }: LiveDemoScreenProps) {
-  const [displayedText, setDisplayedText] = useState('');
   const [orbState, setOrbState] = useState<VoiceOrbState>('idle');
+  const [showCards, setShowCards] = useState(false);
+  const [showBoard, setShowBoard] = useState(false);
   const [showResult, setShowResult] = useState(false);
   const [confidenceWidth, setConfidenceWidth] = useState(0);
   const [animationComplete, setAnimationComplete] = useState(false);
 
-  const transcriptAnim = useRef(new Animated.Value(0)).current;
+  const titleAnim = useRef(new Animated.Value(0)).current;
+  const handAnim = useRef(new Animated.Value(0)).current;
+  const boardAnim = useRef(new Animated.Value(0)).current;
+  const actionAnim = useRef(new Animated.Value(0)).current;
   const resultAnim = useRef(new Animated.Value(0)).current;
   const buttonAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     // Start the demo sequence
     const sequence = async () => {
-      // Phase 1: Show orb as idle, then transition to listening
-      await delay(500);
-      setOrbState('listening');
+      // Phase 1: Show title
+      Animated.spring(titleAnim, {
+        toValue: 1,
+        tension: 50,
+        friction: 8,
+        useNativeDriver: true,
+      }).start();
 
-      // Phase 2: Typewriter effect for transcript
-      await delay(300);
-      Animated.timing(transcriptAnim, {
+      // Phase 2: Show hero cards
+      await delay(400);
+      setShowCards(true);
+      Animated.spring(handAnim, {
+        toValue: 1,
+        tension: 60,
+        friction: 8,
+        useNativeDriver: true,
+      }).start();
+
+      // Phase 3: Show board cards
+      await delay(600);
+      setShowBoard(true);
+      Animated.spring(boardAnim, {
+        toValue: 1,
+        tension: 60,
+        friction: 8,
+        useNativeDriver: true,
+      }).start();
+
+      // Phase 4: Show action context
+      await delay(400);
+      Animated.timing(actionAnim, {
         toValue: 1,
         duration: 200,
         useNativeDriver: true,
       }).start();
 
-      // Type out the transcript
-      for (let i = 0; i <= DEMO_TRANSCRIPT.length; i++) {
-        setDisplayedText(DEMO_TRANSCRIPT.slice(0, i));
-        await delay(40);
-      }
-
-      // Phase 3: Processing
+      // Phase 5: Start listening
       await delay(300);
-      setOrbState('processing');
+      setOrbState('listening');
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-      // Phase 4: Show result
-      await delay(1500);
+      // Phase 6: Processing
+      await delay(1200);
+      setOrbState('processing');
+
+      // Phase 7: Show result
+      await delay(1000);
       setOrbState('speaking');
       setShowResult(true);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -79,7 +107,7 @@ export function LiveDemoScreen({ onNext }: LiveDemoScreenProps) {
       await delay(200);
       animateConfidence();
 
-      // Phase 5: Show continue button
+      // Phase 8: Show continue button
       await delay(800);
       setAnimationComplete(true);
       Animated.spring(buttonAnim, {
@@ -121,29 +149,91 @@ export function LiveDemoScreen({ onNext }: LiveDemoScreenProps) {
       activeOpacity={1}
       onPress={handlePress}
     >
-      <Text style={styles.title}>See the magic</Text>
-
-      {/* Transcript bubble */}
-      <Animated.View
+      {/* Title */}
+      <Animated.Text
         style={[
-          styles.transcriptBubble,
+          styles.title,
           {
-            opacity: transcriptAnim,
+            opacity: titleAnim,
             transform: [
               {
-                translateY: transcriptAnim.interpolate({
+                translateY: titleAnim.interpolate({
                   inputRange: [0, 1],
-                  outputRange: [-10, 0],
+                  outputRange: [-20, 0],
                 }),
               },
             ],
           },
         ]}
       >
-        <Text style={styles.transcriptText}>
-          "{displayedText}"
-          <Text style={styles.cursor}>|</Text>
-        </Text>
+        Real-time analysis
+      </Animated.Text>
+
+      {/* Hand Display Card */}
+      <Animated.View
+        style={[
+          styles.handCard,
+          {
+            opacity: handAnim,
+            transform: [
+              {
+                scale: handAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0.9, 1],
+                }),
+              },
+            ],
+          },
+        ]}
+      >
+        {/* Your Hand */}
+        <View style={styles.handSection}>
+          <Text style={styles.sectionLabel}>Your Hand</Text>
+          <View style={styles.cardsRow}>
+            {showCards && (
+              <>
+                <PlayingCard rank="A" suit="s" size="medium" animateIn delay={0} />
+                <PlayingCard rank="K" suit="h" size="medium" animateIn delay={100} />
+              </>
+            )}
+          </View>
+        </View>
+
+        {/* Board */}
+        <Animated.View
+          style={[
+            styles.handSection,
+            {
+              opacity: boardAnim,
+            },
+          ]}
+        >
+          <Text style={styles.sectionLabel}>Board</Text>
+          <View style={styles.cardsRow}>
+            {showBoard && (
+              <>
+                <PlayingCard rank="Q" suit="d" size="small" animateIn delay={0} />
+                <PlayingCard rank="J" suit="c" size="small" animateIn delay={100} />
+                <PlayingCard rank="3" suit="s" size="small" animateIn delay={200} />
+                <EmptyCard size="small" />
+                <EmptyCard size="small" />
+              </>
+            )}
+          </View>
+        </Animated.View>
+
+        {/* Action Context */}
+        <Animated.View
+          style={[
+            styles.actionContext,
+            {
+              opacity: actionAnim,
+            },
+          ]}
+        >
+          <Text style={styles.actionText}>Villain 3-bets to $45</Text>
+          <Text style={styles.potText}>Pot: $120</Text>
+        </Animated.View>
       </Animated.View>
 
       {/* Voice Orb */}
@@ -169,11 +259,31 @@ export function LiveDemoScreen({ onNext }: LiveDemoScreenProps) {
             },
           ]}
         >
+          {/* Action Header */}
           <View style={styles.resultHeader}>
             <View style={styles.checkCircle}>
               <Check size={16} color="#000" />
             </View>
             <Text style={styles.resultAction}>{DEMO_RESULT.action}</Text>
+          </View>
+
+          {/* Stats Row */}
+          <View style={styles.statsRow}>
+            <View style={styles.statItem}>
+              <Target size={14} color={colors.onboarding.data} />
+              <Text style={styles.statLabel}>Equity</Text>
+              <Text style={styles.statValue}>{DEMO_RESULT.equity}%</Text>
+            </View>
+            <View style={styles.statItem}>
+              <TrendingUp size={14} color={colors.onboarding.profit} />
+              <Text style={styles.statLabel}>EV</Text>
+              <Text style={[styles.statValue, styles.evValue]}>+${DEMO_RESULT.ev}</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Calculator size={14} color={colors.onboarding.data} />
+              <Text style={styles.statLabel}>Pot Odds</Text>
+              <Text style={styles.statValue}>{DEMO_RESULT.potOdds}</Text>
+            </View>
           </View>
 
           {/* Confidence bar */}
@@ -189,12 +299,7 @@ export function LiveDemoScreen({ onNext }: LiveDemoScreenProps) {
             <Text style={styles.confidenceText}>{confidenceWidth}%</Text>
           </View>
 
-          {/* EV Indicator */}
-          <View style={styles.evContainer}>
-            <TrendingUp size={16} color={colors.onboarding.profit} />
-            <Text style={styles.evText}>+${DEMO_RESULT.ev} expected value</Text>
-          </View>
-
+          {/* Reasoning */}
           <Text style={styles.resultReasoning}>{DEMO_RESULT.reasoning}</Text>
         </Animated.View>
       )}
@@ -217,7 +322,7 @@ export function LiveDemoScreen({ onNext }: LiveDemoScreenProps) {
         ]}
       >
         <View style={styles.button}>
-          <Text style={styles.buttonText}>This is what you get</Text>
+          <Text style={styles.buttonText}>That's the edge</Text>
           <ChevronRight size={20} color="#000" />
         </View>
       </Animated.View>
@@ -230,43 +335,66 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingTop: 60,
+    paddingTop: 50,
   } as ViewStyle,
   title: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: '700',
     color: '#fff',
     textAlign: 'center',
-    marginBottom: 32,
+    marginBottom: 20,
   } as TextStyle,
-  transcriptBubble: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
+  handCard: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
     borderRadius: 16,
     padding: 16,
-    marginBottom: 24,
-    maxWidth: '100%',
+    width: '100%',
   } as ViewStyle,
-  transcriptText: {
-    fontSize: 16,
-    color: 'rgba(255,255,255,0.8)',
-    fontStyle: 'italic',
-    lineHeight: 22,
+  handSection: {
+    marginBottom: 16,
+  } as ViewStyle,
+  sectionLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.5)',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 8,
   } as TextStyle,
-  cursor: {
+  cardsRow: {
+    flexDirection: 'row',
+    gap: 8,
+  } as ViewStyle,
+  actionContext: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.1)',
+  } as ViewStyle,
+  actionText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#fff',
+  } as TextStyle,
+  potText: {
+    fontSize: 14,
+    fontWeight: '600',
     color: colors.onboarding.gold,
-    fontWeight: '300',
   } as TextStyle,
   orbContainer: {
-    marginVertical: 24,
+    marginVertical: 16,
   } as ViewStyle,
   resultCard: {
     backgroundColor: 'rgba(255,255,255,0.06)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
     borderRadius: 16,
-    padding: 20,
+    padding: 16,
     width: '100%',
-    marginTop: 16,
   } as ViewStyle,
   resultHeader: {
     flexDirection: 'row',
@@ -287,11 +415,35 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#fff',
   } as TextStyle,
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+    paddingHorizontal: 8,
+  } as ViewStyle,
+  statItem: {
+    alignItems: 'center',
+    gap: 4,
+  } as ViewStyle,
+  statLabel: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: 'rgba(255,255,255,0.5)',
+    textTransform: 'uppercase',
+  } as TextStyle,
+  statValue: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#fff',
+  } as TextStyle,
+  evValue: {
+    color: colors.onboarding.profit,
+  } as TextStyle,
   confidenceContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    marginBottom: 16,
+    marginBottom: 12,
   } as ViewStyle,
   confidenceBar: {
     flex: 1,
@@ -311,26 +463,11 @@ const styles = StyleSheet.create({
     color: colors.onboarding.gold,
     width: 45,
   } as TextStyle,
-  evContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 12,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    backgroundColor: 'rgba(34, 197, 94, 0.1)',
-    borderRadius: 8,
-    alignSelf: 'flex-start',
-  } as ViewStyle,
-  evText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.onboarding.profit,
-  } as TextStyle,
   resultReasoning: {
-    fontSize: 15,
+    fontSize: 14,
     color: 'rgba(255,255,255,0.6)',
-    lineHeight: 22,
+    lineHeight: 20,
+    fontStyle: 'italic',
   } as TextStyle,
   buttonContainer: {
     position: 'absolute',

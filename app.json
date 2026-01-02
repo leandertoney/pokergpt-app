@@ -2,6 +2,7 @@
   "expo": {
     "name": "PokerGPT",
     "slug": "pokergpt",
+    "owner": "universoleappstudios",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/pokergpt_logo.png",
@@ -21,7 +22,8 @@
         "UIBackgroundModes": [
           "audio"
         ],
-        "NSMicrophoneUsageDescription": "Allow $(PRODUCT_NAME) to access your microphone"
+        "NSMicrophoneUsageDescription": "Allow $(PRODUCT_NAME) to access your microphone",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -31,7 +33,9 @@
       },
       "package": "com.pokergpt.app",
       "permissions": [
-        "RECORD_AUDIO"
+        "RECORD_AUDIO",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
       ]
     },
     "web": {
@@ -50,6 +54,12 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "74438842-5df3-4dd3-96e1-35306d266aa5"
+      }
     }
   }
 }
