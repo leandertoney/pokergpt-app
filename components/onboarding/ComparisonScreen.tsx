@@ -8,7 +8,7 @@ import {
   type ViewStyle,
   type TextStyle,
 } from 'react-native';
-import { ChevronUp, TrendingUp, TrendingDown } from 'lucide-react-native';
+import { ChevronRight, TrendingUp, TrendingDown } from 'lucide-react-native';
 import Svg, { Path, Circle, Defs, LinearGradient, Stop, Line, Text as SvgText } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 import { colors } from '@/constants/colors';
@@ -347,7 +347,7 @@ export function ComparisonScreen({ onNext }: ComparisonScreenProps) {
           },
         ]}
       >
-        <ChevronUp size={24} color="rgba(255,255,255,0.5)" />
+        <ChevronRight size={24} color="rgba(255,255,255,0.5)" />
         <Text style={styles.swipeText}>Swipe to continue</Text>
       </Animated.View>
     </View>

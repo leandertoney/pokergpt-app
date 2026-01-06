@@ -8,7 +8,7 @@ import {
   type ViewStyle,
   type TextStyle,
 } from 'react-native';
-import { Check, ChevronUp, TrendingUp, Target, Calculator } from 'lucide-react-native';
+import { Check, ChevronRight, TrendingUp, Target, Calculator } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { VoiceOrb, type VoiceOrbState } from '@/components/VoiceOrb';
 import { PlayingCard, EmptyCard } from '@/components/PlayingCard';
@@ -321,7 +321,7 @@ export function LiveDemoScreen({ onNext }: LiveDemoScreenProps) {
           },
         ]}
       >
-        <ChevronUp size={24} color="rgba(255,255,255,0.5)" />
+        <ChevronRight size={24} color="rgba(255,255,255,0.5)" />
         <Text style={styles.swipeText}>Swipe to continue</Text>
       </Animated.View>
     </TouchableOpacity>

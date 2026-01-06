@@ -7,7 +7,7 @@ import {
   type ViewStyle,
   type TextStyle,
 } from 'react-native';
-import { Star, ChevronUp } from 'lucide-react-native';
+import { Star, ChevronRight } from 'lucide-react-native';
 import { colors } from '@/constants/colors';
 
 type HeroScreenProps = {
@@ -222,7 +222,7 @@ export function HeroScreen({ onNext }: HeroScreenProps) {
           },
         ]}
       >
-        <ChevronUp size={24} color="rgba(255,255,255,0.5)" />
+        <ChevronRight size={24} color="rgba(255,255,255,0.5)" />
         <Text style={styles.swipeText}>Swipe to continue</Text>
       </Animated.View>
     </View>

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -115,7 +115,8 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
     });
   }, [fadeAnim, slideAnim]);
 
-  const handleSwipeUp = useCallback(() => {
+  // Swipe left to advance to next screen
+  const handleSwipeLeft = useCallback(() => {
     if (!canSwipe) return;
 
     const currentIndex = SWIPE_FLOW.indexOf(step);
@@ -128,23 +129,29 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
     }
   }, [step, canSwipe, transitionTo]);
 
+  // Keep a ref to the latest swipe handler to avoid stale closures
+  const handleSwipeRef = useRef(handleSwipeLeft);
+  useEffect(() => {
+    handleSwipeRef.current = handleSwipeLeft;
+  }, [handleSwipeLeft]);
+
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
       onMoveShouldSetPanResponder: (_, gestureState) => {
-        // Only capture vertical swipes
-        return Math.abs(gestureState.dy) > 10 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
+        // Only capture horizontal swipes
+        return Math.abs(gestureState.dx) > 10 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
       },
       onPanResponderMove: (_, gestureState) => {
-        // Only allow upward swipe animation
-        if (gestureState.dy < 0) {
-          swipeAnim.setValue(gestureState.dy * 0.3);
+        // Only allow leftward swipe animation
+        if (gestureState.dx < 0) {
+          swipeAnim.setValue(gestureState.dx * 0.3);
         }
       },
       onPanResponderRelease: (_, gestureState) => {
-        if (gestureState.dy < -SWIPE_THRESHOLD && gestureState.vy < 0) {
-          // Swipe up detected
-          handleSwipeUp();
+        if (gestureState.dx < -SWIPE_THRESHOLD && gestureState.vx < 0) {
+          // Swipe left detected - use ref to get latest handler
+          handleSwipeRef.current();
         }
         // Reset swipe animation
         Animated.spring(swipeAnim, {
@@ -273,7 +280,7 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={[colors.background.tertiary, colors.background.secondary, colors.background.primary, '#0D0202']}
+        colors={[colors.background.tertiary, colors.background.secondary, colors.background.primary, colors.background.primary]}
         locations={[0, 0.3, 0.7, 1]}
         style={styles.gradient}
       >
@@ -283,8 +290,8 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
             {
               opacity: fadeAnim,
               transform: [
-                { translateY: slideAnim },
-                { translateY: swipeAnim },
+                { translateX: slideAnim },
+                { translateX: swipeAnim },
               ],
             },
           ]}

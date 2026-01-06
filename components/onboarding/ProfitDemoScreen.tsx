@@ -8,7 +8,7 @@ import {
   type ViewStyle,
   type TextStyle,
 } from 'react-native';
-import { ChevronUp, TrendingUp, DollarSign } from 'lucide-react-native';
+import { ChevronRight, TrendingUp, DollarSign } from 'lucide-react-native';
 import Svg, { Path, Circle, Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 import { colors } from '@/constants/colors';
@@ -252,7 +252,7 @@ export function ProfitDemoScreen({ onNext }: ProfitDemoScreenProps) {
           },
         ]}
       >
-        <ChevronUp size={24} color="rgba(255,255,255,0.5)" />
+        <ChevronRight size={24} color="rgba(255,255,255,0.5)" />
         <Text style={styles.swipeText}>Swipe to continue</Text>
       </Animated.View>
     </View>

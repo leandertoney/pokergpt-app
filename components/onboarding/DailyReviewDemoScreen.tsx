@@ -8,7 +8,7 @@ import {
   type ViewStyle,
   type TextStyle,
 } from 'react-native';
-import { ChevronUp } from 'lucide-react-native';
+import { ChevronRight } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { colors } from '@/constants/colors';
 import { getOnboardingDemoHand } from '@/services/dailyReviewService';
@@ -170,7 +170,7 @@ export function DailyReviewDemoScreen({ onNext }: DailyReviewDemoScreenProps) {
 
         {/* Swipe hint */}
         <Animated.View style={[styles.swipeHint, { opacity: buttonAnim }]}>
-          <ChevronUp size={24} color="rgba(255,255,255,0.5)" />
+          <ChevronRight size={24} color="rgba(255,255,255,0.5)" />
           <Text style={styles.swipeText}>Or swipe to skip</Text>
         </Animated.View>
       </View>
