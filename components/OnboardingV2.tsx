@@ -1,8 +1,10 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import {
   View,
   StyleSheet,
   Animated,
+  PanResponder,
+  Dimensions,
   type ViewStyle,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -17,10 +19,12 @@ import { ProfitDemoScreen } from './onboarding/ProfitDemoScreen';
 import { LiveDemoScreen } from './onboarding/LiveDemoScreen';
 import { SessionDemoScreen } from './onboarding/SessionDemoScreen';
 import { LearningProgressScreen } from './onboarding/LearningProgressScreen';
+import { ComparisonScreen } from './onboarding/ComparisonScreen';
 import { QuickIdentityScreen } from './onboarding/QuickIdentityScreen';
 import { ProfileBuiltScreen } from './onboarding/ProfileBuiltScreen';
 import { WhatYouGetScreen } from './onboarding/WhatYouGetScreen';
 import { FeatureScreen } from './onboarding/FeatureScreen';
+import { DailyReviewDemoScreen } from './onboarding/DailyReviewDemoScreen';
 
 // Components for feature screens
 import { VoiceOrb } from './VoiceOrb';
@@ -28,6 +32,9 @@ import { VoiceOrb } from './VoiceOrb';
 import { setUserTier, setUserIdentity } from '@/services/storageService';
 import { colors } from '@/constants/colors';
 import type { UserIdentity } from '@/types/poker';
+
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+const SWIPE_THRESHOLD = 50; // Minimum distance for swipe
 
 const ONBOARDING_COMPLETE_KEY = '@onboarding_complete';
 
@@ -40,7 +47,9 @@ type OnboardingStep =
   | 'voice'
   | 'analysis'
   | 'sessionDemo'
+  | 'dailyReviewDemo'
   | 'learningProgress'
+  | 'comparison'
   | 'identity'
   | 'profileBuilt'
   | 'whatYouGet';
@@ -49,15 +58,31 @@ type OnboardingV2Props = {
   onComplete: () => void;
 };
 
+// Define the order of swipeable steps
+const SWIPE_FLOW: OnboardingStep[] = [
+  'hero',
+  'profitDemo',
+  'liveDemo',
+  'voice',
+  'analysis',
+  'sessionDemo',
+  'dailyReviewDemo',
+  'learningProgress',
+  'comparison',
+];
+
 export function OnboardingV2({ onComplete }: OnboardingV2Props) {
   const [step, setStep] = useState<OnboardingStep>('splash');
   const [playStyle, setPlayStyle] = useState<string>('shark');
   const [goal, setGoal] = useState<string>('profit');
+  const [canSwipe, setCanSwipe] = useState(true);
 
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const slideAnim = useRef(new Animated.Value(0)).current;
+  const swipeAnim = useRef(new Animated.Value(0)).current;
 
-  const transitionTo = (nextStep: OnboardingStep) => {
+  const transitionTo = useCallback((nextStep: OnboardingStep) => {
+    setCanSwipe(false);
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 0,
@@ -65,13 +90,13 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
         useNativeDriver: true,
       }),
       Animated.timing(slideAnim, {
-        toValue: -20,
+        toValue: -40,
         duration: 150,
         useNativeDriver: true,
       }),
     ]).start(() => {
       setStep(nextStep);
-      slideAnim.setValue(20);
+      slideAnim.setValue(40);
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
@@ -84,9 +109,53 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
           friction: 8,
           useNativeDriver: true,
         }),
-      ]).start();
+      ]).start(() => {
+        setCanSwipe(true);
+      });
     });
-  };
+  }, [fadeAnim, slideAnim]);
+
+  const handleSwipeUp = useCallback(() => {
+    if (!canSwipe) return;
+
+    const currentIndex = SWIPE_FLOW.indexOf(step);
+    if (currentIndex >= 0 && currentIndex < SWIPE_FLOW.length - 1) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      transitionTo(SWIPE_FLOW[currentIndex + 1]);
+    } else if (step === 'comparison') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      transitionTo('identity');
+    }
+  }, [step, canSwipe, transitionTo]);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        // Only capture vertical swipes
+        return Math.abs(gestureState.dy) > 10 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
+      },
+      onPanResponderMove: (_, gestureState) => {
+        // Only allow upward swipe animation
+        if (gestureState.dy < 0) {
+          swipeAnim.setValue(gestureState.dy * 0.3);
+        }
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dy < -SWIPE_THRESHOLD && gestureState.vy < 0) {
+          // Swipe up detected
+          handleSwipeUp();
+        }
+        // Reset swipe animation
+        Animated.spring(swipeAnim, {
+          toValue: 0,
+          tension: 40,
+          friction: 8,
+          useNativeDriver: true,
+        }).start();
+      },
+    })
+  ).current;
 
   const handleIdentityComplete = (selectedPlayStyle: string, selectedGoal: string) => {
     setPlayStyle(selectedPlayStyle);
@@ -165,10 +234,16 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
         );
 
       case 'sessionDemo':
-        return <SessionDemoScreen onNext={() => transitionTo('learningProgress')} />;
+        return <SessionDemoScreen onNext={() => transitionTo('dailyReviewDemo')} />;
+
+      case 'dailyReviewDemo':
+        return <DailyReviewDemoScreen onNext={() => transitionTo('learningProgress')} />;
 
       case 'learningProgress':
-        return <LearningProgressScreen onNext={() => transitionTo('identity')} />;
+        return <LearningProgressScreen onNext={() => transitionTo('comparison')} />;
+
+      case 'comparison':
+        return <ComparisonScreen onNext={() => transitionTo('identity')} />;
 
       // PHASE 3: IDENTITY (Quick tap cards, no dots)
       case 'identity':
@@ -192,6 +267,9 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
     }
   };
 
+  // Check if current step is swipeable
+  const isSwipeableStep = SWIPE_FLOW.includes(step);
+
   return (
     <View style={styles.container}>
       <LinearGradient
@@ -204,9 +282,13 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
             styles.content,
             {
               opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }],
+              transform: [
+                { translateY: slideAnim },
+                { translateY: swipeAnim },
+              ],
             },
           ]}
+          {...(isSwipeableStep ? panResponder.panHandlers : {})}
         >
           {renderStep()}
         </Animated.View>

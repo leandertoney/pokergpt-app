@@ -8,7 +8,7 @@ import {
   type ViewStyle,
   type TextStyle,
 } from 'react-native';
-import { ChevronRight, Crown, Mic, BarChart3, Zap, DollarSign } from 'lucide-react-native';
+import { Play, Sparkles } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { colors } from '@/constants/colors';
 
@@ -16,30 +16,23 @@ type WhatYouGetScreenProps = {
   onComplete: () => void;
 };
 
-const FEATURES = [
-  { icon: DollarSign, title: 'Session profit tracking', color: colors.onboarding.profit },
-  { icon: Mic, title: 'Voice input', color: colors.onboarding.gold },
-  { icon: BarChart3, title: 'Learning progress', color: colors.onboarding.data },
-  { icon: Zap, title: 'Unlimited analysis', color: colors.onboarding.gold },
-];
-
 export function WhatYouGetScreen({ onComplete }: WhatYouGetScreenProps) {
-  const crownAnim = useRef(new Animated.Value(0)).current;
+  const sparkleAnim = useRef(new Animated.Value(0)).current;
   const titleAnim = useRef(new Animated.Value(0)).current;
-  const itemAnims = useRef(FEATURES.map(() => new Animated.Value(0))).current;
+  const subtitleAnim = useRef(new Animated.Value(0)).current;
   const buttonAnim = useRef(new Animated.Value(0)).current;
-  const footerAnim = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    // Crown bounce in
-    Animated.spring(crownAnim, {
+    // Sparkle icon entrance
+    Animated.spring(sparkleAnim, {
       toValue: 1,
       tension: 50,
       friction: 6,
       useNativeDriver: true,
     }).start();
 
-    // Title
+    // Title entrance
     setTimeout(() => {
       Animated.spring(titleAnim, {
         toValue: 1,
@@ -49,19 +42,16 @@ export function WhatYouGetScreen({ onComplete }: WhatYouGetScreenProps) {
       }).start();
     }, 200);
 
-    // Features staggered
-    itemAnims.forEach((anim, index) => {
-      setTimeout(() => {
-        Animated.spring(anim, {
-          toValue: 1,
-          tension: 50,
-          friction: 8,
-          useNativeDriver: true,
-        }).start();
-      }, 400 + index * 100);
-    });
+    // Subtitle entrance
+    setTimeout(() => {
+      Animated.timing(subtitleAnim, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: true,
+      }).start();
+    }, 400);
 
-    // Button
+    // Button entrance
     setTimeout(() => {
       Animated.spring(buttonAnim, {
         toValue: 1,
@@ -69,16 +59,23 @@ export function WhatYouGetScreen({ onComplete }: WhatYouGetScreenProps) {
         friction: 8,
         useNativeDriver: true,
       }).start();
-    }, 900);
 
-    // Footer
-    setTimeout(() => {
-      Animated.timing(footerAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-    }, 1100);
+      // Start button pulse animation
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.02,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    }, 600);
   }, []);
 
   const handlePress = () => {
@@ -88,24 +85,30 @@ export function WhatYouGetScreen({ onComplete }: WhatYouGetScreenProps) {
 
   return (
     <View style={styles.container}>
-      {/* Crown Header */}
+      {/* Sparkle Icon */}
       <Animated.View
         style={[
-          styles.crownContainer,
+          styles.iconContainer,
           {
-            opacity: crownAnim,
+            opacity: sparkleAnim,
             transform: [
               {
-                scale: crownAnim.interpolate({
+                scale: sparkleAnim.interpolate({
                   inputRange: [0, 0.5, 1],
-                  outputRange: [0.5, 1.1, 1],
+                  outputRange: [0.5, 1.2, 1],
+                }),
+              },
+              {
+                rotate: sparkleAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: ['-20deg', '0deg'],
                 }),
               },
             ],
           },
         ]}
       >
-        <Crown size={48} color={colors.onboarding.gold} />
+        <Sparkles size={56} color={colors.onboarding.gold} />
       </Animated.View>
 
       {/* Title */}
@@ -116,47 +119,28 @@ export function WhatYouGetScreen({ onComplete }: WhatYouGetScreenProps) {
             {
               translateY: titleAnim.interpolate({
                 inputRange: [0, 1],
-                outputRange: [20, 0],
+                outputRange: [30, 0],
               }),
             },
           ],
         }}
       >
-        <Text style={styles.title}>Your Edge</Text>
+        <Text style={styles.title}>Ready to{'\n'}start winning?</Text>
       </Animated.View>
 
-      {/* Features List */}
-      <View style={styles.featuresList}>
-        {FEATURES.map((feature, index) => {
-          const IconComponent = feature.icon;
-          return (
-            <Animated.View
-              key={feature.title}
-              style={[
-                styles.featureRow,
-                {
-                  opacity: itemAnims[index],
-                  transform: [
-                    {
-                      translateX: itemAnims[index].interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [-30, 0],
-                      }),
-                    },
-                  ],
-                },
-              ]}
-            >
-              <View style={[styles.featureIcon, { backgroundColor: `${feature.color}20` }]}>
-                <IconComponent size={22} color={feature.color} />
-              </View>
-              <Text style={styles.featureText}>{feature.title}</Text>
-            </Animated.View>
-          );
-        })}
-      </View>
+      {/* Subtitle */}
+      <Animated.Text
+        style={[
+          styles.subtitle,
+          {
+            opacity: subtitleAnim,
+          },
+        ]}
+      >
+        Your AI poker coach is ready.{'\n'}Let's make every hand count.
+      </Animated.Text>
 
-      {/* Continue Button */}
+      {/* Start Button */}
       <Animated.View
         style={[
           styles.buttonContainer,
@@ -166,8 +150,11 @@ export function WhatYouGetScreen({ onComplete }: WhatYouGetScreenProps) {
               {
                 translateY: buttonAnim.interpolate({
                   inputRange: [0, 1],
-                  outputRange: [20, 0],
+                  outputRange: [30, 0],
                 }),
+              },
+              {
+                scale: pulseAnim,
               },
             ],
           },
@@ -176,10 +163,10 @@ export function WhatYouGetScreen({ onComplete }: WhatYouGetScreenProps) {
         <TouchableOpacity
           style={styles.button}
           onPress={handlePress}
-          activeOpacity={0.8}
+          activeOpacity={0.85}
         >
-          <Text style={styles.buttonText}>Let's Go</Text>
-          <ChevronRight size={20} color="#000" />
+          <Play size={22} color="#000" fill="#000" />
+          <Text style={styles.buttonText}>Start Playing</Text>
         </TouchableOpacity>
       </Animated.View>
 
@@ -188,11 +175,11 @@ export function WhatYouGetScreen({ onComplete }: WhatYouGetScreenProps) {
         style={[
           styles.footerText,
           {
-            opacity: footerAnim,
+            opacity: subtitleAnim,
           },
         ]}
       >
-        Free to start.
+        Free forever. Upgrade anytime.
       </Animated.Text>
     </View>
   );
@@ -203,71 +190,62 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: 32,
   } as ViewStyle,
-  crownContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(255, 215, 0, 0.15)',
+  iconContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(212, 168, 75, 0.12)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 24,
+    marginBottom: 32,
   } as ViewStyle,
   title: {
-    fontSize: 32,
+    fontSize: 36,
     fontWeight: '800',
     color: '#fff',
     textAlign: 'center',
-    marginBottom: 40,
+    lineHeight: 44,
   } as TextStyle,
-  featuresList: {
-    width: '100%',
-    gap: 16,
-  } as ViewStyle,
-  featureRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-  } as ViewStyle,
-  featureIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  } as ViewStyle,
-  featureText: {
+  subtitle: {
     fontSize: 17,
-    fontWeight: '600',
-    color: '#fff',
+    color: 'rgba(255,255,255,0.6)',
+    textAlign: 'center',
+    lineHeight: 26,
+    marginTop: 16,
   } as TextStyle,
   buttonContainer: {
     position: 'absolute',
     bottom: 100,
-    left: 24,
-    right: 24,
+    left: 32,
+    right: 32,
   } as ViewStyle,
   button: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.accent.primary,
-    paddingVertical: 18,
-    paddingHorizontal: 32,
-    borderRadius: 14,
-    gap: 8,
+    backgroundColor: colors.onboarding.profit,
+    paddingVertical: 20,
+    paddingHorizontal: 40,
+    borderRadius: 16,
+    gap: 12,
+    shadowColor: colors.onboarding.profit,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 8,
   } as ViewStyle,
   buttonText: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 20,
+    fontWeight: '800',
     color: '#000',
   } as TextStyle,
   footerText: {
     position: 'absolute',
-    bottom: 60,
+    bottom: 55,
     fontSize: 14,
-    color: 'rgba(255,255,255,0.5)',
+    color: 'rgba(255,255,255,0.4)',
   } as TextStyle,
 });
 

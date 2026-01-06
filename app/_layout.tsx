@@ -122,6 +122,14 @@ function RootLayoutNav() {
         }}
       />
       <Stack.Screen
+        name="daily-review"
+        options={{
+          headerShown: true,
+          title: "Daily Review",
+          presentation: 'modal',
+        }}
+      />
+      <Stack.Screen
         name="+not-found"
         options={{
           headerShown: true,

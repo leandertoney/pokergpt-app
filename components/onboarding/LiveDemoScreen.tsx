@@ -8,7 +8,7 @@ import {
   type ViewStyle,
   type TextStyle,
 } from 'react-native';
-import { Check, ChevronRight, TrendingUp, Target, Calculator } from 'lucide-react-native';
+import { Check, ChevronUp, TrendingUp, Target, Calculator } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { VoiceOrb, type VoiceOrbState } from '@/components/VoiceOrb';
 import { PlayingCard, EmptyCard } from '@/components/PlayingCard';
@@ -107,15 +107,23 @@ export function LiveDemoScreen({ onNext }: LiveDemoScreenProps) {
       await delay(200);
       animateConfidence();
 
-      // Phase 8: Show continue button
+      // Phase 8: Show swipe hint with pulsing animation
       await delay(800);
       setAnimationComplete(true);
-      Animated.spring(buttonAnim, {
-        toValue: 1,
-        tension: 60,
-        friction: 8,
-        useNativeDriver: true,
-      }).start();
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(buttonAnim, {
+            toValue: 1,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(buttonAnim, {
+            toValue: 0.4,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
     };
 
     sequence();
@@ -304,27 +312,17 @@ export function LiveDemoScreen({ onNext }: LiveDemoScreenProps) {
         </Animated.View>
       )}
 
-      {/* Continue button */}
+      {/* Swipe Hint */}
       <Animated.View
         style={[
-          styles.buttonContainer,
+          styles.swipeHint,
           {
             opacity: buttonAnim,
-            transform: [
-              {
-                translateY: buttonAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [20, 0],
-                }),
-              },
-            ],
           },
         ]}
       >
-        <View style={styles.button}>
-          <Text style={styles.buttonText}>That's the edge</Text>
-          <ChevronRight size={20} color="#000" />
-        </View>
+        <ChevronUp size={24} color="rgba(255,255,255,0.5)" />
+        <Text style={styles.swipeText}>Swipe to continue</Text>
       </Animated.View>
     </TouchableOpacity>
   );
@@ -469,26 +467,17 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     fontStyle: 'italic',
   } as TextStyle,
-  buttonContainer: {
+  swipeHint: {
     position: 'absolute',
-    bottom: 60,
-    left: 24,
-    right: 24,
-  } as ViewStyle,
-  button: {
-    flexDirection: 'row',
+    bottom: 40,
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.accent.primary,
-    paddingVertical: 18,
-    paddingHorizontal: 32,
-    borderRadius: 14,
-    gap: 8,
+    alignSelf: 'center',
+    gap: 4,
   } as ViewStyle,
-  buttonText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#000',
+  swipeText: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.5)',
+    fontWeight: '500',
   } as TextStyle,
 });
 

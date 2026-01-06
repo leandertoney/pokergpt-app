@@ -4,13 +4,12 @@ import {
   Text,
   StyleSheet,
   Animated,
-  TouchableOpacity,
   Dimensions,
   type ViewStyle,
   type TextStyle,
 } from 'react-native';
-import { ChevronRight, TrendingUp, DollarSign } from 'lucide-react-native';
-import Svg, { Path, Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
+import { ChevronUp, TrendingUp, DollarSign } from 'lucide-react-native';
+import Svg, { Path, Circle, Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 import { colors } from '@/constants/colors';
 
@@ -19,11 +18,11 @@ type ProfitDemoScreenProps = {
 };
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const GRAPH_WIDTH = SCREEN_WIDTH - 80;
-const GRAPH_HEIGHT = 120;
+const GRAPH_WIDTH = SCREEN_WIDTH - 64;
+const GRAPH_HEIGHT = 140;
 
-// Demo data points (normalized 0-1 for the graph)
-const DATA_POINTS = [0.1, 0.15, 0.25, 0.2, 0.35, 0.45, 0.5, 0.6, 0.55, 0.7, 0.85, 1.0];
+// Demo data points (normalized 0-1 for the graph) - doesn't go to full 1.0
+const DATA_POINTS = [0.15, 0.2, 0.28, 0.22, 0.35, 0.42, 0.48, 0.55, 0.52, 0.62, 0.72, 0.78];
 
 const DEMO_DATA = {
   sessionName: 'Friday Night Session',
@@ -64,14 +63,22 @@ export function ProfitDemoScreen({ onNext }: ProfitDemoScreenProps) {
       animateGraph();
     }, 600);
 
-    // Show button
+    // Show swipe hint with pulsing animation
     setTimeout(() => {
-      Animated.spring(buttonAnim, {
-        toValue: 1,
-        tension: 60,
-        friction: 8,
-        useNativeDriver: true,
-      }).start();
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(buttonAnim, {
+            toValue: 1,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(buttonAnim, {
+            toValue: 0.4,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
     }, 2000);
   }, []);
 
@@ -127,11 +134,6 @@ export function ProfitDemoScreen({ onNext }: ProfitDemoScreenProps) {
     }
 
     return path;
-  };
-
-  const handlePress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    onNext();
   };
 
   const currentPath = generatePath(graphProgress);
@@ -241,31 +243,17 @@ export function ProfitDemoScreen({ onNext }: ProfitDemoScreenProps) {
         </View>
       </Animated.View>
 
-      {/* Continue Button */}
+      {/* Swipe Hint */}
       <Animated.View
         style={[
-          styles.buttonContainer,
+          styles.swipeHint,
           {
             opacity: buttonAnim,
-            transform: [
-              {
-                translateY: buttonAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [20, 0],
-                }),
-              },
-            ],
           },
         ]}
       >
-        <TouchableOpacity
-          style={styles.button}
-          onPress={handlePress}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.buttonText}>Continue</Text>
-          <ChevronRight size={20} color="#000" />
-        </TouchableOpacity>
+        <ChevronUp size={24} color="rgba(255,255,255,0.5)" />
+        <Text style={styles.swipeText}>Swipe to continue</Text>
       </Animated.View>
     </View>
   );
@@ -349,30 +337,22 @@ const styles = StyleSheet.create({
     color: '#000',
   } as TextStyle,
   graphContainer: {
-    backgroundColor: 'rgba(0,0,0,0.2)',
-    borderRadius: 12,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    borderRadius: 16,
     overflow: 'hidden',
+    padding: 4,
   } as ViewStyle,
-  buttonContainer: {
+  swipeHint: {
     position: 'absolute',
-    bottom: 60,
-    left: 24,
-    right: 24,
-  } as ViewStyle,
-  button: {
-    flexDirection: 'row',
+    bottom: 50,
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.accent.primary,
-    paddingVertical: 18,
-    paddingHorizontal: 32,
-    borderRadius: 14,
-    gap: 8,
+    alignSelf: 'center',
+    gap: 4,
   } as ViewStyle,
-  buttonText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#000',
+  swipeText: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.5)',
+    fontWeight: '500',
   } as TextStyle,
 });
 

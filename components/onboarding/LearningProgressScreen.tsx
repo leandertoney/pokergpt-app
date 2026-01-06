@@ -4,11 +4,10 @@ import {
   Text,
   StyleSheet,
   Animated,
-  TouchableOpacity,
   type ViewStyle,
   type TextStyle,
 } from 'react-native';
-import { ChevronRight, Brain, Target, Calculator, Eye } from 'lucide-react-native';
+import { ChevronUp, Brain, Target, Calculator, Eye } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { colors } from '@/constants/colors';
 
@@ -17,10 +16,10 @@ type LearningProgressScreenProps = {
 };
 
 const SKILLS = [
-  { name: 'Pot Odds', icon: Calculator, target: 82, color: colors.onboarding.data },
-  { name: 'Position Play', icon: Target, target: 65, color: colors.onboarding.data },
-  { name: 'Bet Sizing', icon: Calculator, target: 54, color: colors.onboarding.data },
-  { name: 'Hand Reading', icon: Eye, target: 41, color: colors.onboarding.dataLight },
+  { name: 'Pot Odds', icon: Calculator, target: 82, color: colors.onboarding.profit },
+  { name: 'Position Play', icon: Target, target: 65, color: colors.onboarding.gold },
+  { name: 'Bet Sizing', icon: Calculator, target: 54, color: colors.onboarding.gold },
+  { name: 'Hand Reading', icon: Eye, target: 41, color: colors.onboarding.goldDark },
 ];
 
 export function LearningProgressScreen({ onNext }: LearningProgressScreenProps) {
@@ -64,14 +63,22 @@ export function LearningProgressScreen({ onNext }: LearningProgressScreenProps) 
       }).start();
     }, 1200);
 
-    // Button
+    // Swipe hint with pulsing animation
     setTimeout(() => {
-      Animated.spring(buttonAnim, {
-        toValue: 1,
-        tension: 60,
-        friction: 8,
-        useNativeDriver: true,
-      }).start();
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(buttonAnim, {
+            toValue: 1,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(buttonAnim, {
+            toValue: 0.4,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
     }, 1400);
   }, []);
 
@@ -101,11 +108,6 @@ export function LearningProgressScreen({ onNext }: LearningProgressScreenProps) 
     };
 
     animate();
-  };
-
-  const handlePress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    onNext();
   };
 
   return (
@@ -190,31 +192,17 @@ export function LearningProgressScreen({ onNext }: LearningProgressScreenProps) 
         You're improving every day.
       </Animated.Text>
 
-      {/* Continue Button */}
+      {/* Swipe Hint */}
       <Animated.View
         style={[
-          styles.buttonContainer,
+          styles.swipeHint,
           {
             opacity: buttonAnim,
-            transform: [
-              {
-                translateY: buttonAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [20, 0],
-                }),
-              },
-            ],
           },
         ]}
       >
-        <TouchableOpacity
-          style={styles.button}
-          onPress={handlePress}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.buttonText}>Quick question</Text>
-          <ChevronRight size={20} color="#000" />
-        </TouchableOpacity>
+        <ChevronUp size={24} color="rgba(255,255,255,0.5)" />
+        <Text style={styles.swipeText}>Swipe to continue</Text>
       </Animated.View>
     </View>
   );
@@ -297,26 +285,17 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 32,
   } as TextStyle,
-  buttonContainer: {
+  swipeHint: {
     position: 'absolute',
-    bottom: 60,
-    left: 24,
-    right: 24,
-  } as ViewStyle,
-  button: {
-    flexDirection: 'row',
+    bottom: 50,
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.accent.primary,
-    paddingVertical: 18,
-    paddingHorizontal: 32,
-    borderRadius: 14,
-    gap: 8,
+    alignSelf: 'center',
+    gap: 4,
   } as ViewStyle,
-  buttonText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#000',
+  swipeText: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.5)',
+    fontWeight: '500',
   } as TextStyle,
 });
 

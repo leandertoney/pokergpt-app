@@ -4,12 +4,11 @@ import {
   Text,
   StyleSheet,
   Animated,
-  TouchableOpacity,
   Dimensions,
   type ViewStyle,
   type TextStyle,
 } from 'react-native';
-import { ChevronRight, BarChart3, Clock, Layers, TrendingUp } from 'lucide-react-native';
+import { ChevronUp, BarChart3, Clock, Layers, TrendingUp } from 'lucide-react-native';
 import Svg, { Path, Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 import { colors } from '@/constants/colors';
@@ -19,11 +18,11 @@ type SessionDemoScreenProps = {
 };
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const GRAPH_WIDTH = SCREEN_WIDTH - 80;
-const GRAPH_HEIGHT = 100;
+const GRAPH_WIDTH = SCREEN_WIDTH - 64;
+const GRAPH_HEIGHT = 120;
 
-// Demo data points (normalized 0-1 for the graph)
-const DATA_POINTS = [0.2, 0.25, 0.3, 0.35, 0.32, 0.4, 0.5, 0.55, 0.6, 0.65, 0.7, 0.8];
+// Demo data points (normalized 0-1 for the graph) - doesn't fill completely
+const DATA_POINTS = [0.2, 0.25, 0.3, 0.35, 0.32, 0.4, 0.48, 0.52, 0.55, 0.58, 0.62, 0.68];
 
 const DEMO_STATS = {
   sessions: 47,
@@ -66,14 +65,22 @@ export function SessionDemoScreen({ onNext }: SessionDemoScreenProps) {
       animateGraph();
     }, 400);
 
-    // Show button
+    // Show swipe hint with pulsing animation
     setTimeout(() => {
-      Animated.spring(buttonAnim, {
-        toValue: 1,
-        tension: 60,
-        friction: 8,
-        useNativeDriver: true,
-      }).start();
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(buttonAnim, {
+            toValue: 1,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(buttonAnim, {
+            toValue: 0.4,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
     }, 2000);
   }, []);
 
@@ -148,11 +155,6 @@ export function SessionDemoScreen({ onNext }: SessionDemoScreenProps) {
     return path;
   };
 
-  const handlePress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    onNext();
-  };
-
   const currentPath = generatePath(graphProgress);
   const lastPointIndex = Math.floor(DATA_POINTS.length * graphProgress);
   const lastPointX = 10 + (lastPointIndex / (DATA_POINTS.length - 1)) * (GRAPH_WIDTH - 20);
@@ -175,7 +177,7 @@ export function SessionDemoScreen({ onNext }: SessionDemoScreenProps) {
         }}
       >
         <View style={styles.iconHeader}>
-          <BarChart3 size={28} color={colors.onboarding.data} />
+          <BarChart3 size={28} color={colors.onboarding.gold} />
         </View>
         <Text style={styles.headline}>Your poker journey</Text>
         <Text style={styles.subheadline}>Track everything, improve always.</Text>
@@ -201,24 +203,24 @@ export function SessionDemoScreen({ onNext }: SessionDemoScreenProps) {
         {/* Stats Grid */}
         <View style={styles.statsGrid}>
           <View style={styles.statItem}>
-            <View style={[styles.statIcon, { backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>
-              <Layers size={18} color={colors.onboarding.data} />
+            <View style={[styles.statIcon, { backgroundColor: 'rgba(212, 168, 75, 0.15)' }]}>
+              <Layers size={18} color={colors.onboarding.gold} />
             </View>
             <Text style={styles.statValue}>{animatedSessions}</Text>
             <Text style={styles.statLabel}>Sessions</Text>
           </View>
 
           <View style={styles.statItem}>
-            <View style={[styles.statIcon, { backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>
-              <BarChart3 size={18} color={colors.onboarding.data} />
+            <View style={[styles.statIcon, { backgroundColor: 'rgba(212, 168, 75, 0.15)' }]}>
+              <BarChart3 size={18} color={colors.onboarding.gold} />
             </View>
             <Text style={styles.statValue}>{animatedHands}</Text>
             <Text style={styles.statLabel}>Hands</Text>
           </View>
 
           <View style={styles.statItem}>
-            <View style={[styles.statIcon, { backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>
-              <Clock size={18} color={colors.onboarding.data} />
+            <View style={[styles.statIcon, { backgroundColor: 'rgba(212, 168, 75, 0.15)' }]}>
+              <Clock size={18} color={colors.onboarding.gold} />
             </View>
             <Text style={styles.statValue}>{DEMO_STATS.timeWithApp}</Text>
             <Text style={styles.statLabel}>Time</Text>
@@ -237,16 +239,16 @@ export function SessionDemoScreen({ onNext }: SessionDemoScreenProps) {
         <View style={styles.graphContainer}>
           <Svg width={GRAPH_WIDTH} height={GRAPH_HEIGHT}>
             <Defs>
-              <LinearGradient id="blueGradient" x1="0" y1="0" x2="1" y2="0">
-                <Stop offset="0" stopColor={colors.onboarding.data} stopOpacity="0.6" />
-                <Stop offset="1" stopColor={colors.onboarding.dataLight} stopOpacity="1" />
+              <LinearGradient id="goldGradient" x1="0" y1="0" x2="1" y2="0">
+                <Stop offset="0" stopColor={colors.onboarding.gold} stopOpacity="0.6" />
+                <Stop offset="1" stopColor={colors.onboarding.gold} stopOpacity="1" />
               </LinearGradient>
             </Defs>
             {currentPath && (
               <>
                 <Path
                   d={currentPath}
-                  stroke="url(#blueGradient)"
+                  stroke="url(#goldGradient)"
                   strokeWidth={3}
                   fill="none"
                   strokeLinecap="round"
@@ -257,7 +259,7 @@ export function SessionDemoScreen({ onNext }: SessionDemoScreenProps) {
                     cx={lastPointX}
                     cy={lastPointY}
                     r={5}
-                    fill={colors.onboarding.dataLight}
+                    fill={colors.onboarding.gold}
                     stroke="#fff"
                     strokeWidth={2}
                   />
@@ -268,31 +270,17 @@ export function SessionDemoScreen({ onNext }: SessionDemoScreenProps) {
         </View>
       </Animated.View>
 
-      {/* Continue Button */}
+      {/* Swipe Hint */}
       <Animated.View
         style={[
-          styles.buttonContainer,
+          styles.swipeHint,
           {
             opacity: buttonAnim,
-            transform: [
-              {
-                translateY: buttonAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [20, 0],
-                }),
-              },
-            ],
           },
         ]}
       >
-        <TouchableOpacity
-          style={styles.button}
-          onPress={handlePress}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.buttonText}>Continue</Text>
-          <ChevronRight size={20} color="#000" />
-        </TouchableOpacity>
+        <ChevronUp size={24} color="rgba(255,255,255,0.5)" />
+        <Text style={styles.swipeText}>Swipe to continue</Text>
       </Animated.View>
     </View>
   );
@@ -309,7 +297,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: 'rgba(59, 130, 246, 0.15)',
+    backgroundColor: 'rgba(212, 168, 75, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'center',
@@ -368,30 +356,22 @@ const styles = StyleSheet.create({
     marginTop: 2,
   } as TextStyle,
   graphContainer: {
-    backgroundColor: 'rgba(0,0,0,0.2)',
-    borderRadius: 12,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    borderRadius: 16,
     overflow: 'hidden',
+    padding: 4,
   } as ViewStyle,
-  buttonContainer: {
+  swipeHint: {
     position: 'absolute',
-    bottom: 60,
-    left: 24,
-    right: 24,
-  } as ViewStyle,
-  button: {
-    flexDirection: 'row',
+    bottom: 50,
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.accent.primary,
-    paddingVertical: 18,
-    paddingHorizontal: 32,
-    borderRadius: 14,
-    gap: 8,
+    alignSelf: 'center',
+    gap: 4,
   } as ViewStyle,
-  buttonText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#000',
+  swipeText: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.5)',
+    fontWeight: '500',
   } as TextStyle,
 });
 
