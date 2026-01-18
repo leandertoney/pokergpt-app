@@ -17,7 +17,7 @@ type DailyReviewDemoScreenProps = {
   onNext: () => void;
 };
 
-type DemoPhase = 'intro' | 'question' | 'answer' | 'celebrate';
+type DemoPhase = 'intro' | 'question' | 'answer' | 'celebrate' | 'difficultyReveal';
 
 // Demo analysis stats (shown after answer)
 const DEMO_STATS = {
@@ -61,6 +61,12 @@ export function DailyReviewDemoScreen({ onNext }: DailyReviewDemoScreenProps) {
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
   const streakAnim = useRef(new Animated.Value(0)).current;
   const buttonAnim = useRef(new Animated.Value(0)).current;
+
+  // Difficulty reveal animations
+  const revealFadeAnim = useRef(new Animated.Value(0)).current;
+  const easyBadgeAnim = useRef(new Animated.Value(0)).current;
+  const mediumBadgeAnim = useRef(new Animated.Value(0)).current;
+  const hardBadgeAnim = useRef(new Animated.Value(0)).current;
 
   const demoHand = getOnboardingDemoHand();
   const cards = demoHand.heroHand.split(' ').filter(c => c.length > 0);
@@ -177,6 +183,43 @@ export function DailyReviewDemoScreen({ onNext }: DailyReviewDemoScreenProps) {
         friction: 6,
         useNativeDriver: true,
       }).start();
+
+      // Then transition to difficulty reveal after celebrating
+      setTimeout(() => {
+        setPhase('difficultyReveal');
+        // Animate the reveal
+        Animated.timing(revealFadeAnim, {
+          toValue: 1,
+          duration: 400,
+          useNativeDriver: true,
+        }).start();
+
+        // Stagger the badges
+        setTimeout(() => {
+          Animated.spring(easyBadgeAnim, {
+            toValue: 1,
+            tension: 60,
+            friction: 8,
+            useNativeDriver: true,
+          }).start();
+        }, 100);
+        setTimeout(() => {
+          Animated.spring(mediumBadgeAnim, {
+            toValue: 1,
+            tension: 60,
+            friction: 8,
+            useNativeDriver: true,
+          }).start();
+        }, 250);
+        setTimeout(() => {
+          Animated.spring(hardBadgeAnim, {
+            toValue: 1,
+            tension: 60,
+            friction: 8,
+            useNativeDriver: true,
+          }).start();
+        }, 400);
+      }, 2000);
     }, 2500);
   };
 
@@ -403,34 +446,132 @@ export function DailyReviewDemoScreen({ onNext }: DailyReviewDemoScreenProps) {
     );
   }
 
-  // Render celebrate phase
+  // Render celebrate phase (auto-transitions to difficultyReveal)
+  if (phase === 'celebrate') {
+    return (
+      <View style={styles.container}>
+        <View style={styles.celebrateContent}>
+          <Animated.View
+            style={[
+              styles.bigStreakContainer,
+              {
+                transform: [
+                  {
+                    scale: streakAnim.interpolate({
+                      inputRange: [0, 0.5, 1],
+                      outputRange: [0.5, 1.2, 1],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          >
+            <Text style={styles.bigFireEmoji}>🔥</Text>
+            <Text style={styles.bigStreakNumber}>1</Text>
+            <Text style={styles.bigStreakLabel}>Day Streak!</Text>
+          </Animated.View>
+
+          <Text style={styles.celebrateText}>
+            That's all it takes.{'\n'}
+            60 seconds a day to become a better player.
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  // Render difficulty reveal phase
   return (
     <View style={styles.container}>
-      <View style={styles.celebrateContent}>
-        <Animated.View
-          style={[
-            styles.bigStreakContainer,
-            {
-              transform: [
-                {
-                  scale: streakAnim.interpolate({
-                    inputRange: [0, 0.5, 1],
-                    outputRange: [0.5, 1.2, 1],
-                  }),
-                },
-              ],
-            },
-          ]}
-        >
-          <Text style={styles.bigFireEmoji}>🔥</Text>
-          <Text style={styles.bigStreakNumber}>1</Text>
-          <Text style={styles.bigStreakLabel}>Day Streak!</Text>
-        </Animated.View>
+      <Animated.View style={[styles.revealContent, { opacity: revealFadeAnim }]}>
+        {/* Headline */}
+        <Text style={styles.revealSubheadline}>Nice work! But...</Text>
+        <Text style={styles.revealHeadline}>That was just the warm-up</Text>
 
-        <Text style={styles.celebrateText}>
-          That's all it takes.{'\n'}
-          60 seconds a day to become a better player.
-        </Text>
+        {/* Difficulty badges */}
+        <View style={styles.badgesContainer}>
+          <Animated.View
+            style={[
+              styles.difficultyBadge,
+              styles.easyBadge,
+              {
+                opacity: easyBadgeAnim,
+                transform: [
+                  {
+                    scale: easyBadgeAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.5, 1],
+                    }),
+                  },
+                  {
+                    translateY: easyBadgeAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [20, 0],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          >
+            <Text style={styles.badgeText}>EASY</Text>
+            <Text style={styles.badgeCheck}>✓</Text>
+          </Animated.View>
+
+          <Animated.View
+            style={[
+              styles.difficultyBadge,
+              styles.mediumBadge,
+              {
+                opacity: mediumBadgeAnim,
+                transform: [
+                  {
+                    scale: mediumBadgeAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.5, 1],
+                    }),
+                  },
+                  {
+                    translateY: mediumBadgeAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [20, 0],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          >
+            <Text style={styles.badgeText}>MEDIUM</Text>
+          </Animated.View>
+
+          <Animated.View
+            style={[
+              styles.difficultyBadge,
+              styles.hardBadge,
+              {
+                opacity: hardBadgeAnim,
+                transform: [
+                  {
+                    scale: hardBadgeAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.5, 1],
+                    }),
+                  },
+                  {
+                    translateY: hardBadgeAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [20, 0],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          >
+            <Text style={styles.badgeText}>HARD</Text>
+          </Animated.View>
+        </View>
+
+        {/* Call to action */}
+        <Text style={styles.revealCta}>Ready to find your level?</Text>
 
         {/* Continue button */}
         <TouchableOpacity
@@ -438,9 +579,9 @@ export function DailyReviewDemoScreen({ onNext }: DailyReviewDemoScreenProps) {
           onPress={onNext}
           activeOpacity={0.85}
         >
-          <Text style={styles.continueButtonText}>Continue</Text>
+          <Text style={styles.continueButtonText}>Let's Go</Text>
         </TouchableOpacity>
-      </View>
+      </Animated.View>
     </View>
   );
 }
@@ -777,6 +918,68 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '700',
     color: '#fff',
+  } as TextStyle,
+  // Difficulty reveal phase
+  revealContent: {
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  } as ViewStyle,
+  revealSubheadline: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.7)',
+    marginBottom: 8,
+  } as TextStyle,
+  revealHeadline: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#fff',
+    textAlign: 'center',
+    marginBottom: 40,
+  } as TextStyle,
+  badgesContainer: {
+    flexDirection: 'row',
+    gap: 16,
+    marginBottom: 40,
+  } as ViewStyle,
+  difficultyBadge: {
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 16,
+    alignItems: 'center',
+    minWidth: 90,
+  } as ViewStyle,
+  easyBadge: {
+    backgroundColor: 'rgba(34, 197, 94, 0.2)',
+    borderWidth: 2,
+    borderColor: '#22C55E',
+  } as ViewStyle,
+  mediumBadge: {
+    backgroundColor: 'rgba(232, 184, 74, 0.2)',
+    borderWidth: 2,
+    borderColor: colors.onboarding.gold,
+  } as ViewStyle,
+  hardBadge: {
+    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+    borderWidth: 2,
+    borderColor: '#EF4444',
+  } as ViewStyle,
+  badgeText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#fff',
+    letterSpacing: 1,
+  } as TextStyle,
+  badgeCheck: {
+    fontSize: 16,
+    color: '#22C55E',
+    marginTop: 4,
+  } as TextStyle,
+  revealCta: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.8)',
+    marginBottom: 24,
   } as TextStyle,
 });
 

@@ -10,6 +10,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { MessageCircle } from 'lucide-react-native';
 import { colors } from '@/constants/colors';
+import { FavoriteButton } from './FavoriteButton';
 
 interface ChatCardProps {
   id: string;
@@ -20,6 +21,8 @@ interface ChatCardProps {
   updatedAt: number;
   onPress: () => void;
   onLongPress?: () => void;
+  isFavorite?: boolean;
+  onToggleFavorite?: () => void;
 }
 
 function formatRelativeTime(timestamp: number): string {
@@ -43,6 +46,8 @@ export function ChatCard({
   updatedAt,
   onPress,
   onLongPress,
+  isFavorite = false,
+  onToggleFavorite,
 }: ChatCardProps) {
   return (
     <TouchableOpacity
@@ -80,6 +85,15 @@ export function ChatCard({
             <Text style={styles.timestamp}>{formatRelativeTime(updatedAt)}</Text>
           </View>
         </View>
+
+        {/* Favorite Button */}
+        {onToggleFavorite && (
+          <FavoriteButton
+            isFavorite={isFavorite}
+            onToggle={onToggleFavorite}
+            style={styles.favoriteButton}
+          />
+        )}
       </LinearGradient>
     </TouchableOpacity>
   );
@@ -148,6 +162,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.text.muted,
   } as TextStyle,
+  favoriteButton: {
+    marginLeft: 8,
+    alignSelf: 'center',
+  } as ViewStyle,
 });
 
 export default ChatCard;

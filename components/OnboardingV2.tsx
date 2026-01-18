@@ -26,12 +26,13 @@ import { DailyReviewDemoScreen } from './onboarding/DailyReviewDemoScreen';
 import { ChatDemoScreen } from './onboarding/ChatDemoScreen';
 import { GoalSettingScreen } from './onboarding/GoalSettingScreen';
 import { PaywallScreen } from './onboarding/PaywallScreen';
+import { SkillLevelScreen } from './onboarding/SkillLevelScreen';
 
 import { setUserTier, setUserIdentity, setUserDisplayName, setPaywallState, setGoalConfirmation } from '@/services/storageService';
 import { updateUserIdentity as syncUserIdentityToSupabase, getOrCreateUser } from '@/services/supabaseStorage';
 import { checkSubscriptionStatus } from '@/services/revenueCat';
 import { colors } from '@/constants/colors';
-import type { UserIdentity } from '@/types/poker';
+import type { UserIdentity, ExperienceLevel } from '@/types/poker';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const SWIPE_THRESHOLD = 50; // Minimum distance for swipe
@@ -47,6 +48,7 @@ type OnboardingStep =
   | 'liveDemo'
   | 'sessionDemo'
   | 'dailyReviewDemo'
+  | 'skillLevel'
   | 'learningProgress'
   | 'comparison'
   | 'identity'
@@ -71,16 +73,49 @@ const SWIPE_FLOW: OnboardingStep[] = [
   'comparison',
 ];
 
+// All steps in order for progress calculation (excluding splash and hero)
+const ALL_STEPS: OnboardingStep[] = [
+  'chatDemo',
+  'liveDemo',
+  'sessionDemo',
+  'dailyReviewDemo',
+  'skillLevel',
+  'learningProgress',
+  'profitDemo',
+  'comparison',
+  'identity',
+  'name',
+  'goalSetting',
+  'paywall',
+  'whatYouGet',
+];
+
 export function OnboardingV2({ onComplete }: OnboardingV2Props) {
   const [step, setStep] = useState<OnboardingStep>('splash');
   const [playStyle, setPlayStyle] = useState<string>('shark');
   const [goal, setGoal] = useState<string>('profit');
   const [userName, setUserName] = useState<string | null>(null);
+  const [experienceLevel, setExperienceLevel] = useState<ExperienceLevel>('intermediate');
   const [canSwipe, setCanSwipe] = useState(true);
 
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const slideAnim = useRef(new Animated.Value(0)).current;
   const swipeAnim = useRef(new Animated.Value(0)).current;
+  const progressAnim = useRef(new Animated.Value(0)).current;
+
+  // Calculate and animate progress when step changes
+  useEffect(() => {
+    const stepIndex = ALL_STEPS.indexOf(step);
+    if (stepIndex >= 0) {
+      const progress = (stepIndex + 1) / ALL_STEPS.length;
+      Animated.spring(progressAnim, {
+        toValue: progress,
+        tension: 50,
+        friction: 10,
+        useNativeDriver: false,
+      }).start();
+    }
+  }, [step, progressAnim]);
 
   const transitionTo = useCallback((nextStep: OnboardingStep) => {
     setCanSwipe(false);
@@ -176,6 +211,11 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
     transitionTo('goalSetting');
   };
 
+  const handleSkillLevelComplete = (level: ExperienceLevel) => {
+    setExperienceLevel(level);
+    transitionTo('learningProgress');
+  };
+
   const handleGoalConfirmed = async (timestamp: number) => {
     await setGoalConfirmation({
       playStyle,
@@ -231,7 +271,7 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
 
       const identity: UserIdentity = {
         archetype: archetypeMap[playStyle] as UserIdentity['archetype'],
-        experienceLevel: 'intermediate', // Default
+        experienceLevel: experienceLevel,
         primaryGoal: goalMap[goal] as UserIdentity['primaryGoal'],
         biggestChallenge: null,
       };
@@ -273,7 +313,7 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
         return <ChatDemoScreen onNext={() => transitionTo('liveDemo')} />;
 
       case 'profitDemo':
-        return <ProfitDemoScreen onNext={() => transitionTo('learningProgress')} />;
+        return <ProfitDemoScreen onNext={() => transitionTo('comparison')} />;
 
       case 'liveDemo':
         return <LiveDemoScreen onNext={() => transitionTo('sessionDemo')} />;
@@ -282,10 +322,13 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
         return <SessionDemoScreen onNext={() => transitionTo('dailyReviewDemo')} />;
 
       case 'dailyReviewDemo':
-        return <DailyReviewDemoScreen onNext={() => transitionTo('profitDemo')} />;
+        return <DailyReviewDemoScreen onNext={() => transitionTo('skillLevel')} />;
+
+      case 'skillLevel':
+        return <SkillLevelScreen onComplete={handleSkillLevelComplete} />;
 
       case 'learningProgress':
-        return <LearningProgressScreen onNext={() => transitionTo('comparison')} />;
+        return <LearningProgressScreen onNext={() => transitionTo('profitDemo')} />;
 
       case 'comparison':
         return <ComparisonScreen onNext={() => transitionTo('identity')} />;
@@ -330,6 +373,9 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
   // Check if current step is swipeable
   const isSwipeableStep = SWIPE_FLOW.includes(step);
 
+  // Show progress bar for all steps except splash and hero
+  const showProgress = step !== 'splash' && step !== 'hero';
+
   return (
     <View style={styles.container}>
       <LinearGradient
@@ -337,6 +383,25 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
         locations={[0, 0.3, 0.7, 1]}
         style={styles.gradient}
       >
+        {/* Progress Bar */}
+        {showProgress && (
+          <View style={styles.progressContainer}>
+            <View style={styles.progressTrack}>
+              <Animated.View
+                style={[
+                  styles.progressFill,
+                  {
+                    width: progressAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ['0%', '100%'],
+                    }),
+                  },
+                ]}
+              />
+            </View>
+          </View>
+        )}
+
         <Animated.View
           style={[
             styles.content,
@@ -400,6 +465,22 @@ const styles = StyleSheet.create({
   } as ViewStyle,
   gradient: {
     flex: 1,
+  } as ViewStyle,
+  progressContainer: {
+    paddingHorizontal: 60,
+    paddingTop: 60,
+    paddingBottom: 8,
+  } as ViewStyle,
+  progressTrack: {
+    height: 3,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    borderRadius: 2,
+    overflow: 'hidden',
+  } as ViewStyle,
+  progressFill: {
+    height: '100%',
+    backgroundColor: colors.accent.gold,
+    borderRadius: 2,
   } as ViewStyle,
   content: {
     flex: 1,

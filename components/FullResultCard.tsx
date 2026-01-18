@@ -1,9 +1,91 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Animated, type ViewStyle, type TextStyle } from 'react-native';
-import { ChevronDown, ChevronUp, TrendingUp, Target, Users, Lightbulb, Calculator } from 'lucide-react-native';
-import type { AnalysisResult, HandData, AlternativeAction, ExperienceLevel } from '@/types/poker';
+import { ChevronDown, TrendingUp, Target, Users, Lightbulb, Calculator } from 'lucide-react-native';
+import { PlayingCard } from '@/components/PlayingCard';
+import type { AnalysisResult, HandData, ExperienceLevel } from '@/types/poker';
 import { colors } from '@/constants/colors';
 import { getUserIdentity } from '@/services/storageService';
+
+// Parse card string into rank and suit
+type Suit = 'h' | 'd' | 'c' | 's';
+type ParsedCard = { rank: string; suit: Suit };
+
+function parseCardString(cardStr: string): ParsedCard | null {
+  if (!cardStr || cardStr.length < 2) return null;
+
+  // Handle formats like "Th", "Ts", "T♠", "10h", etc.
+  const suitMap: Record<string, Suit> = {
+    'h': 'h', '♥': 'h', 'H': 'h',
+    'd': 'd', '♦': 'd', 'D': 'd',
+    'c': 'c', '♣': 'c', 'C': 'c',
+    's': 's', '♠': 's', 'S': 's',
+  };
+
+  const normalized = cardStr.trim();
+  const lastChar = normalized.slice(-1);
+  const suit = suitMap[lastChar];
+
+  if (!suit) return null;
+
+  let rank = normalized.slice(0, -1).toUpperCase();
+  // Handle 10 -> T
+  if (rank === '10') rank = 'T';
+
+  return { rank, suit };
+}
+
+function parseHeroHand(heroHand: string): ParsedCard[] {
+  if (!heroHand) return [];
+
+  // Handle formats: "TT", "Th Ts", "T♠ T♥", "ThTs", "pocket tens"
+  const cards: ParsedCard[] = [];
+
+  // Split by spaces or find card patterns
+  const cardPattern = /([AKQJT2-9]|10)[hdcs♥♦♣♠]/gi;
+  const matches = heroHand.match(cardPattern);
+
+  if (matches) {
+    for (const match of matches) {
+      const parsed = parseCardString(match);
+      if (parsed) cards.push(parsed);
+    }
+  }
+
+  // Handle pocket pair format like "TT" (no suits)
+  if (cards.length === 0 && heroHand.length === 2) {
+    const rank = heroHand[0].toUpperCase();
+    if (/[AKQJT2-9]/.test(rank)) {
+      // Default to spades and hearts for pocket pairs
+      cards.push({ rank, suit: 's' });
+      cards.push({ rank, suit: 'h' });
+    }
+  }
+
+  return cards;
+}
+
+function parseBoardCards(flop?: string[], turn?: string, river?: string): ParsedCard[] {
+  const cards: ParsedCard[] = [];
+
+  if (flop) {
+    for (const card of flop) {
+      const parsed = parseCardString(card);
+      if (parsed) cards.push(parsed);
+    }
+  }
+
+  if (turn) {
+    const parsed = parseCardString(turn);
+    if (parsed) cards.push(parsed);
+  }
+
+  if (river) {
+    const parsed = parseCardString(river);
+    if (parsed) cards.push(parsed);
+  }
+
+  return cards;
+}
 
 interface FullResultCardProps {
   analysis: AnalysisResult;
@@ -198,49 +280,74 @@ export function FullResultCard({ analysis, handData }: FullResultCardProps) {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      {/* Hand Summary - At Top */}
-      <View style={styles.handSummary}>
-        <Text style={styles.handSummaryTitle}>Your Hand</Text>
-        <View style={styles.handDetails}>
-          {handData?.heroHand && (
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Cards</Text>
-              <Text style={styles.detailValue}>{handData.heroHand}</Text>
+      {/* Visual Hand Display */}
+      <View style={styles.visualHandSection}>
+        {/* Hero Cards */}
+        <View style={styles.heroCardsRow}>
+          {parseHeroHand(handData?.heroHand || '').map((card, idx) => (
+            <PlayingCard
+              key={`hero-${idx}`}
+              rank={card.rank}
+              suit={card.suit}
+              size="large"
+              animateIn
+              delay={idx * 100}
+            />
+          ))}
+          {parseHeroHand(handData?.heroHand || '').length === 0 && handData?.heroHand && (
+            <View style={styles.fallbackHand}>
+              <Text style={styles.fallbackHandText}>{handData.heroHand}</Text>
             </View>
           )}
-          {handData?.heroPosition && (
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Position</Text>
-              <Text style={styles.detailValue}>
-                {handData.heroPosition}
-                {handData.villainPosition ? ` vs ${handData.villainPosition}` : ''}
-              </Text>
+        </View>
+
+        {/* Position Badge */}
+        {handData?.heroPosition && (
+          <View style={styles.positionBadge}>
+            <Text style={styles.positionText}>
+              {handData.heroPosition}
+              {handData.villainPosition ? ` vs ${handData.villainPosition}` : ''}
+            </Text>
+          </View>
+        )}
+
+        {/* Board Cards */}
+        {handData?.flop && handData.flop.length > 0 && (
+          <View style={styles.boardSection}>
+            <Text style={styles.boardLabel}>BOARD</Text>
+            <View style={styles.boardCardsRow}>
+              {parseBoardCards(handData.flop, handData.turn, handData.river).map((card, idx) => (
+                <PlayingCard
+                  key={`board-${idx}`}
+                  rank={card.rank}
+                  suit={card.suit}
+                  size="medium"
+                  animateIn
+                  delay={200 + idx * 80}
+                />
+              ))}
             </View>
-          )}
-          {handData?.flop && handData.flop.length > 0 && (
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Board</Text>
-              <Text style={styles.detailValue}>
-                {[...(handData.flop || []), handData.turn, handData.river].filter(Boolean).join(' ')}
-              </Text>
-            </View>
-          )}
+          </View>
+        )}
+
+        {/* Quick Info Row - Pot & Stack */}
+        <View style={styles.quickInfoRow}>
           {handData?.potSize !== undefined && handData?.potSize !== null && (
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Pot Size</Text>
-              <Text style={styles.detailValue}>${handData.potSize}</Text>
+            <View style={styles.quickInfoItem}>
+              <Text style={styles.quickInfoLabel}>POT</Text>
+              <Text style={styles.quickInfoValue}>${handData.potSize}</Text>
             </View>
           )}
           {(handData?.effectiveStack !== undefined || handData?.heroStack !== undefined) && (
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Effective Stack</Text>
-              <Text style={styles.detailValue}>${handData.effectiveStack ?? handData.heroStack}</Text>
+            <View style={styles.quickInfoItem}>
+              <Text style={styles.quickInfoLabel}>STACK</Text>
+              <Text style={styles.quickInfoValue}>${handData.effectiveStack ?? handData.heroStack}</Text>
             </View>
           )}
           {handData?.action && (
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Action</Text>
-              <Text style={styles.detailValue}>{handData.action}</Text>
+            <View style={[styles.quickInfoItem, styles.actionItem]}>
+              <Text style={styles.quickInfoLabel}>ACTION</Text>
+              <Text style={styles.actionText}>{handData.action}</Text>
             </View>
           )}
         </View>
@@ -376,6 +483,88 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 40,
   } as ViewStyle,
+  // Visual Hand Display Styles
+  visualHandSection: {
+    alignItems: 'center',
+    marginBottom: 24,
+    paddingBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.background.tertiary,
+  } as ViewStyle,
+  heroCardsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 12,
+  } as ViewStyle,
+  fallbackHand: {
+    backgroundColor: colors.background.tertiary,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderRadius: 12,
+  } as ViewStyle,
+  fallbackHandText: {
+    fontSize: 24,
+    fontWeight: '700' as const,
+    color: colors.text.primary,
+  } as TextStyle,
+  positionBadge: {
+    backgroundColor: colors.accent.gold,
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 16,
+    marginBottom: 16,
+  } as ViewStyle,
+  positionText: {
+    fontSize: 14,
+    fontWeight: '700' as const,
+    color: colors.text.inverse,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  } as TextStyle,
+  boardSection: {
+    alignItems: 'center',
+    marginBottom: 16,
+  } as ViewStyle,
+  boardLabel: {
+    fontSize: 11,
+    fontWeight: '600' as const,
+    color: colors.text.muted,
+    letterSpacing: 1,
+    marginBottom: 8,
+  } as TextStyle,
+  boardCardsRow: {
+    flexDirection: 'row',
+    gap: 6,
+  } as ViewStyle,
+  quickInfoRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 20,
+  } as ViewStyle,
+  quickInfoItem: {
+    alignItems: 'center',
+  } as ViewStyle,
+  quickInfoLabel: {
+    fontSize: 10,
+    fontWeight: '600' as const,
+    color: colors.text.muted,
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  } as TextStyle,
+  quickInfoValue: {
+    fontSize: 18,
+    fontWeight: '700' as const,
+    color: colors.accent.gold,
+  } as TextStyle,
+  actionItem: {
+    maxWidth: 120,
+  } as ViewStyle,
+  actionText: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: colors.text.primary,
+    textAlign: 'center',
+  } as TextStyle,
   mainRecommendation: {
     marginBottom: 20,
   } as ViewStyle,
@@ -580,38 +769,5 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     color: colors.text.primary,
     fontStyle: 'italic' as const,
-  } as TextStyle,
-  handSummary: {
-    backgroundColor: colors.background.secondary,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
-    borderLeftWidth: 4,
-    borderLeftColor: colors.accent.gold,
-  } as ViewStyle,
-  handSummaryTitle: {
-    fontSize: 14,
-    fontWeight: '600' as const,
-    color: colors.accent.gold,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 12,
-  } as TextStyle,
-  handDetails: {} as ViewStyle,
-  detailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.background.tertiary,
-  } as ViewStyle,
-  detailLabel: {
-    fontSize: 14,
-    color: colors.text.muted,
-  } as TextStyle,
-  detailValue: {
-    fontSize: 14,
-    fontWeight: '600' as const,
-    color: colors.text.primary,
   } as TextStyle,
 });

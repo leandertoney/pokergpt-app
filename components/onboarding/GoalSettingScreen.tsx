@@ -68,6 +68,7 @@ export function GoalSettingScreen({ playStyle, goal, userName, onComplete }: Goa
   const [showCelebration, setShowCelebration] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
 
+  const scrollViewRef = useRef<ScrollView>(null);
   const headerAnim = useRef(new Animated.Value(0)).current;
   const cardAnim = useRef(new Animated.Value(0)).current;
   const signatureAnim = useRef(new Animated.Value(0)).current;
@@ -198,6 +199,13 @@ export function GoalSettingScreen({ playStyle, goal, userName, onComplete }: Goa
 
   const displayName = userName || 'Player';
 
+  // Scroll to signature section when input is focused
+  const handleInputFocus = () => {
+    setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, 100);
+  };
+
   return (
     <KeyboardAvoidingView
       style={styles.keyboardAvoid}
@@ -234,6 +242,7 @@ export function GoalSettingScreen({ playStyle, goal, userName, onComplete }: Goa
       ))}
 
       <ScrollView
+        ref={scrollViewRef}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -336,6 +345,7 @@ export function GoalSettingScreen({ playStyle, goal, userName, onComplete }: Goa
             style={styles.signatureInput}
             value={initials}
             onChangeText={(text) => setInitials(text.toUpperCase().slice(0, 3))}
+            onFocus={handleInputFocus}
             placeholder="ABC"
             placeholderTextColor="rgba(255,255,255,0.3)"
             maxLength={3}
@@ -414,7 +424,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 24,
-    paddingVertical: 40,
+    paddingTop: 40,
+    paddingBottom: 120, // Extra padding for keyboard
   } as ViewStyle,
   container: {
     flex: 1,

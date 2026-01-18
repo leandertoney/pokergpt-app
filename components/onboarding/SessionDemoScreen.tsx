@@ -193,7 +193,7 @@ export function SessionDemoScreen({ onNext }: SessionDemoScreenProps) {
         }}
       >
         <View style={styles.logoContainer}>
-          <AnimatedLogo variant={1} size="medium" loop />
+          <AnimatedLogo variant={1} size="small" loop />
         </View>
         <Text style={styles.headline}>Your poker journey</Text>
         <Text style={styles.subheadline}>Track everything, improve always.</Text>

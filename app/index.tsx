@@ -1,11 +1,12 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { View, StyleSheet, Text, TouchableOpacity, FlatList, Animated, KeyboardAvoidingView, Platform, type ViewStyle, type TextStyle } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Settings, MessageCircle } from 'lucide-react-native';
+import { Settings, MessageCircle, Star } from 'lucide-react-native';
 import { SpotifyHandCard } from '@/components/SpotifyHandCard';
 import { ChatCard } from '@/components/ChatCard';
-import { HomeTabBar, type HomeTab } from '@/components/HomeTabBar';
+import { SwipeableRow } from '@/components/SwipeableRow';
+import { FilterChips, type FilterOption } from '@/components/FilterChips';
 import { SearchBottomBar } from '@/components/SearchBottomBar';
 import { FullResultCard } from '@/components/FullResultCard';
 import { LoadingIndicator } from '@/components/LoadingIndicator';
@@ -14,10 +15,16 @@ import { OnboardingV2, checkOnboardingComplete } from '@/components/OnboardingV2
 import { DailyReviewCard } from '@/components/DailyReviewCard';
 import { useHandHistory, type StoredHandEntryWithName } from '@/hooks/useHandHistory';
 import { useChatHistory } from '@/hooks/useChatHistory';
+import { useFavorites } from '@/hooks/useFavorites';
 import { useAuth } from '@/contexts/AuthContext';
 import { colors } from '@/constants/colors';
 import type { HandData, AnalysisResult } from '@/types/poker';
 import type { ChatConversation } from '@/types/chat';
+
+// Type for combined list items (hands + chats)
+type CombinedListItem =
+  | { type: 'hand'; data: StoredHandEntryWithName; timestamp: number }
+  | { type: 'chat'; data: ChatConversation; timestamp: number };
 
 const { height: screenHeight } = require('react-native').Dimensions.get('window');
 const OPENAI_API_KEY = process.env.EXPO_PUBLIC_OPENAI_API_KEY || '';
@@ -26,19 +33,26 @@ const OPENAI_API_KEY = process.env.EXPO_PUBLIC_OPENAI_API_KEY || '';
 const DEMO_HAND: { handData: HandData; analysis: AnalysisResult; handName: string } = {
   handData: {
     id: 'demo-hand',
-    heroHand: 'A♠ K♠',
+    heroHand: 'As Ks',
     heroPosition: 'CO',
     villainPosition: 'BTN',
     action: '3-bets to $35',
     potSize: 55,
     effectiveStack: 200,
+    flop: ['Kh', '7d', '2c'],
   },
   analysis: {
-    recommendedAction: 'call',
+    recommendedAction: 'Call',
     confidence: 78,
     reasoning: 'Strong suited broadway hand with position. Calling keeps villain\'s bluffs in while maintaining playability postflop.',
     gtoLine: 'Call and play in position postflop',
     exploitLine: 'Consider 4-betting vs aggressive opponents',
+    // Math education fields
+    equity: 72,
+    potOdds: 2.6,
+    outs: 5,
+    outBreakdown: 'Top pair with 5 outs to improve: 2 aces to trips, 3 kings to two pair',
+    riskLevel: 'medium',
   },
   handName: '3-Bet Pot with AKs',
 };
@@ -52,17 +66,21 @@ export default function HomeScreen() {
   const [isCheckingOnboarding, setIsCheckingOnboarding] = useState(true);
 
   // Hand history
-  const { hands, isLoading, isRefreshing, error, refresh, searchQuery, setSearchQuery, submitSearch } = useHandHistory();
+  const { hands, isLoading, isRefreshing, error, refresh, searchQuery, setSearchQuery, submitSearch, deleteHand } = useHandHistory();
 
   // Chat history
   const {
     chats,
     isRefreshing: isChatsRefreshing,
     refresh: refreshChats,
+    deleteChat,
   } = useChatHistory();
 
-  // Active tab state
-  const [activeTab, setActiveTab] = useState<HomeTab>('hands');
+  // Favorites
+  const { isFavorite, toggleFavorite, getFavoriteHandIds, getFavoriteChatIds } = useFavorites();
+
+  // Active filter state
+  const [activeFilter, setActiveFilter] = useState<FilterOption>('all');
 
   // Selected hand for detail view
   const [selectedHand, setSelectedHand] = useState<StoredHandEntryWithName | null>(null);
@@ -140,10 +158,78 @@ export default function HomeScreen() {
     });
   }, [router]);
 
-  // Handle tab change
-  const handleTabChange = useCallback((tab: HomeTab) => {
-    setActiveTab(tab);
+  // Handle filter change
+  const handleFilterChange = useCallback((filter: FilterOption) => {
+    setActiveFilter(filter);
   }, []);
+
+  // Get filtered content based on active filter
+  const getFilteredContent = useMemo((): CombinedListItem[] => {
+    const favoriteHandIds = getFavoriteHandIds();
+    const favoriteChatIds = getFavoriteChatIds();
+
+    switch (activeFilter) {
+      case 'all': {
+        // Combine hands and chats, sorted by date
+        const handItems: CombinedListItem[] = hands.map(h => ({
+          type: 'hand' as const,
+          data: h,
+          timestamp: h.createdAt ? new Date(h.createdAt).getTime() : 0,
+        }));
+        const chatItems: CombinedListItem[] = chats.map(c => ({
+          type: 'chat' as const,
+          data: c,
+          timestamp: c.updatedAt,
+        }));
+        return [...handItems, ...chatItems].sort((a, b) => b.timestamp - a.timestamp);
+      }
+      case 'hands':
+        return hands.map(h => ({
+          type: 'hand' as const,
+          data: h,
+          timestamp: h.createdAt ? new Date(h.createdAt).getTime() : 0,
+        }));
+      case 'chats':
+        return chats.map(c => ({
+          type: 'chat' as const,
+          data: c,
+          timestamp: c.updatedAt,
+        }));
+      case 'favorites': {
+        // Only favorited items
+        const favoriteHands: CombinedListItem[] = hands
+          .filter(h => h.handData.id && favoriteHandIds.has(h.handData.id))
+          .map(h => ({
+            type: 'hand' as const,
+            data: h,
+            timestamp: h.createdAt ? new Date(h.createdAt).getTime() : 0,
+          }));
+        const favoriteChats: CombinedListItem[] = chats
+          .filter(c => favoriteChatIds.has(c.id))
+          .map(c => ({
+            type: 'chat' as const,
+            data: c,
+            timestamp: c.updatedAt,
+          }));
+        return [...favoriteHands, ...favoriteChats].sort((a, b) => b.timestamp - a.timestamp);
+      }
+      default:
+        return [];
+    }
+  }, [activeFilter, hands, chats, getFavoriteHandIds, getFavoriteChatIds]);
+
+  // Filter counts for badges
+  const filterCounts = useMemo(() => {
+    const favoriteHandIds = getFavoriteHandIds();
+    const favoriteChatIds = getFavoriteChatIds();
+    return {
+      all: hands.length + chats.length,
+      hands: hands.length,
+      chats: chats.length,
+      favorites: hands.filter(h => h.handData.id && favoriteHandIds.has(h.handData.id)).length +
+                 chats.filter(c => favoriteChatIds.has(c.id)).length,
+    };
+  }, [hands, chats, getFavoriteHandIds, getFavoriteChatIds]);
 
   if (isCheckingOnboarding) {
     return (
@@ -201,6 +287,18 @@ export default function HomeScreen() {
       >
         <Text style={styles.startChatText}>Start a Chat</Text>
       </TouchableOpacity>
+    </View>
+  );
+
+  const renderFavoritesEmptyState = () => (
+    <View style={styles.emptyStateContainer}>
+      <View style={styles.favoritesEmptyIcon}>
+        <Star size={48} color={colors.accent.gold} />
+      </View>
+      <Text style={styles.emptyTitle}>No Favorites Yet</Text>
+      <Text style={styles.emptySubtext}>
+        Tap the star on any hand or chat to save it here
+      </Text>
     </View>
   );
 
@@ -265,65 +363,77 @@ export default function HomeScreen() {
               {/* Daily Review Card */}
               <DailyReviewCard />
 
-              {/* Tab Bar */}
-              <HomeTabBar
-                activeTab={activeTab}
-                onTabChange={handleTabChange}
-                handsCount={hands.length}
-                chatsCount={chats.length}
+              {/* Filter Chips */}
+              <FilterChips
+                activeFilter={activeFilter}
+                onFilterChange={handleFilterChange}
+                counts={filterCounts}
               />
 
-              {/* Content based on active tab */}
-              {activeTab === 'hands' ? (
-                <FlatList
-                  data={hands}
-                  keyExtractor={(item) => item.handData.id || `hand-${Math.random()}`}
-                  renderItem={({ item }) => (
-                    <SpotifyHandCard
-                      heroHand={item.handData.heroHand || '?? ??'}
-                      handName={item.handName}
-                      position={item.handData.heroPosition}
-                      villainPosition={item.handData.villainPosition}
-                      createdAt={item.createdAt}
-                      onPress={() => handleSelectHand(item)}
-                    />
-                  )}
-                  contentContainerStyle={[
-                    styles.listContent,
-                    hands.length === 0 && styles.emptyListContent,
-                  ]}
-                  ListEmptyComponent={renderHandsEmptyState}
-                  showsVerticalScrollIndicator={false}
-                  keyboardShouldPersistTaps="handled"
-                  refreshing={isRefreshing}
-                  onRefresh={refresh}
-                />
-              ) : (
-                <FlatList
-                  data={chats}
-                  keyExtractor={(item) => item.id}
-                  renderItem={({ item }) => (
-                    <ChatCard
-                      id={item.id}
-                      title={item.title}
-                      preview={item.preview}
-                      messageCount={item.messageCount}
-                      createdAt={item.createdAt}
-                      updatedAt={item.updatedAt}
-                      onPress={() => handleSelectChat(item)}
-                    />
-                  )}
-                  contentContainerStyle={[
-                    styles.listContent,
-                    chats.length === 0 && styles.emptyListContent,
-                  ]}
-                  ListEmptyComponent={renderChatsEmptyState}
-                  showsVerticalScrollIndicator={false}
-                  keyboardShouldPersistTaps="handled"
-                  refreshing={isChatsRefreshing}
-                  onRefresh={refreshChats}
-                />
-              )}
+              {/* Content based on active filter */}
+              <FlatList
+                data={getFilteredContent}
+                keyExtractor={(item) =>
+                  item.type === 'hand'
+                    ? item.data.handData.id || `hand-${item.timestamp}`
+                    : item.data.id
+                }
+                renderItem={({ item }) => {
+                  if (item.type === 'hand') {
+                    const hand = item.data;
+                    const handId = hand.handData.id || '';
+                    return (
+                      <SwipeableRow onDelete={() => deleteHand(handId)}>
+                        <SpotifyHandCard
+                          heroHand={hand.handData.heroHand || '?? ??'}
+                          handName={hand.handName}
+                          position={hand.handData.heroPosition}
+                          villainPosition={hand.handData.villainPosition}
+                          createdAt={hand.createdAt}
+                          onPress={() => handleSelectHand(hand)}
+                          isFavorite={isFavorite(handId, 'hand')}
+                          onToggleFavorite={() => toggleFavorite(handId, 'hand')}
+                        />
+                      </SwipeableRow>
+                    );
+                  } else {
+                    const chat = item.data;
+                    return (
+                      <SwipeableRow onDelete={() => deleteChat(chat.id)}>
+                        <ChatCard
+                          id={chat.id}
+                          title={chat.title}
+                          preview={chat.preview}
+                          messageCount={chat.messageCount}
+                          createdAt={chat.createdAt}
+                          updatedAt={chat.updatedAt}
+                          onPress={() => handleSelectChat(chat)}
+                          isFavorite={isFavorite(chat.id, 'chat')}
+                          onToggleFavorite={() => toggleFavorite(chat.id, 'chat')}
+                        />
+                      </SwipeableRow>
+                    );
+                  }
+                }}
+                contentContainerStyle={[
+                  styles.listContent,
+                  getFilteredContent.length === 0 && styles.emptyListContent,
+                ]}
+                ListEmptyComponent={
+                  activeFilter === 'favorites'
+                    ? renderFavoritesEmptyState
+                    : activeFilter === 'chats'
+                      ? renderChatsEmptyState
+                      : renderHandsEmptyState
+                }
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+                refreshing={isRefreshing || isChatsRefreshing}
+                onRefresh={() => {
+                  refresh();
+                  refreshChats();
+                }}
+              />
 
               {/* Search Bar with Speak Button */}
               <SearchBottomBar
@@ -492,6 +602,15 @@ const styles = StyleSheet.create({
     height: 80,
     borderRadius: 40,
     backgroundColor: 'rgba(255, 58, 58, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  } as ViewStyle,
+  favoritesEmptyIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(232, 184, 74, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,

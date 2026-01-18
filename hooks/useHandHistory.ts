@@ -1,7 +1,8 @@
 import { useState, useCallback } from 'react';
 import { useFocusEffect } from 'expo-router';
-import { getHandHistory } from '@/services/supabaseStorage';
+import { getHandHistory, deleteHand as deleteHandFromStorage } from '@/services/supabaseStorage';
 import { generateText } from '@/services/supabaseAI';
+import * as Haptics from 'expo-haptics';
 import type { HandData, AnalysisResult } from '@/types/poker';
 
 export interface StoredHandEntry {
@@ -355,6 +356,18 @@ Only return the JSON array, nothing else.`;
     searchHands(searchQuery);
   }, [searchQuery, searchHands]);
 
+  // Delete a hand
+  const deleteHand = useCallback(async (handId: string) => {
+    // Optimistic update - remove from state immediately
+    setHands(prev => prev.filter(h => h.handData.id !== handId));
+    setFilteredHands(prev => prev.filter(h => h.handData.id !== handId));
+
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+    // Delete from storage
+    await deleteHandFromStorage(handId);
+  }, []);
+
   return {
     hands: filteredHands,
     allHands: hands,
@@ -366,5 +379,6 @@ Only return the JSON array, nothing else.`;
     setSearchQuery: handleSearch,
     submitSearch,
     refresh: handleRefresh,
+    deleteHand,
   };
 }

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, type ViewStyle, type TextStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '@/constants/colors';
+import { FavoriteButton } from './FavoriteButton';
 
 interface SpotifyHandCardProps {
   heroHand: string;
@@ -10,6 +11,8 @@ interface SpotifyHandCardProps {
   villainPosition?: string;
   createdAt?: string;
   onPress: () => void;
+  isFavorite?: boolean;
+  onToggleFavorite?: () => void;
 }
 
 function formatRelativeTime(dateString?: string): string {
@@ -65,6 +68,8 @@ export function SpotifyHandCard({
   villainPosition,
   createdAt,
   onPress,
+  isFavorite = false,
+  onToggleFavorite,
 }: SpotifyHandCardProps) {
   // Split hero hand into individual cards
   const cards = heroHand.split(' ').filter(c => c.length > 0);
@@ -111,6 +116,15 @@ export function SpotifyHandCard({
           </View>
 
         </View>
+
+        {/* Favorite Button */}
+        {onToggleFavorite && (
+          <FavoriteButton
+            isFavorite={isFavorite}
+            onToggle={onToggleFavorite}
+            style={styles.favoriteButton}
+          />
+        )}
       </LinearGradient>
     </TouchableOpacity>
   );
@@ -238,4 +252,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.text.muted,
   } as TextStyle,
+  favoriteButton: {
+    marginLeft: 8,
+  } as ViewStyle,
 });

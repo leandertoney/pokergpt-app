@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { colors } from '@/constants/colors';
+import { AnimatedLogo } from '@/components/AnimatedLogo';
 
 type QuickIdentityScreenProps = {
   onComplete: (playStyle: string, goal: string) => void;
@@ -120,6 +121,24 @@ export function QuickIdentityScreen({ onComplete }: QuickIdentityScreenProps) {
 
   return (
     <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
+      {/* Logo */}
+      <Animated.View
+        style={{
+          opacity: headlineAnim,
+          marginBottom: 20,
+          transform: [
+            {
+              scale: headlineAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0.8, 1],
+              }),
+            },
+          ],
+        }}
+      >
+        <AnimatedLogo variant={1} size="small" loop />
+      </Animated.View>
+
       {/* Headline */}
       <Animated.View
         style={{

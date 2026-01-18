@@ -229,6 +229,36 @@ export async function getHandHistory(): Promise<
   }
 }
 
+export async function deleteHand(handId: string): Promise<boolean> {
+  if (!isSupabaseConfigured() || !supabase) {
+    return false;
+  }
+
+  try {
+    const user = await getOrCreateUser();
+    if (!user) return false;
+
+    // Find and delete the hand with matching hand_data.id
+    const { data: hands } = await supabase
+      .from("hands")
+      .select("id, hand_data")
+      .eq("user_id", user.id);
+
+    const handToDelete = hands?.find(
+      (h) => (h.hand_data as HandData)?.id === handId
+    );
+
+    if (handToDelete) {
+      await supabase.from("hands").delete().eq("id", handToDelete.id);
+      return true;
+    }
+
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 export async function isOnboardingComplete(): Promise<boolean> {
   if (!isSupabaseConfigured() || !supabase) {
     return false;

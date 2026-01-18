@@ -112,14 +112,23 @@ Ask about ONE thing at a time. Make it feel natural, not like a form.`;
         hybridLine: analysis.hybridLine || "",
         villainRange: analysis.villainRange || "",
         confidence: analysis.confidence || 60,
+        reasoning: analysis.reasoning || "",
+        // Math education fields
+        equity: analysis.equity,
+        potOdds: analysis.potOdds,
+        impliedOdds: analysis.impliedOdds,
+        outs: analysis.outs,
+        outBreakdown: analysis.outBreakdown,
+        riskLevel: analysis.riskLevel,
+        alternativeActions: analysis.alternativeActions,
         structuralAnalysis: {
           gtoAction: analysis.gtoLine || "",
           rangeCommentary: analysis.villainRange || "",
         },
-        personaAnalysis: {
+        personaAnalysis: analysis.personaAnalysis || {
           tone: 'mentor',
           narrative: "",
-          keyInsights: (analysis as any).keyInsights || [],
+          keyInsights: [],
         },
         timestamp: Date.now(),
       };

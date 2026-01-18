@@ -199,7 +199,7 @@ export function ProfileBuiltScreen({ playStyle, goal, userName, onNext }: Profil
           ],
         }}
       >
-        <AnimatedLogo variant={1} size="medium" loop />
+        <AnimatedLogo variant={1} size="small" loop />
         <Text style={styles.perfectText}>
           {userName ? `Perfect, ${userName}.` : 'Perfect.'}
         </Text>

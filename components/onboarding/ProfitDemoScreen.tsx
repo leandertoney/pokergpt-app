@@ -173,7 +173,7 @@ export function ProfitDemoScreen({ onNext }: ProfitDemoScreenProps) {
         }}
       >
         <View style={styles.logoContainer}>
-          <AnimatedLogo variant={1} size="medium" loop />
+          <AnimatedLogo variant={1} size="small" loop />
         </View>
         <Text style={styles.headline}>Track every session.</Text>
         <Text style={styles.headline}>Watch your bankroll grow.</Text>

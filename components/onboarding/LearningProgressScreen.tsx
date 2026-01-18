@@ -128,7 +128,7 @@ export function LearningProgressScreen({ onNext }: LearningProgressScreenProps) 
         }}
       >
         <View style={styles.logoContainer}>
-          <AnimatedLogo variant={1} size="medium" loop />
+          <AnimatedLogo variant={1} size="small" loop />
         </View>
         <Text style={styles.headline}>Level up your game</Text>
         <Text style={styles.subheadline}>Track what you're learning</Text>

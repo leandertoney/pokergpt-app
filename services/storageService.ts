@@ -534,3 +534,78 @@ export async function clearAllChats(): Promise<void> {
     console.error('Error clearing chats:', error);
   }
 }
+
+// ============================================
+// Favorites Storage
+// ============================================
+
+import type { FavoriteItem } from '@/types/favorites';
+
+const FAVORITES_STORAGE_KEY = '@poker_favorites';
+
+// Get all favorites
+export async function getFavorites(): Promise<FavoriteItem[]> {
+  try {
+    const stored = await AsyncStorage.getItem(FAVORITES_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch (error) {
+    console.error('Error getting favorites:', error);
+    return [];
+  }
+}
+
+// Add a favorite
+export async function addFavorite(id: string, type: 'hand' | 'chat'): Promise<void> {
+  try {
+    const favorites = await getFavorites();
+
+    // Check if already favorited
+    const exists = favorites.some(f => f.id === id && f.type === type);
+    if (exists) return;
+
+    const newFavorite: FavoriteItem = {
+      id,
+      type,
+      favoritedAt: Date.now(),
+    };
+
+    favorites.unshift(newFavorite);
+    await AsyncStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(favorites));
+    console.log('Favorite added:', id, type);
+  } catch (error) {
+    console.error('Error adding favorite:', error);
+  }
+}
+
+// Remove a favorite
+export async function removeFavorite(id: string, type: 'hand' | 'chat'): Promise<void> {
+  try {
+    const favorites = await getFavorites();
+    const filtered = favorites.filter(f => !(f.id === id && f.type === type));
+    await AsyncStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(filtered));
+    console.log('Favorite removed:', id, type);
+  } catch (error) {
+    console.error('Error removing favorite:', error);
+  }
+}
+
+// Check if item is favorited
+export async function isFavorited(id: string, type: 'hand' | 'chat'): Promise<boolean> {
+  try {
+    const favorites = await getFavorites();
+    return favorites.some(f => f.id === id && f.type === type);
+  } catch (error) {
+    console.error('Error checking favorite:', error);
+    return false;
+  }
+}
+
+// Clear all favorites
+export async function clearAllFavorites(): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(FAVORITES_STORAGE_KEY);
+    console.log('All favorites cleared');
+  } catch (error) {
+    console.error('Error clearing favorites:', error);
+  }
+}

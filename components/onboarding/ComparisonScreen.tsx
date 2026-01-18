@@ -184,7 +184,7 @@ export function ComparisonScreen({ onNext }: ComparisonScreenProps) {
         }}
       >
         <View style={styles.logoContainer}>
-          <AnimatedLogo variant={1} size="medium" loop />
+          <AnimatedLogo variant={1} size="small" loop />
         </View>
         <Text style={styles.headline}>They're getting better.</Text>
         <Text style={styles.subheadline}>PokerGPT players vs the rest</Text>

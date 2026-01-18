@@ -6,6 +6,7 @@ import {
   Animated,
   TouchableOpacity,
   Image,
+  ScrollView,
   type ViewStyle,
   type TextStyle,
   type ImageStyle,
@@ -29,6 +30,12 @@ const DEMO_MESSAGES: DemoMessage[] = [
   { role: 'assistant', content: "With top pair on a wet board, I'd lean towards a call. What was the bet sizing?" },
   { role: 'user', content: "He bet 2/3 pot" },
   { role: 'assistant', content: "Pot odds of ~2.5:1 means you need 28% equity. Top pair likely has that. ✓ Call was correct" },
+  { role: 'user', content: "What about when I have a flush draw?" },
+  { role: 'assistant', content: "Flush draws have ~35% equity on the flop. Consider stack sizes and implied odds." },
+  { role: 'user', content: "And if the board pairs?" },
+  { role: 'assistant', content: "Board pairing reduces flush value. Watch for full houses - sometimes check-calling is best." },
+  { role: 'user', content: "This is exactly what I needed!" },
+  { role: 'assistant', content: "Happy to help! Keep asking - the more context, the better my analysis." },
 ];
 
 export function ChatDemoScreen({ onNext }: ChatDemoScreenProps) {
@@ -36,10 +43,36 @@ export function ChatDemoScreen({ onNext }: ChatDemoScreenProps) {
   const [showTyping, setShowTyping] = useState(false);
   const [animationComplete, setAnimationComplete] = useState(false);
 
+  const scrollViewRef = useRef<ScrollView>(null);
   const titleAnim = useRef(new Animated.Value(0)).current;
-  const cardAnim = useRef(new Animated.Value(0)).current;
   const buttonAnim = useRef(new Animated.Value(0)).current;
   const messageAnims = useRef(DEMO_MESSAGES.map(() => new Animated.Value(0))).current;
+
+  // Animated typing dots
+  const dotAnim1 = useRef(new Animated.Value(0.3)).current;
+  const dotAnim2 = useRef(new Animated.Value(0.3)).current;
+  const dotAnim3 = useRef(new Animated.Value(0.3)).current;
+
+  // Start dot animation when typing indicator shows
+  useEffect(() => {
+    if (showTyping) {
+      const animateDots = () => {
+        Animated.sequence([
+          Animated.timing(dotAnim1, { toValue: 1, duration: 300, useNativeDriver: true }),
+          Animated.timing(dotAnim2, { toValue: 1, duration: 300, useNativeDriver: true }),
+          Animated.timing(dotAnim3, { toValue: 1, duration: 300, useNativeDriver: true }),
+          Animated.parallel([
+            Animated.timing(dotAnim1, { toValue: 0.3, duration: 200, useNativeDriver: true }),
+            Animated.timing(dotAnim2, { toValue: 0.3, duration: 200, useNativeDriver: true }),
+            Animated.timing(dotAnim3, { toValue: 0.3, duration: 200, useNativeDriver: true }),
+          ]),
+        ]).start(() => {
+          if (showTyping) animateDots();
+        });
+      };
+      animateDots();
+    }
+  }, [showTyping, dotAnim1, dotAnim2, dotAnim3]);
 
   useEffect(() => {
     const sequence = async () => {
@@ -51,16 +84,7 @@ export function ChatDemoScreen({ onNext }: ChatDemoScreenProps) {
         useNativeDriver: true,
       }).start();
 
-      // Phase 2: Card entrance
-      await delay(400);
-      Animated.spring(cardAnim, {
-        toValue: 1,
-        tension: 60,
-        friction: 8,
-        useNativeDriver: true,
-      }).start();
-
-      // Phase 3: Messages appear with typing indicators
+      // Phase 2: Start messages
       await delay(600);
 
       for (let i = 0; i < DEMO_MESSAGES.length; i++) {
@@ -69,7 +93,7 @@ export function ChatDemoScreen({ onNext }: ChatDemoScreenProps) {
         if (message.role === 'assistant') {
           // Show typing indicator before AI messages
           setShowTyping(true);
-          await delay(600);
+          await delay(500);
           setShowTyping(false);
         }
 
@@ -82,16 +106,21 @@ export function ChatDemoScreen({ onNext }: ChatDemoScreenProps) {
           useNativeDriver: true,
         }).start();
 
+        // Auto-scroll to bottom
+        setTimeout(() => {
+          scrollViewRef.current?.scrollToEnd({ animated: true });
+        }, 50);
+
         if (i === DEMO_MESSAGES.length - 1) {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         } else {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         }
 
-        await delay(message.role === 'user' ? 400 : 600);
+        await delay(message.role === 'user' ? 350 : 500);
       }
 
-      // Phase 4: Swipe hint
+      // Phase 3: Swipe hint
       await delay(400);
       setAnimationComplete(true);
       Animated.loop(
@@ -124,6 +153,8 @@ export function ChatDemoScreen({ onNext }: ChatDemoScreenProps) {
 
   const renderMessage = (message: DemoMessage, index: number) => {
     const isUser = message.role === 'user';
+    // Slide in from left for assistant, right for user
+    const slideDirection = isUser ? 50 : -50;
 
     return (
       <Animated.View
@@ -135,15 +166,15 @@ export function ChatDemoScreen({ onNext }: ChatDemoScreenProps) {
             opacity: messageAnims[index],
             transform: [
               {
-                scale: messageAnims[index].interpolate({
+                translateX: messageAnims[index].interpolate({
                   inputRange: [0, 1],
-                  outputRange: [0.8, 1],
+                  outputRange: [slideDirection, 0],
                 }),
               },
               {
-                translateY: messageAnims[index].interpolate({
+                scale: messageAnims[index].interpolate({
                   inputRange: [0, 1],
-                  outputRange: [10, 0],
+                  outputRange: [0.9, 1],
                 }),
               },
             ],
@@ -184,9 +215,9 @@ export function ChatDemoScreen({ onNext }: ChatDemoScreenProps) {
       </View>
       <View style={[styles.messageBubble, styles.assistantBubble, styles.typingBubble]}>
         <View style={styles.typingDots}>
-          <View style={[styles.dot, { opacity: 0.4 }]} />
-          <View style={[styles.dot, { opacity: 0.6 }]} />
-          <View style={[styles.dot, { opacity: 0.8 }]} />
+          <Animated.View style={[styles.dot, { opacity: dotAnim1 }]} />
+          <Animated.View style={[styles.dot, { opacity: dotAnim2 }]} />
+          <Animated.View style={[styles.dot, { opacity: dotAnim3 }]} />
         </View>
       </View>
     </View>
@@ -249,28 +280,18 @@ export function ChatDemoScreen({ onNext }: ChatDemoScreenProps) {
         Ask any question, get expert analysis
       </Animated.Text>
 
-      {/* Chat Card */}
-      <Animated.View
-        style={[
-          styles.chatCard,
-          {
-            opacity: cardAnim,
-            transform: [
-              {
-                scale: cardAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0.9, 1],
-                }),
-              },
-            ],
-          },
-        ]}
+      {/* Chat Messages - no container border */}
+      <ScrollView
+        ref={scrollViewRef}
+        style={styles.messagesContainer}
+        contentContainerStyle={styles.messagesContent}
+        showsVerticalScrollIndicator={false}
       >
         {DEMO_MESSAGES.slice(0, visibleMessages).map((message, index) =>
           renderMessage(message, index)
         )}
         {showTyping && renderTypingIndicator()}
-      </Animated.View>
+      </ScrollView>
 
       {/* Swipe Hint */}
       <Animated.View
@@ -309,16 +330,15 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: 'rgba(255,255,255,0.6)',
     textAlign: 'center',
-    marginBottom: 24,
+    marginBottom: 20,
   } as TextStyle,
-  chatCard: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 20,
-    padding: 16,
+  messagesContainer: {
+    flex: 1,
     width: '100%',
-    gap: 12,
+  } as ViewStyle,
+  messagesContent: {
+    paddingVertical: 8,
+    gap: 14,
   } as ViewStyle,
   messageRow: {
     flexDirection: 'row',
@@ -331,23 +351,21 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
   } as ViewStyle,
   avatarContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    width: 32,
+    height: 32,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 10,
+    marginRight: 8,
   } as ViewStyle,
   avatarImage: {
-    width: 28,
-    height: 28,
-    borderRadius: 6,
+    width: 32,
+    height: 32,
+    borderRadius: 8,
   } as ImageStyle,
   messageBubble: {
-    maxWidth: '80%',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    maxWidth: '78%',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     borderRadius: 18,
   } as ViewStyle,
   userBubble: {
@@ -359,21 +377,21 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 4,
   } as ViewStyle,
   messageText: {
-    fontSize: 15,
+    fontSize: 14,
     color: colors.text.primary,
-    lineHeight: 21,
+    lineHeight: 20,
   } as TextStyle,
   userText: {
     fontWeight: '500',
     color: colors.text.inverse,
   } as TextStyle,
   typingBubble: {
-    paddingVertical: 14,
-    paddingHorizontal: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 18,
   } as ViewStyle,
   typingDots: {
     flexDirection: 'row',
-    gap: 4,
+    gap: 5,
   } as ViewStyle,
   dot: {
     width: 8,

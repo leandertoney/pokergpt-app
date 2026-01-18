@@ -5,7 +5,7 @@ import {
   DEFAULT_DAILY_REVIEW_STATE,
   TrainingHand
 } from '@/types/dailyReview';
-import { StoredHand, PlayerArchetype } from '@/types/poker';
+import { StoredHand, PlayerArchetype, ExperienceLevel } from '@/types/poker';
 import { getHandHistory, getUserIdentity } from './storageService';
 import { TRAINING_HANDS, getRandomTrainingHand } from '@/data/trainingHands';
 
@@ -72,10 +72,11 @@ export async function getNextReviewHand(): Promise<ReviewHandData | null> {
     return convertStoredHandToReviewHand(unreviewedUserHand);
   }
 
-  // If no user hands, get a training hand
+  // If no user hands, get a training hand based on skill level
   const trainingHand = getNextTrainingHand(
     state.reviewedHandIds,
-    userIdentity?.archetype || null
+    userIdentity?.archetype || null,
+    userIdentity?.experienceLevel || null
   );
 
   if (trainingHand) {
@@ -139,8 +140,31 @@ function findBestUserHand(hands: StoredHand[], excludeIds: string[]): StoredHand
   return scored[0]?.hand || null;
 }
 
-// Get next training hand based on user archetype
-function getNextTrainingHand(excludeIds: string[], archetype: PlayerArchetype | null): TrainingHand | null {
+// Get difficulty weights based on user's skill level
+function getDifficultyWeights(level: ExperienceLevel | null): { beginner: number; intermediate: number; advanced: number } {
+  switch (level) {
+    case 'beginner':
+      // Beginners: 60% easy, 30% medium, 10% hard
+      return { beginner: 0.60, intermediate: 0.30, advanced: 0.10 };
+    case 'intermediate':
+      // Intermediate: 25% easy, 50% medium, 25% hard
+      return { beginner: 0.25, intermediate: 0.50, advanced: 0.25 };
+    case 'advanced':
+    case 'professional':
+      // Advanced: 10% easy, 30% medium, 60% hard
+      return { beginner: 0.10, intermediate: 0.30, advanced: 0.60 };
+    default:
+      // Default fallback (slightly easier mix)
+      return { beginner: 0.30, intermediate: 0.40, advanced: 0.30 };
+  }
+}
+
+// Get next training hand based on user archetype and skill level
+function getNextTrainingHand(
+  excludeIds: string[],
+  archetype: PlayerArchetype | null,
+  experienceLevel: ExperienceLevel | null
+): TrainingHand | null {
   let available = TRAINING_HANDS.filter(h => !excludeIds.includes(h.id));
 
   // If archetype set, prefer matching hands
@@ -155,23 +179,28 @@ function getNextTrainingHand(excludeIds: string[], archetype: PlayerArchetype | 
 
   if (available.length === 0) return null;
 
-  // Mix of difficulties, slight preference for intermediate
-  const weights = {
+  // Get skill-based weights
+  const weights = getDifficultyWeights(experienceLevel);
+
+  // Categorize available hands by difficulty
+  const pools = {
     beginner: available.filter(h => h.difficulty === 'beginner'),
     intermediate: available.filter(h => h.difficulty === 'intermediate'),
     advanced: available.filter(h => h.difficulty === 'advanced'),
   };
 
-  // Pick category based on weighted random
+  // Pick category based on weighted random (using cumulative weights)
   const rand = Math.random();
   let pool: TrainingHand[];
-  if (rand < 0.3 && weights.beginner.length > 0) {
-    pool = weights.beginner;
-  } else if (rand < 0.7 && weights.intermediate.length > 0) {
-    pool = weights.intermediate;
-  } else if (weights.advanced.length > 0) {
-    pool = weights.advanced;
+
+  if (rand < weights.beginner && pools.beginner.length > 0) {
+    pool = pools.beginner;
+  } else if (rand < weights.beginner + weights.intermediate && pools.intermediate.length > 0) {
+    pool = pools.intermediate;
+  } else if (pools.advanced.length > 0) {
+    pool = pools.advanced;
   } else {
+    // Fallback to any available hand
     pool = available;
   }
 
