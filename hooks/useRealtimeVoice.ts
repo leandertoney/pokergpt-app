@@ -6,9 +6,7 @@
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Platform } from 'react-native';
-import { Audio } from 'expo-av';
-import { setAudioModeAsync, AudioModule } from 'expo-audio';
+import { Audio, InterruptionModeIOS, InterruptionModeAndroid } from 'expo-av';
 import {
   OpenAIRealtimeService,
   getRealtimeService,
@@ -58,16 +56,48 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions) {
   const audioPlayerRef = useRef<PCMAudioPlayer | null>(null);
   const audioRecorderRef = useRef<PCMAudioRecorder | null>(null);
   const isActiveRef = useRef(false);
+  const isDisconnectingRef = useRef(false);
 
-  // Update state and notify callback
+  // Buffer for accumulating user transcripts until turn is complete
+  const transcriptBufferRef = useRef<string>('');
+  // Buffer for AI message that arrived before user transcript
+  const pendingAIMessageRef = useRef<string>('');
+  // Flag to track if we're waiting for user transcript after they spoke
+  const awaitingUserTranscriptRef = useRef(false);
+
+  // Refs for stable callback access (avoid stale closures)
+  const voiceStateRef = useRef(voiceState);
+  const onUserTranscriptRef = useRef(onUserTranscript);
+  const onAITranscriptRef = useRef(onAITranscript);
+  const onErrorRef = useRef(onError);
+  const onStateChangeRef = useRef(onStateChange);
+
+  // Keep refs in sync with values
+  useEffect(() => { voiceStateRef.current = voiceState; }, [voiceState]);
+  useEffect(() => { onUserTranscriptRef.current = onUserTranscript; }, [onUserTranscript]);
+  useEffect(() => { onAITranscriptRef.current = onAITranscript; }, [onAITranscript]);
+  useEffect(() => { onErrorRef.current = onError; }, [onError]);
+  useEffect(() => { onStateChangeRef.current = onStateChange; }, [onStateChange]);
+
+  // Update state and notify callback (uses refs to avoid stale closures)
   const updateState = useCallback((newState: RealtimeVoiceState) => {
+    console.log('[RealtimeVoice] State change:', voiceStateRef.current, '->', newState);
     setVoiceState(newState);
-    onStateChange?.(newState);
-  }, [onStateChange]);
+    voiceStateRef.current = newState;
+    onStateChangeRef.current?.(newState);
+  }, []);
 
-  // Add message to conversation history
+  // Add message to conversation history (with deduplication)
   const addMessage = useCallback((role: 'user' | 'assistant', content: string) => {
-    setMessages(prev => [...prev, { role, content, timestamp: Date.now() }]);
+    setMessages(prev => {
+      // Prevent duplicate consecutive messages with same role and content
+      const lastMessage = prev[prev.length - 1];
+      if (lastMessage && lastMessage.role === role && lastMessage.content === content) {
+        console.log('[RealtimeVoice] Skipping duplicate message');
+        return prev;
+      }
+      return [...prev, { role, content, timestamp: Date.now() }];
+    });
   }, []);
 
   // Initialize audio player and recorder
@@ -81,51 +111,126 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions) {
     };
   }, []);
 
-  // Setup realtime callbacks
+  // Start streaming audio to the realtime service
+  const startAudioStreaming = useCallback(async () => {
+    if (!audioRecorderRef.current || !serviceRef.current) return;
+
+    try {
+      // Configure audio mode for recording using expo-av
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: false,
+        interruptionModeIOS: InterruptionModeIOS.DuckOthers,
+        interruptionModeAndroid: InterruptionModeAndroid.DuckOthers,
+        shouldDuckAndroid: true,
+        playThroughEarpieceAndroid: false,
+      });
+
+      // Start recording with callback for each audio chunk
+      await audioRecorderRef.current.start((base64Chunk: string) => {
+        // Send audio chunk to OpenAI Realtime
+        serviceRef.current?.sendAudioChunk(base64Chunk);
+      });
+
+      console.log('[RealtimeVoice] Audio streaming started');
+    } catch (error) {
+      console.error('[RealtimeVoice] Failed to start audio streaming:', error);
+      onErrorRef.current?.(error);
+    }
+  }, []);
+
+  // Ref for startAudioStreaming to use in callbacks
+  const startAudioStreamingRef = useRef(startAudioStreaming);
+  useEffect(() => { startAudioStreamingRef.current = startAudioStreaming; }, [startAudioStreaming]);
+
+  // Setup realtime callbacks - uses refs for stable access
   const setupCallbacks = useCallback((): RealtimeCallbacks => ({
     onSessionCreated: () => {
       console.log('[RealtimeVoice] Session created, ready to listen');
       updateState('listening');
       // Start recording and streaming audio
-      startAudioStreaming();
+      startAudioStreamingRef.current();
     },
 
     onSpeechStarted: () => {
       console.log('[RealtimeVoice] User started speaking');
       // If AI is speaking, this is an interruption
-      if (voiceState === 'speaking') {
+      if (voiceStateRef.current === 'speaking') {
         console.log('[RealtimeVoice] Interruption detected!');
         serviceRef.current?.cancelResponse();
         audioPlayerRef.current?.stop();
+        // Clear buffer for new turn after interruption
+        transcriptBufferRef.current = '';
       }
       updateState('listening');
     },
 
     onSpeechStopped: () => {
       console.log('[RealtimeVoice] User stopped speaking');
+      // Mark that we're waiting for the user transcript to arrive
+      awaitingUserTranscriptRef.current = true;
       updateState('processing');
     },
 
     onUserTranscript: (transcript: string) => {
       console.log('[RealtimeVoice] User said:', transcript);
-      setCurrentUserTranscript(transcript);
-      onUserTranscript?.(transcript);
-      addMessage('user', transcript);
+      // Accumulate transcripts
+      if (transcriptBufferRef.current) {
+        transcriptBufferRef.current += ' ' + transcript;
+      } else {
+        transcriptBufferRef.current = transcript;
+      }
+      // Show in live transcript view
+      setCurrentUserTranscript(transcriptBufferRef.current);
+      onUserTranscriptRef.current?.(transcript);
+
+      // User transcript has arrived - add it to messages NOW
+      if (transcriptBufferRef.current) {
+        addMessage('user', transcriptBufferRef.current);
+        console.log('[RealtimeVoice] Added user message:', transcriptBufferRef.current);
+        transcriptBufferRef.current = '';
+        setCurrentUserTranscript('');
+      }
+
+      // No longer waiting for user transcript
+      awaitingUserTranscriptRef.current = false;
+
+      // If there's a pending AI message that arrived before this, add it now
+      if (pendingAIMessageRef.current) {
+        addMessage('assistant', pendingAIMessageRef.current);
+        console.log('[RealtimeVoice] Added buffered AI message');
+        pendingAIMessageRef.current = '';
+      }
     },
 
     onTranscript: (transcript: string, isFinal: boolean) => {
       console.log('[RealtimeVoice] AI transcript:', transcript, 'final:', isFinal);
-      setCurrentAITranscript(transcript);
-      onAITranscript?.(transcript, isFinal);
+      onAITranscriptRef.current?.(transcript, isFinal);
+
       if (isFinal) {
-        addMessage('assistant', transcript);
+        // Clear streaming transcript - it's now going into messages
+        setCurrentAITranscript('');
+
+        // If we're still waiting for user transcript, buffer this AI message
+        if (awaitingUserTranscriptRef.current) {
+          console.log('[RealtimeVoice] Buffering AI message until user transcript arrives');
+          pendingAIMessageRef.current = transcript;
+        } else {
+          // User transcript already arrived, add AI message directly
+          addMessage('assistant', transcript);
+        }
+      } else {
+        // Only update streaming transcript for non-final (partial) updates
+        setCurrentAITranscript(transcript);
       }
     },
 
     onAudioResponse: (audioBase64: string) => {
       // Play audio chunk immediately for low latency
+      // User message is now added in onTranscript to ensure correct ordering
       audioPlayerRef.current?.playChunk(audioBase64);
-      if (voiceState !== 'speaking') {
+      if (voiceStateRef.current !== 'speaking') {
         updateState('speaking');
       }
     },
@@ -143,54 +248,31 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions) {
     onError: (error: any) => {
       console.error('[RealtimeVoice] Error:', error);
       updateState('error');
-      onError?.(error);
+      onErrorRef.current?.(error);
     },
-  }), [voiceState, updateState, onUserTranscript, onAITranscript, onError, addMessage]);
-
-  // Start streaming audio to the realtime service
-  const startAudioStreaming = useCallback(async () => {
-    if (!audioRecorderRef.current || !serviceRef.current) return;
-
-    try {
-      // Configure audio mode for recording
-      await setAudioModeAsync({
-        allowsRecording: true,
-        playsInSilentMode: true,
-      });
-
-      // Start recording with callback for each audio chunk
-      await audioRecorderRef.current.start((base64Chunk: string) => {
-        // Send audio chunk to OpenAI Realtime
-        serviceRef.current?.sendAudioChunk(base64Chunk);
-      });
-
-      console.log('[RealtimeVoice] Audio streaming started');
-    } catch (error) {
-      console.error('[RealtimeVoice] Failed to start audio streaming:', error);
-      onError?.(error);
-    }
-  }, [onError]);
+  }), [updateState, addMessage]);  // Only stable refs used, no stale closures
 
   // Connect to OpenAI Realtime
   const connect = useCallback(async () => {
-    if (isConnected || voiceState === 'connecting') {
+    if (isConnected || voiceStateRef.current === 'connecting') {
       console.log('[RealtimeVoice] Already connected or connecting');
       return;
     }
 
     if (!openaiApiKey) {
       const error = new Error('OpenAI API key is required');
-      onError?.(error);
+      onErrorRef.current?.(error);
       return;
     }
 
     console.log('[RealtimeVoice] Connecting...');
     updateState('connecting');
     isActiveRef.current = true;
+    isDisconnectingRef.current = false;
 
     try {
-      // Request microphone permission
-      const permissionResponse = await AudioModule.requestRecordingPermissionsAsync();
+      // Request microphone permission using expo-av
+      const permissionResponse = await Audio.requestPermissionsAsync();
       if (permissionResponse.status !== 'granted') {
         throw new Error('Microphone permission denied');
       }
@@ -206,13 +288,20 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions) {
     } catch (error) {
       console.error('[RealtimeVoice] Connection failed:', error);
       updateState('error');
-      onError?.(error);
+      onErrorRef.current?.(error);
       isActiveRef.current = false;
     }
-  }, [isConnected, voiceState, openaiApiKey, updateState, setupCallbacks, onError]);
+  }, [isConnected, openaiApiKey, updateState, setupCallbacks]);
 
   // Disconnect from OpenAI Realtime
   const disconnect = useCallback(async () => {
+    // Prevent double disconnect
+    if (isDisconnectingRef.current) {
+      console.log('[RealtimeVoice] Already disconnecting, skipping');
+      return;
+    }
+    isDisconnectingRef.current = true;
+
     console.log('[RealtimeVoice] Disconnecting...');
     isActiveRef.current = false;
 
@@ -231,28 +320,30 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions) {
     updateState('idle');
     setCurrentUserTranscript('');
     setCurrentAITranscript('');
+    transcriptBufferRef.current = '';
 
+    isDisconnectingRef.current = false;
     console.log('[RealtimeVoice] Disconnected');
   }, [updateState]);
 
   // Toggle connection (tap to start/stop)
   const toggle = useCallback(async () => {
-    if (isConnected || voiceState === 'connecting') {
+    if (isConnected || voiceStateRef.current === 'connecting') {
       await disconnect();
     } else {
       await connect();
     }
-  }, [isConnected, voiceState, connect, disconnect]);
+  }, [isConnected, connect, disconnect]);
 
   // Interrupt current AI response
   const interrupt = useCallback(() => {
-    if (voiceState === 'speaking') {
+    if (voiceStateRef.current === 'speaking') {
       console.log('[RealtimeVoice] Manual interruption');
       serviceRef.current?.cancelResponse();
       audioPlayerRef.current?.stop();
       updateState('listening');
     }
-  }, [voiceState, updateState]);
+  }, [updateState]);
 
   // Send text message (for testing or hybrid input)
   const sendText = useCallback((text: string) => {
@@ -278,6 +369,15 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions) {
     };
   }, []);
 
+  // Volume control
+  const setVolume = useCallback((volume: number) => {
+    audioPlayerRef.current?.setVolume(volume);
+  }, []);
+
+  const getVolume = useCallback(() => {
+    return audioPlayerRef.current?.getVolume() ?? 0.8;
+  }, []);
+
   return {
     // State
     voiceState,
@@ -301,6 +401,10 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions) {
     toggle,
     interrupt,
     sendText,
+
+    // Volume control
+    setVolume,
+    getVolume,
 
     // Clear conversation
     clearMessages: () => setMessages([]),

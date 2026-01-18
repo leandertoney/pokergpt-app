@@ -3,15 +3,10 @@
  *
  * Handles PCM16 audio recording and playback for real-time voice streaming.
  * OpenAI Realtime API requires PCM16 format at 24kHz sample rate.
- *
- * Note: Expo doesn't natively support streaming PCM audio, so we use
- * a chunked recording approach that approximates real-time streaming.
  */
 
 import { Audio, InterruptionModeIOS, InterruptionModeAndroid } from 'expo-av';
-import { setAudioModeAsync, useAudioRecorder, RecordingPresets, AudioModule } from 'expo-audio';
 import * as FileSystem from 'expo-file-system/legacy';
-import { Platform } from 'react-native';
 
 // OpenAI Realtime API expects 24kHz PCM16 mono
 const SAMPLE_RATE = 24000;
@@ -25,11 +20,34 @@ const CHUNK_DURATION_MS = 100; // Send audio every 100ms for low latency
  * Plays PCM16 audio chunks received from OpenAI Realtime API.
  * Converts PCM16 to WAV format for playback through expo-av.
  */
+// Audio amplification gain - OpenAI's audio is quiet, boost it significantly
+const AUDIO_GAIN = 5.0;
+
 export class PCMAudioPlayer {
   private sound: Audio.Sound | null = null;
   private audioQueue: string[] = [];
   private isPlaying = false;
   private onCompleteCallback: (() => void) | null = null;
+  private volume: number = 1.0; // Default volume (0.0 to 1.0)
+
+  /**
+   * Set playback volume
+   * @param volume Number between 0.0 (silent) and 1.0 (full volume)
+   */
+  setVolume(volume: number): void {
+    this.volume = Math.max(0, Math.min(1, volume));
+    // Update current sound if playing
+    if (this.sound) {
+      this.sound.setVolumeAsync(this.volume).catch(() => {});
+    }
+  }
+
+  /**
+   * Get current volume
+   */
+  getVolume(): number {
+    return this.volume;
+  }
 
   /**
    * Queue and play a PCM16 audio chunk
@@ -87,10 +105,10 @@ export class PCMAudioPlayer {
         playThroughEarpieceAndroid: false,
       });
 
-      // Create and play sound
+      // Create and play sound with volume setting
       const { sound } = await Audio.Sound.createAsync(
         { uri: tempFile },
-        { shouldPlay: true }
+        { shouldPlay: true, volume: this.volume }
       );
 
       this.sound = sound;
@@ -115,7 +133,7 @@ export class PCMAudioPlayer {
   }
 
   /**
-   * Convert PCM16 base64 to WAV base64
+   * Convert PCM16 base64 to WAV base64 with amplification
    */
   private pcmToWav(base64PCM: string): string {
     // Decode base64 to binary
@@ -125,13 +143,16 @@ export class PCMAudioPlayer {
       pcmData[i] = binaryString.charCodeAt(i);
     }
 
+    // Amplify the PCM audio data (PCM16 is signed 16-bit little-endian)
+    const amplifiedData = this.amplifyPCM(pcmData);
+
     // Create WAV header
-    const wavHeader = this.createWavHeader(pcmData.length);
+    const wavHeader = this.createWavHeader(amplifiedData.length);
 
     // Combine header and PCM data
-    const wavData = new Uint8Array(wavHeader.length + pcmData.length);
+    const wavData = new Uint8Array(wavHeader.length + amplifiedData.length);
     wavData.set(wavHeader, 0);
-    wavData.set(pcmData, wavHeader.length);
+    wavData.set(amplifiedData, wavHeader.length);
 
     // Convert to base64
     let binary = '';
@@ -139,6 +160,44 @@ export class PCMAudioPlayer {
       binary += String.fromCharCode(wavData[i]);
     }
     return btoa(binary);
+  }
+
+  /**
+   * Amplify PCM16 audio data
+   * PCM16 is signed 16-bit little-endian (-32768 to 32767)
+   */
+  private amplifyPCM(pcmData: Uint8Array): Uint8Array {
+    const amplified = new Uint8Array(pcmData.length);
+
+    // Process samples (2 bytes per sample for 16-bit)
+    for (let i = 0; i < pcmData.length; i += 2) {
+      // Read signed 16-bit little-endian sample
+      const low = pcmData[i];
+      const high = pcmData[i + 1];
+      let sample = (high << 8) | low;
+
+      // Convert to signed (two's complement)
+      if (sample >= 32768) {
+        sample -= 65536;
+      }
+
+      // Apply gain
+      sample = Math.round(sample * AUDIO_GAIN);
+
+      // Clamp to prevent clipping
+      sample = Math.max(-32768, Math.min(32767, sample));
+
+      // Convert back to unsigned for storage
+      if (sample < 0) {
+        sample += 65536;
+      }
+
+      // Write back as little-endian
+      amplified[i] = sample & 0xff;
+      amplified[i + 1] = (sample >> 8) & 0xff;
+    }
+
+    return amplified;
   }
 
   /**
@@ -203,6 +262,13 @@ export class PCMAudioPlayer {
   }
 
   /**
+   * Clear queued audio without fully stopping
+   */
+  clearQueue(): void {
+    this.audioQueue = [];
+  }
+
+  /**
    * Register callback for when playback completes
    */
   onPlaybackComplete(callback: () => void): void {
@@ -214,10 +280,7 @@ export class PCMAudioPlayer {
  * PCM Audio Recorder
  *
  * Records audio and provides PCM16 chunks for streaming.
- * Uses expo-audio for recording with chunked output.
- *
- * Note: This is an approximation of streaming - true streaming requires
- * native module access that expo-audio doesn't provide.
+ * Uses expo-av for recording with chunked output.
  */
 export class PCMAudioRecorder {
   private recording: Audio.Recording | null = null;
@@ -226,10 +289,38 @@ export class PCMAudioRecorder {
   private recordingInterval: ReturnType<typeof setInterval> | null = null;
 
   /**
+   * Safely cleanup any existing recording before starting a new one
+   */
+  private async cleanupExistingRecording(): Promise<void> {
+    if (this.recording) {
+      try {
+        const status = await this.recording.getStatusAsync();
+        if (status.isRecording) {
+          await this.recording.stopAndUnloadAsync();
+        } else if (status.canRecord) {
+          // Recording is prepared but not recording - try to stop and unload
+          try {
+            await this.recording.stopAndUnloadAsync();
+          } catch {
+            // May fail if not actually prepared, ignore
+          }
+        }
+      } catch (error) {
+        // Recording may already be unloaded or in invalid state, ignore
+        console.log('[PCMAudioRecorder] Cleanup: recording already unloaded or invalid');
+      }
+      this.recording = null;
+    }
+  }
+
+  /**
    * Start recording and streaming audio chunks
    * @param onChunk Callback for each audio chunk (base64 PCM16)
    */
   async start(onChunk: (base64Chunk: string) => void): Promise<void> {
+    // Clean up any existing recording first to avoid "Only one Recording" error
+    await this.cleanupExistingRecording();
+
     if (this.isRecording) {
       console.warn('[PCMAudioRecorder] Already recording');
       return;
@@ -240,13 +331,14 @@ export class PCMAudioRecorder {
 
     try {
       // Configure audio mode for recording
+      // Use DuckOthers instead of DoNotMix to allow VAD to work properly
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: true,
         playsInSilentModeIOS: true,
         staysActiveInBackground: false,
-        interruptionModeIOS: InterruptionModeIOS.DoNotMix,
-        interruptionModeAndroid: InterruptionModeAndroid.DoNotMix,
-        shouldDuckAndroid: false,
+        interruptionModeIOS: InterruptionModeIOS.DuckOthers,
+        interruptionModeAndroid: InterruptionModeAndroid.DuckOthers,
+        shouldDuckAndroid: true,
         playThroughEarpieceAndroid: false,
       });
 
@@ -265,11 +357,12 @@ export class PCMAudioRecorder {
    * Start the recording loop that extracts chunks periodically
    */
   private async startRecordingLoop(): Promise<void> {
-    // Use expo-av Recording API for chunked recording
+    // Ensure no existing recording before creating new one
+    await this.cleanupExistingRecording();
+
     const recording = new Audio.Recording();
 
     try {
-      // Prepare with high-quality settings closest to PCM16 24kHz
       await recording.prepareToRecordAsync({
         android: {
           extension: '.wav',
@@ -300,22 +393,19 @@ export class PCMAudioRecorder {
       this.recording = recording;
 
       // Periodically extract and send audio chunks
-      // This is a workaround since we can't get streaming PCM from expo-av
       this.recordingInterval = setInterval(async () => {
         if (!this.isRecording || !this.recording) return;
 
         try {
-          // Get current recording status
           const status = await this.recording.getStatusAsync();
 
           if (status.isRecording && status.durationMillis > 0) {
-            // Every interval, we restart the recording and send the previous chunk
             await this.extractAndSendChunk();
           }
         } catch (error) {
           console.error('[PCMAudioRecorder] Error in recording loop:', error);
         }
-      }, CHUNK_DURATION_MS * 2); // Extract every 200ms for balance between latency and stability
+      }, CHUNK_DURATION_MS * 2);
     } catch (error) {
       console.error('[PCMAudioRecorder] Failed to start recording loop:', error);
       throw error;
@@ -326,32 +416,38 @@ export class PCMAudioRecorder {
    * Extract current audio and send as chunk, then restart recording
    */
   private async extractAndSendChunk(): Promise<void> {
-    if (!this.recording || !this.chunkCallback) return;
+    // Capture recording reference to avoid race conditions
+    const currentRecording = this.recording;
+    if (!currentRecording || !this.chunkCallback) return;
 
     try {
-      // Stop current recording
-      await this.recording.stopAndUnloadAsync();
-      const uri = this.recording.getURI();
+      // Get URI before stopping (some implementations clear it after unload)
+      const uri = currentRecording.getURI();
+
+      // Stop and unload the current recording
+      await currentRecording.stopAndUnloadAsync();
+      // Clear the reference immediately after stopping
+      this.recording = null;
 
       if (uri) {
-        // Read the audio file
         const base64Audio = await FileSystem.readAsStringAsync(uri, {
           encoding: FileSystem.EncodingType.Base64,
         });
 
-        // Extract PCM data from WAV (skip 44-byte header)
         const pcmBase64 = this.extractPCMFromWav(base64Audio);
 
-        if (pcmBase64) {
+        if (pcmBase64 && this.chunkCallback) {
+          console.log('[PCMAudioRecorder] Sending audio chunk, length:', pcmBase64.length);
           this.chunkCallback(pcmBase64);
         }
 
-        // Clean up file
-        await FileSystem.deleteAsync(uri, { idempotent: true });
+        await FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => {});
       }
 
       // Start new recording if still active
       if (this.isRecording) {
+        // Ensure cleanup before creating new recording
+        await this.cleanupExistingRecording();
         const newRecording = new Audio.Recording();
         await newRecording.prepareToRecordAsync({
           android: {
@@ -383,6 +479,45 @@ export class PCMAudioRecorder {
       }
     } catch (error) {
       console.error('[PCMAudioRecorder] Error extracting chunk:', error);
+      // Don't let errors stop the recording loop - try to restart
+      if (this.isRecording) {
+        // Cleanup any existing recording before restart
+        await this.cleanupExistingRecording();
+        // Restart recording after error
+        try {
+          const newRecording = new Audio.Recording();
+          await newRecording.prepareToRecordAsync({
+            android: {
+              extension: '.wav',
+              outputFormat: Audio.AndroidOutputFormat.DEFAULT,
+              audioEncoder: Audio.AndroidAudioEncoder.DEFAULT,
+              sampleRate: SAMPLE_RATE,
+              numberOfChannels: CHANNELS,
+              bitRate: SAMPLE_RATE * CHANNELS * BITS_PER_SAMPLE,
+            },
+            ios: {
+              extension: '.wav',
+              outputFormat: Audio.IOSOutputFormat.LINEARPCM,
+              audioQuality: Audio.IOSAudioQuality.HIGH,
+              sampleRate: SAMPLE_RATE,
+              numberOfChannels: CHANNELS,
+              bitRate: SAMPLE_RATE * CHANNELS * BITS_PER_SAMPLE,
+              linearPCMBitDepth: 16,
+              linearPCMIsBigEndian: false,
+              linearPCMIsFloat: false,
+            },
+            web: {
+              mimeType: 'audio/wav',
+              bitsPerSecond: SAMPLE_RATE * CHANNELS * BITS_PER_SAMPLE,
+            },
+          });
+          await newRecording.startAsync();
+          this.recording = newRecording;
+          console.log('[PCMAudioRecorder] Recording restarted after error');
+        } catch (restartError) {
+          console.error('[PCMAudioRecorder] Failed to restart recording:', restartError);
+        }
+      }
     }
   }
 
@@ -391,18 +526,13 @@ export class PCMAudioRecorder {
    */
   private extractPCMFromWav(wavBase64: string): string | null {
     try {
-      // Decode base64
       const binaryString = atob(wavBase64);
 
-      // WAV header is 44 bytes, skip it to get PCM data
       if (binaryString.length <= 44) {
         return null;
       }
 
-      // Extract PCM data (after 44-byte header)
       const pcmBinary = binaryString.slice(44);
-
-      // Re-encode as base64
       return btoa(pcmBinary);
     } catch (error) {
       console.error('[PCMAudioRecorder] Error extracting PCM:', error);
@@ -414,24 +544,17 @@ export class PCMAudioRecorder {
    * Stop recording
    */
   async stop(): Promise<void> {
+    // Set flag first to prevent recording loop from creating new recordings
     this.isRecording = false;
 
+    // Clear the interval before stopping recording to prevent race conditions
     if (this.recordingInterval) {
       clearInterval(this.recordingInterval);
       this.recordingInterval = null;
     }
 
-    if (this.recording) {
-      try {
-        const status = await this.recording.getStatusAsync();
-        if (status.isRecording) {
-          await this.recording.stopAndUnloadAsync();
-        }
-      } catch (error) {
-        // Ignore cleanup errors
-      }
-      this.recording = null;
-    }
+    // Use cleanup helper for proper recording cleanup
+    await this.cleanupExistingRecording();
 
     this.chunkCallback = null;
     console.log('[PCMAudioRecorder] Recording stopped');

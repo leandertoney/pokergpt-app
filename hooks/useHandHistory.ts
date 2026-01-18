@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useCallback } from 'react';
+import { useFocusEffect } from 'expo-router';
 import { getHandHistory } from '@/services/supabaseStorage';
 import { generateText } from '@/services/supabaseAI';
 import type { HandData, AnalysisResult } from '@/types/poker';
@@ -225,15 +226,20 @@ const USE_MOCK_DATA = false;
 export function useHandHistory() {
   const [hands, setHands] = useState<StoredHandEntryWithName[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredHands, setFilteredHands] = useState<StoredHandEntryWithName[]>([]);
   const [isSearching, setIsSearching] = useState(false);
 
   // Load hands from storage
-  const loadHands = useCallback(async () => {
+  const loadHands = useCallback(async (isRefresh = false) => {
     try {
-      setIsLoading(true);
+      if (isRefresh) {
+        setIsRefreshing(true);
+      } else {
+        setIsLoading(true);
+      }
       setError(null);
 
       if (USE_MOCK_DATA) {
@@ -249,13 +255,21 @@ export function useHandHistory() {
       setError(err instanceof Error ? err : new Error('Failed to load hand history'));
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   }, []);
 
-  // Initial load
-  useEffect(() => {
-    loadHands();
+  // Manual refresh (pull-to-refresh)
+  const handleRefresh = useCallback(() => {
+    loadHands(true);
   }, [loadHands]);
+
+  // Load on initial mount and when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      loadHands();
+    }, [loadHands])
+  );
 
   // Search hands using AI for natural language understanding
   const searchHands = useCallback(async (query: string) => {
@@ -345,11 +359,12 @@ Only return the JSON array, nothing else.`;
     hands: filteredHands,
     allHands: hands,
     isLoading,
+    isRefreshing,
     isSearching,
     error,
     searchQuery,
     setSearchQuery: handleSearch,
     submitSearch,
-    refresh: loadHands,
+    refresh: handleRefresh,
   };
 }

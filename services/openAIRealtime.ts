@@ -91,26 +91,35 @@ export class OpenAIRealtimeService {
   private configureSession(): void {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
 
-    // Configure the session for poker hand analysis with Grok personality
+    // Configure the session for poker hand analysis - concise coaching style
     const sessionConfig = {
       type: 'session.update',
       session: {
         modalities: ['text', 'audio'],
-        instructions: `You are Grok, an expert poker coach with a sharp wit and direct style. You analyze hands with precision while keeping things engaging and sometimes irreverent.
+        instructions: `You are a poker coach helping users review hands they've already played. Keep responses SHORT - 1-2 sentences max.
 
-Key behaviors:
-- Be direct and confident in your recommendations
-- Use poker terminology naturally
-- Add personality - be playful or sarcastic when appropriate
-- Focus on actionable insights, not just theory
-- Call out mistakes honestly but constructively
-- Ask clarifying questions naturally: "What position are you in?" "What's the pot size?"
+CRITICAL: Listen carefully. NEVER ask about something the user already told you.
 
-Voice style: Speak like a friend at the poker table who happens to be a pro - knowledgeable but not stuffy. Keep responses concise - this is a conversation, not a lecture.
+Poker terminology you MUST understand:
+- "Folded to me" = no one called or raised before them
+- "Limped" or "limpers" = called the big blind
+- "3-bet" = re-raised
+- "4-bet" = re-raised the 3-bet
+- "In position" = acting last
+- "Out of position" = acting first
+- "Straddle" = blind raise, usually 2x BB
+- "It checked around" = no one bet
 
-When you have enough information, give a clear recommendation like "I'd raise here to 85" followed by brief reasoning.
+Your job: Ask ONE clarifying question at a time for MISSING details only:
+- Position (if not mentioned)
+- Stack sizes or effective stacks
+- What action they took or are facing
+- Board texture (if postflop)
 
-Start with a casual greeting like "Hey, what hand are we looking at?" and let them describe the situation naturally.`,
+When you have enough info, give a clear verdict on whether they played it right.
+Don't lecture. Don't explain theory. Just help them think through it.
+
+Start by asking: "What hand are we looking at?"`,
         voice: 'echo',
         input_audio_format: 'pcm16',
         output_audio_format: 'pcm16',
@@ -185,7 +194,7 @@ Start with a casual greeting like "Hey, what hand are we looking at?" and let th
 
   sendAudioChunk(base64Audio: string): void {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      console.warn('WebSocket not connected');
+      console.warn('WebSocket not connected, cannot send audio');
       return;
     }
 
@@ -193,6 +202,10 @@ Start with a casual greeting like "Hey, what hand are we looking at?" and let th
       type: 'input_audio_buffer.append',
       audio: base64Audio,
     }));
+    // Log periodically to avoid spam
+    if (Math.random() < 0.1) {
+      console.log('[OpenAIRealtime] Sent audio chunk to server');
+    }
   }
 
   commitAudioBuffer(): void {
