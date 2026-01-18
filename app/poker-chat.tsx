@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import {
   View,
   FlatList,
@@ -14,7 +14,9 @@ import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, Send } from 'lucide-react-native';
 import { ChatMessage, TypingIndicator } from '@/components/ChatMessage';
+import { SpecialOfferBanner } from '@/components/SpecialOfferBanner';
 import { usePokerChat } from '@/hooks/usePokerChat';
+import { shouldShowSpecialOffer, markSpecialOfferShown, setUserTier } from '@/services/storageService';
 import { colors } from '@/constants/colors';
 import type { ChatMessage as ChatMessageType } from '@/services/pokerAI';
 
@@ -22,17 +24,60 @@ export default function PokerChatScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const flatListRef = useRef<FlatList>(null);
-  const { heroHand } = useLocalSearchParams<{ heroHand?: string }>();
+  const { heroHand, chatId } = useLocalSearchParams<{ heroHand?: string; chatId?: string }>();
 
-  // Pre-fill input with hole cards if passed from card picker
+  // Pre-fill input with hole cards if passed from card picker (only for new chats)
   const [inputText, setInputText] = useState(() => {
-    if (heroHand) {
-      return `I have ${heroHand}. `;
+    if (heroHand && !chatId) {
+      return `I had ${heroHand}. `;
     }
     return '';
   });
 
-  const { messages, isLoading, sendMessage } = usePokerChat();
+  // Pass chatId to load existing conversation
+  const { messages, isLoading, sendMessage, isInitialized } = usePokerChat(
+    chatId ? { chatId } : undefined
+  );
+
+  // Special offer state
+  const [showSpecialOffer, setShowSpecialOffer] = useState(false);
+  const hasCheckedOffer = useRef(false);
+
+  // Check if we should show special offer after first assistant response
+  useEffect(() => {
+    // Only check once per session and when there's an assistant message
+    if (hasCheckedOffer.current) return;
+
+    const assistantMessages = messages.filter(m => m.role === 'assistant');
+    if (assistantMessages.length > 0 && !isLoading) {
+      hasCheckedOffer.current = true;
+
+      // Check if user qualifies for special offer (skipped paywall, hasn't seen offer)
+      (async () => {
+        const shouldShow = await shouldShowSpecialOffer();
+        if (shouldShow) {
+          // Small delay so user can see their analysis first
+          setTimeout(() => {
+            setShowSpecialOffer(true);
+          }, 2000);
+        }
+      })();
+    }
+  }, [messages, isLoading]);
+
+  // Handle special offer acceptance
+  const handleSpecialOfferAccept = useCallback(async () => {
+    console.log('User accepted special offer - lifetime plan at $49');
+    await setUserTier('paid');
+    await markSpecialOfferShown();
+    setShowSpecialOffer(false);
+  }, []);
+
+  // Handle special offer dismissal
+  const handleSpecialOfferDismiss = useCallback(async () => {
+    await markSpecialOfferShown();
+    setShowSpecialOffer(false);
+  }, []);
 
   // Scroll to bottom when new messages arrive
   useEffect(() => {
@@ -63,7 +108,7 @@ export default function PokerChatScreen() {
       <Stack.Screen
         options={{
           headerShown: true,
-          title: 'Poker Assistant',
+          title: chatId ? 'Continue Chat' : 'Poker Assistant',
           headerStyle: {
             backgroundColor: colors.background.primary,
           },
@@ -120,6 +165,14 @@ export default function PokerChatScreen() {
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* Special Offer Modal for users who skipped paywall */}
+      {showSpecialOffer && (
+        <SpecialOfferBanner
+          onAccept={handleSpecialOfferAccept}
+          onDismiss={handleSpecialOfferDismiss}
+        />
+      )}
     </KeyboardAvoidingView>
   );
 }

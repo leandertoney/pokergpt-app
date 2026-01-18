@@ -1,0 +1,395 @@
+import { TrainingHand } from '../types/dailyReview';
+
+export const TRAINING_HANDS: TrainingHand[] = [
+  // BEGINNER - Preflop fundamentals
+  {
+    id: 'training-1',
+    heroHand: 'A♠ A♥',
+    heroPosition: 'CO',
+    villainPosition: 'BTN',
+    villainAction: 'raises to $15',
+    potSize: 25,
+    toCall: 10,
+    correctAction: 'raise',
+    explanation: 'With pocket Aces, you always want to build the pot. 3-bet here to $45-50. You have the best hand in poker - make them pay to see a flop.',
+    difficulty: 'beginner',
+    category: 'preflop',
+  },
+  {
+    id: 'training-2',
+    heroHand: '7♠ 2♦',
+    heroPosition: 'UTG',
+    villainPosition: 'BB',
+    villainAction: 'waiting for action',
+    potSize: 3,
+    correctAction: 'fold',
+    explanation: '72 offsuit is the worst hand in poker. From early position, you need a strong hand to open. Fold and wait for a better spot.',
+    difficulty: 'beginner',
+    category: 'preflop',
+  },
+  {
+    id: 'training-3',
+    heroHand: 'K♠ Q♠',
+    heroPosition: 'BTN',
+    villainPosition: 'CO',
+    villainAction: 'raises to $8',
+    potSize: 13,
+    toCall: 6,
+    correctAction: 'call',
+    explanation: 'KQs is a strong hand but not strong enough to 3-bet vs an early position raise. Call in position and outplay them postflop.',
+    difficulty: 'beginner',
+    category: 'preflop',
+  },
+
+  // BEGINNER - Postflop basics
+  {
+    id: 'training-4',
+    heroHand: 'A♠ K♦',
+    heroPosition: 'CO',
+    villainPosition: 'BTN',
+    villainAction: 'checks',
+    board: 'A♥ 7♣ 2♠',
+    potSize: 30,
+    correctAction: 'bet',
+    explanation: 'You flopped top pair with the best kicker. Bet for value - around 2/3 pot ($20). You want worse hands to call and better hands to reveal themselves.',
+    difficulty: 'beginner',
+    category: 'postflop',
+  },
+  {
+    id: 'training-5',
+    heroHand: '9♠ 9♦',
+    heroPosition: 'MP',
+    villainPosition: 'CO',
+    villainAction: 'bets $25',
+    board: 'K♠ Q♥ J♣',
+    potSize: 50,
+    toCall: 25,
+    correctAction: 'fold',
+    explanation: 'This board hit villain\'s range hard. Any K, Q, J, T, or A beats you. Your pocket 9s are an underpair with no draws. Let it go.',
+    difficulty: 'beginner',
+    category: 'postflop',
+  },
+
+  // INTERMEDIATE - Pot odds decisions
+  {
+    id: 'training-6',
+    heroHand: 'A♦ 5♦',
+    heroPosition: 'BB',
+    villainPosition: 'BTN',
+    villainAction: 'bets $40',
+    board: 'K♦ 8♦ 3♠',
+    potSize: 80,
+    toCall: 40,
+    correctAction: 'call',
+    explanation: 'You have the nut flush draw (9 outs = ~35% equity). Getting 3:1 pot odds (need 25%), this is a clear call. You\'ll hit by the river about 1/3 of the time.',
+    difficulty: 'intermediate',
+    category: 'postflop',
+  },
+  {
+    id: 'training-7',
+    heroHand: 'Q♥ J♥',
+    heroPosition: 'CO',
+    villainPosition: 'BB',
+    villainAction: 'shoves all-in for $150',
+    board: '10♥ 9♠ 2♣',
+    potSize: 200,
+    toCall: 150,
+    correctAction: 'call',
+    explanation: 'You have an open-ended straight draw (8 outs). With $200 in the pot and $150 to call, you need 43% equity. Your straight draw + overcards gives you enough equity to call.',
+    difficulty: 'intermediate',
+    category: 'postflop',
+  },
+
+  // INTERMEDIATE - Bluff catching
+  {
+    id: 'training-8',
+    heroHand: 'A♠ Q♠',
+    heroPosition: 'BTN',
+    villainPosition: 'BB',
+    villainAction: 'bets $80 on river',
+    board: 'K♣ 8♥ 4♦ 2♠ 7♣',
+    potSize: 160,
+    toCall: 80,
+    correctAction: 'call',
+    explanation: 'Villain bet into a very dry board. Your A-high beats all missed draws and bluffs. Getting 3:1, you only need to be right 25% of the time. Good bluff catch.',
+    difficulty: 'intermediate',
+    category: 'river',
+  },
+  {
+    id: 'training-9',
+    heroHand: 'J♦ J♣',
+    heroPosition: 'CO',
+    villainPosition: 'BTN',
+    villainAction: 'raises river to $200',
+    board: 'Q♠ 8♥ 3♣ 5♦ K♠',
+    potSize: 300,
+    toCall: 200,
+    correctAction: 'fold',
+    explanation: 'Two overcards came (Q and K). When villain raises the river on this runout, they\'re repping at least a Q. Pocket Jacks are an easy fold here.',
+    difficulty: 'intermediate',
+    category: 'river',
+  },
+
+  // INTERMEDIATE - 3-bet spots
+  {
+    id: 'training-10',
+    heroHand: 'A♥ K♣',
+    heroPosition: 'BB',
+    villainPosition: 'BTN',
+    villainAction: 'raises to $8',
+    potSize: 12,
+    toCall: 6,
+    correctAction: 'raise',
+    explanation: 'AK is a premium hand. Against a button steal, you should 3-bet for value. Raise to $28-32. You\'re out of position, so you want to narrow villain\'s range preflop.',
+    difficulty: 'intermediate',
+    category: 'preflop',
+  },
+  {
+    id: 'training-11',
+    heroHand: 'A♠ 5♠',
+    heroPosition: 'SB',
+    villainPosition: 'CO',
+    villainAction: 'raises to $10',
+    potSize: 15,
+    toCall: 8,
+    correctAction: 'raise',
+    explanation: 'A5s is a great 3-bet bluff candidate. It blocks AA/AK, has suited wheel potential, and you\'re in a squeeze spot. 3-bet to $35 and often take it down.',
+    difficulty: 'intermediate',
+    category: 'preflop',
+    archetypes: ['shark', 'strategist'],
+  },
+
+  // ADVANCED - River decisions
+  {
+    id: 'training-12',
+    heroHand: 'K♥ K♠',
+    heroPosition: 'UTG',
+    villainPosition: 'BB',
+    villainAction: 'check-raises river to $300',
+    board: 'J♥ 8♣ 4♦ 2♠ A♥',
+    potSize: 400,
+    toCall: 200,
+    correctAction: 'fold',
+    explanation: 'The Ace on the river is a disaster card. When BB check-raises here, they\'re almost always repping Ax or a set. Your Kings just became a bluff catcher vs a very strong line.',
+    difficulty: 'advanced',
+    category: 'river',
+    archetypes: ['strategist', 'grinder'],
+  },
+  {
+    id: 'training-13',
+    heroHand: '6♦ 5♦',
+    heroPosition: 'BTN',
+    villainPosition: 'BB',
+    villainAction: 'checks river',
+    board: 'K♠ 9♥ 2♣ 3♦ 8♠',
+    potSize: 120,
+    correctAction: 'bet',
+    explanation: 'You have 6-high but great bluffing opportunity. You can represent the straight (7-6) or any King. Bet $75-90. Villain checked twice - they\'re capped and likely folding.',
+    difficulty: 'advanced',
+    category: 'river',
+    archetypes: ['shark'],
+  },
+
+  // ADVANCED - Exploitative plays
+  {
+    id: 'training-14',
+    heroHand: 'Q♦ Q♣',
+    heroPosition: 'MP',
+    villainPosition: 'UTG',
+    villainAction: '4-bets to $120',
+    potSize: 150,
+    toCall: 90,
+    correctAction: 'call',
+    explanation: 'QQ is too strong to fold but facing a UTG 4-bet, we\'re often against AA/KK/AK. Call and set-mine. If an A or K flops and they bet big, you can get away.',
+    difficulty: 'advanced',
+    category: 'preflop',
+    archetypes: ['strategist', 'grinder'],
+  },
+  {
+    id: 'training-15',
+    heroHand: 'T♠ 9♠',
+    heroPosition: 'CO',
+    villainPosition: 'BTN',
+    villainAction: 'bets $60',
+    board: 'J♥ 8♣ 2♦ K♠',
+    potSize: 120,
+    toCall: 60,
+    correctAction: 'call',
+    explanation: 'You have an open-ended straight draw + backdoor flush. Any Q or 7 gives you the nuts. With 8+ outs and position, this is a clear call to see the river.',
+    difficulty: 'advanced',
+    category: 'postflop',
+  },
+
+  // ADVANCED - Thin value
+  {
+    id: 'training-16',
+    heroHand: 'A♣ J♦',
+    heroPosition: 'BTN',
+    villainPosition: 'BB',
+    villainAction: 'checks river',
+    board: 'J♠ 7♥ 4♣ 2♦ 9♠',
+    potSize: 85,
+    correctAction: 'bet',
+    explanation: 'Top pair good kicker on a dry board. Villain checked twice. Bet $35-45 for thin value. You beat all Jx with worse kickers and can get called by pocket pairs.',
+    difficulty: 'advanced',
+    category: 'river',
+    archetypes: ['grinder', 'shark'],
+  },
+
+  // INTERMEDIATE - Set mining
+  {
+    id: 'training-17',
+    heroHand: '4♥ 4♦',
+    heroPosition: 'BB',
+    villainPosition: 'UTG',
+    villainAction: 'raises to $12',
+    potSize: 17,
+    toCall: 9,
+    correctAction: 'call',
+    explanation: 'Small pocket pairs are great for set mining. You\'ll flop a set ~12% of the time and stack overpairs. With implied odds, this is a profitable call.',
+    difficulty: 'intermediate',
+    category: 'preflop',
+  },
+
+  // BEGINNER - Obvious value bet
+  {
+    id: 'training-18',
+    heroHand: 'K♦ K♣',
+    heroPosition: 'BTN',
+    villainPosition: 'BB',
+    villainAction: 'checks',
+    board: 'K♠ 7♥ 2♣',
+    potSize: 40,
+    correctAction: 'bet',
+    explanation: 'You flopped top set! Bet for value immediately. Around $25-30. You want to build the pot with the near-nuts. Don\'t slow play - extract value!',
+    difficulty: 'beginner',
+    category: 'postflop',
+  },
+
+  // INTERMEDIATE - Overbet bluff
+  {
+    id: 'training-19',
+    heroHand: 'A♠ 9♠',
+    heroPosition: 'CO',
+    villainPosition: 'BB',
+    villainAction: 'checks',
+    board: 'K♦ Q♠ J♠ 4♥ 2♣',
+    potSize: 100,
+    correctAction: 'bet',
+    explanation: 'You missed your flush draw but the board is scary. You can rep AK, KQ, QJ, or the straight (AT). Bet $70-100 as a bluff - villain folds most non-nut hands.',
+    difficulty: 'intermediate',
+    category: 'river',
+    archetypes: ['shark'],
+  },
+
+  // ADVANCED - Squeeze play
+  {
+    id: 'training-20',
+    heroHand: 'K♠ J♠',
+    heroPosition: 'BB',
+    villainPosition: 'BTN',
+    villainAction: 'calls a CO raise',
+    potSize: 25,
+    toCall: 5,
+    correctAction: 'raise',
+    explanation: 'Perfect squeeze spot! CO raises, BTN cold calls showing weakness. 3-bet to $40 with KJs. You\'ll often take it down preflop, and if called, you have a playable hand in a bloated pot.',
+    difficulty: 'advanced',
+    category: 'preflop',
+    archetypes: ['shark', 'strategist'],
+  },
+
+  // BEGINNER - Avoid dominated hands
+  {
+    id: 'training-21',
+    heroHand: 'K♦ 3♦',
+    heroPosition: 'UTG',
+    villainPosition: 'BB',
+    villainAction: 'waiting for action',
+    potSize: 3,
+    correctAction: 'fold',
+    explanation: 'K3 suited is a trap hand from early position. If you hit a King, you\'re often dominated by AK, KQ, KJ. The suited factor doesn\'t save it. Wait for better.',
+    difficulty: 'beginner',
+    category: 'preflop',
+  },
+
+  // INTERMEDIATE - Check-raise for value
+  {
+    id: 'training-22',
+    heroHand: '8♠ 8♦',
+    heroPosition: 'BB',
+    villainPosition: 'BTN',
+    villainAction: 'bets $15',
+    board: '8♥ 5♣ 2♦',
+    potSize: 40,
+    toCall: 15,
+    correctAction: 'raise',
+    explanation: 'You flopped a set on a dry board. Check-raise for value! Raise to $50. You want to build the pot while villain thinks you might be bluffing.',
+    difficulty: 'intermediate',
+    category: 'postflop',
+    archetypes: ['shark', 'grinder'],
+  },
+
+  // ADVANCED - Fold equity play
+  {
+    id: 'training-23',
+    heroHand: '7♠ 6♠',
+    heroPosition: 'SB',
+    villainPosition: 'BB',
+    villainAction: 'calls your flop bet',
+    board: 'K♣ 9♥ 4♦ 2♠',
+    potSize: 60,
+    correctAction: 'bet',
+    explanation: 'You have no made hand but picked up a gutshot. Fire the second barrel for $40. BB mostly has weak Kx or floats. Another bet folds out most of their range.',
+    difficulty: 'advanced',
+    category: 'postflop',
+    archetypes: ['shark'],
+  },
+
+  // BEGINNER - Simple continuation bet
+  {
+    id: 'training-24',
+    heroHand: 'A♦ Q♥',
+    heroPosition: 'BTN',
+    villainPosition: 'BB',
+    villainAction: 'checks to you',
+    board: '7♣ 5♠ 2♦',
+    potSize: 20,
+    correctAction: 'bet',
+    explanation: 'You raised preflop and missed, but so did villain most of the time. Continuation bet $12-15. Your AQ has overcards and you represent the stronger range.',
+    difficulty: 'beginner',
+    category: 'postflop',
+  },
+
+  // INTERMEDIATE - Floating in position
+  {
+    id: 'training-25',
+    heroHand: 'J♦ T♦',
+    heroPosition: 'BTN',
+    villainPosition: 'CO',
+    villainAction: 'bets $12',
+    board: 'A♠ 7♥ 3♣',
+    potSize: 30,
+    toCall: 12,
+    correctAction: 'call',
+    explanation: 'Villain c-bets into an A-high board but often doesn\'t have an Ace. Float the flop with position - if they check turn, you can take it away with a bet.',
+    difficulty: 'intermediate',
+    category: 'postflop',
+    archetypes: ['shark', 'intuitive'],
+  },
+];
+
+// Get training hands filtered by difficulty or archetype
+export function getTrainingHandsByDifficulty(difficulty: 'beginner' | 'intermediate' | 'advanced'): TrainingHand[] {
+  return TRAINING_HANDS.filter(h => h.difficulty === difficulty);
+}
+
+export function getTrainingHandsForArchetype(archetype: string): TrainingHand[] {
+  return TRAINING_HANDS.filter(h => !h.archetypes || h.archetypes.includes(archetype as any));
+}
+
+// Get a random training hand not yet reviewed
+export function getRandomTrainingHand(excludeIds: string[] = []): TrainingHand | null {
+  const available = TRAINING_HANDS.filter(h => !excludeIds.includes(h.id));
+  if (available.length === 0) return null;
+  return available[Math.floor(Math.random() * available.length)];
+}

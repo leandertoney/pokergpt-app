@@ -28,8 +28,18 @@ export function DailyReviewCard() {
     );
   }
 
+  const handleFullHandPress = () => {
+    router.push('/full-hand-review');
+  };
+
   // Different content based on whether user has reviewed today
   if (hasReviewed) {
+    const motivationalMessage = streak >= 7
+      ? "You're on fire! Keep dominating!"
+      : streak >= 3
+        ? "Building momentum!"
+        : "Great start! Come back tomorrow!";
+
     return (
       <View style={styles.container}>
         <LinearGradient
@@ -38,24 +48,42 @@ export function DailyReviewCard() {
           end={{ x: 1, y: 1 }}
           style={styles.gradient}
         >
-          {/* Completed state */}
-          <View style={styles.completedContent}>
-            <View style={styles.streakBadge}>
-              <Text style={styles.fireEmoji}>🔥</Text>
-              <Text style={styles.streakNumber}>{streak}</Text>
+          {/* Completed state - celebratory */}
+          <View style={styles.completedCelebration}>
+            {/* Big streak display */}
+            <View style={styles.bigStreakDisplay}>
+              <Text style={styles.bigFireEmoji}>🔥</Text>
+              <Text style={styles.bigStreakNumber}>{streak}</Text>
+              <Text style={styles.streakDaysLabel}>day streak</Text>
             </View>
 
-            <View style={styles.completedText}>
-              <Text style={styles.completedTitle}>Today's review complete!</Text>
-              <Text style={styles.completedSubtitle}>
-                {streak > 1 ? `${streak}-day streak` : 'Come back tomorrow'}
-                {accuracy > 0 && ` · ${accuracy}% accuracy`}
-              </Text>
+            {/* Motivational text */}
+            <Text style={styles.motivationalText}>{motivationalMessage}</Text>
+
+            {/* Stats row */}
+            <View style={styles.statsRow}>
+              {bestStreak > streak && (
+                <Text style={styles.bestStreakText}>Best: {bestStreak} days</Text>
+              )}
+              {accuracy > 0 && (
+                <Text style={styles.accuracyText}>{accuracy}% accuracy</Text>
+              )}
             </View>
 
-            <View style={styles.checkmark}>
+            {/* Checkmark badge */}
+            <View style={styles.completedBadge}>
               <Text style={styles.checkmarkText}>✓</Text>
+              <Text style={styles.completedBadgeText}>Done for today</Text>
             </View>
+
+            {/* Full Hand Training option */}
+            <TouchableOpacity
+              style={styles.fullHandButton}
+              onPress={handleFullHandPress}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.fullHandButtonText}>🎯 Full Hand Training</Text>
+            </TouchableOpacity>
           </View>
         </LinearGradient>
       </View>
@@ -193,51 +221,82 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(34, 197, 94, 0.1)',
     pointerEvents: 'none',
   },
-  // Completed state styles
-  completedContent: {
+  // Completed state styles - compact celebratory
+  completedCelebration: {
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  bigStreakDisplay: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 4,
   },
-  streakBadge: {
+  bigFireEmoji: {
+    fontSize: 24,
+  },
+  bigStreakNumber: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: colors.onboarding.profit,
+    marginHorizontal: 6,
+  },
+  streakDaysLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text.secondary,
+  },
+  motivationalText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text.primary,
+    marginBottom: 6,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 8,
+  },
+  bestStreakText: {
+    fontSize: 13,
+    color: colors.text.muted,
+  },
+  accuracyText: {
+    fontSize: 13,
+    color: colors.onboarding.profit,
+    fontWeight: '600',
+  },
+  completedBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(34, 197, 94, 0.2)',
     paddingVertical: 6,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     borderRadius: 20,
-    marginRight: 12,
-  },
-  streakNumber: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.onboarding.profit,
-    marginLeft: 4,
-  },
-  completedText: {
-    flex: 1,
-  },
-  completedTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text.primary,
-  },
-  completedSubtitle: {
-    fontSize: 13,
-    color: colors.text.secondary,
-    marginTop: 2,
-  },
-  checkmark: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: colors.onboarding.profit,
-    alignItems: 'center',
-    justifyContent: 'center',
+    gap: 6,
   },
   checkmarkText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: colors.onboarding.profit,
+  },
+  completedBadgeText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.onboarding.profit,
+  },
+  fullHandButton: {
+    marginTop: 10,
+    backgroundColor: 'rgba(255, 215, 0, 0.15)',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 215, 0, 0.3)',
+  },
+  fullHandButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.onboarding.gold,
   },
 });
 

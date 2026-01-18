@@ -8,7 +8,8 @@ import {
   type ViewStyle,
   type TextStyle,
 } from 'react-native';
-import { Play, Sparkles } from 'lucide-react-native';
+import { Play } from 'lucide-react-native';
+import { AnimatedLogo } from '@/components/AnimatedLogo';
 import * as Haptics from 'expo-haptics';
 import { colors } from '@/constants/colors';
 
@@ -17,22 +18,14 @@ type WhatYouGetScreenProps = {
 };
 
 export function WhatYouGetScreen({ onComplete }: WhatYouGetScreenProps) {
-  const sparkleAnim = useRef(new Animated.Value(0)).current;
+  const sparkleAnim = useRef(new Animated.Value(1)).current; // Start visible immediately
   const titleAnim = useRef(new Animated.Value(0)).current;
   const subtitleAnim = useRef(new Animated.Value(0)).current;
   const buttonAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    // Sparkle icon entrance
-    Animated.spring(sparkleAnim, {
-      toValue: 1,
-      tension: 50,
-      friction: 6,
-      useNativeDriver: true,
-    }).start();
-
-    // Title entrance
+    // Title entrance (logo already visible)
     setTimeout(() => {
       Animated.spring(titleAnim, {
         toValue: 1,
@@ -85,30 +78,24 @@ export function WhatYouGetScreen({ onComplete }: WhatYouGetScreenProps) {
 
   return (
     <View style={styles.container}>
-      {/* Sparkle Icon */}
+      {/* Animated Logo */}
       <Animated.View
         style={[
-          styles.iconContainer,
+          styles.logoContainer,
           {
             opacity: sparkleAnim,
             transform: [
               {
                 scale: sparkleAnim.interpolate({
                   inputRange: [0, 0.5, 1],
-                  outputRange: [0.5, 1.2, 1],
-                }),
-              },
-              {
-                rotate: sparkleAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: ['-20deg', '0deg'],
+                  outputRange: [0.5, 1.1, 1],
                 }),
               },
             ],
           },
         ]}
       >
-        <Sparkles size={56} color={colors.onboarding.gold} />
+        <AnimatedLogo variant={1} size="medium" loop />
       </Animated.View>
 
       {/* Title */}
@@ -166,21 +153,9 @@ export function WhatYouGetScreen({ onComplete }: WhatYouGetScreenProps) {
           activeOpacity={0.85}
         >
           <Play size={22} color="#000" fill="#000" />
-          <Text style={styles.buttonText}>Start Playing</Text>
+          <Text style={styles.buttonText}>Start Winning</Text>
         </TouchableOpacity>
       </Animated.View>
-
-      {/* Footer */}
-      <Animated.Text
-        style={[
-          styles.footerText,
-          {
-            opacity: subtitleAnim,
-          },
-        ]}
-      >
-        Free forever. Upgrade anytime.
-      </Animated.Text>
     </View>
   );
 }
@@ -192,14 +167,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 32,
   } as ViewStyle,
-  iconContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: 'rgba(212, 168, 75, 0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 32,
+  logoContainer: {
+    marginBottom: 24,
   } as ViewStyle,
   title: {
     fontSize: 36,
@@ -240,12 +209,6 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '800',
     color: '#000',
-  } as TextStyle,
-  footerText: {
-    position: 'absolute',
-    bottom: 55,
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.4)',
   } as TextStyle,
 });
 

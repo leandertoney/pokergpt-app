@@ -9,7 +9,6 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Zap } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 
 // Onboarding screens
@@ -21,15 +20,16 @@ import { SessionDemoScreen } from './onboarding/SessionDemoScreen';
 import { LearningProgressScreen } from './onboarding/LearningProgressScreen';
 import { ComparisonScreen } from './onboarding/ComparisonScreen';
 import { QuickIdentityScreen } from './onboarding/QuickIdentityScreen';
-import { ProfileBuiltScreen } from './onboarding/ProfileBuiltScreen';
+import { NameInputScreen } from './onboarding/NameInputScreen';
 import { WhatYouGetScreen } from './onboarding/WhatYouGetScreen';
-import { FeatureScreen } from './onboarding/FeatureScreen';
 import { DailyReviewDemoScreen } from './onboarding/DailyReviewDemoScreen';
+import { ChatDemoScreen } from './onboarding/ChatDemoScreen';
+import { GoalSettingScreen } from './onboarding/GoalSettingScreen';
+import { PaywallScreen } from './onboarding/PaywallScreen';
 
-// Components for feature screens
-import { VoiceOrb } from './VoiceOrb';
-
-import { setUserTier, setUserIdentity } from '@/services/storageService';
+import { setUserTier, setUserIdentity, setUserDisplayName, setPaywallState, setGoalConfirmation } from '@/services/storageService';
+import { updateUserIdentity as syncUserIdentityToSupabase, getOrCreateUser } from '@/services/supabaseStorage';
+import { checkSubscriptionStatus } from '@/services/revenueCat';
 import { colors } from '@/constants/colors';
 import type { UserIdentity } from '@/types/poker';
 
@@ -42,16 +42,17 @@ const ONBOARDING_COMPLETE_KEY = '@onboarding_complete';
 type OnboardingStep =
   | 'splash'
   | 'hero'
+  | 'chatDemo'
   | 'profitDemo'
   | 'liveDemo'
-  | 'voice'
-  | 'analysis'
   | 'sessionDemo'
   | 'dailyReviewDemo'
   | 'learningProgress'
   | 'comparison'
   | 'identity'
-  | 'profileBuilt'
+  | 'name'
+  | 'goalSetting'
+  | 'paywall'
   | 'whatYouGet';
 
 type OnboardingV2Props = {
@@ -61,12 +62,11 @@ type OnboardingV2Props = {
 // Define the order of swipeable steps
 const SWIPE_FLOW: OnboardingStep[] = [
   'hero',
-  'profitDemo',
-  'liveDemo',
-  'voice',
-  'analysis',
-  'sessionDemo',
-  'dailyReviewDemo',
+  'chatDemo',        // Chat conversation demo
+  'liveDemo',        // Real-time analysis
+  'sessionDemo',     // Session tracking
+  'dailyReviewDemo', // 60-second review
+  'profitDemo',      // Bankroll tracking (moved later)
   'learningProgress',
   'comparison',
 ];
@@ -75,6 +75,7 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
   const [step, setStep] = useState<OnboardingStep>('splash');
   const [playStyle, setPlayStyle] = useState<string>('shark');
   const [goal, setGoal] = useState<string>('profit');
+  const [userName, setUserName] = useState<string | null>(null);
   const [canSwipe, setCanSwipe] = useState(true);
 
   const fadeAnim = useRef(new Animated.Value(1)).current;
@@ -167,37 +168,95 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
   const handleIdentityComplete = (selectedPlayStyle: string, selectedGoal: string) => {
     setPlayStyle(selectedPlayStyle);
     setGoal(selectedGoal);
-    transitionTo('profileBuilt');
+    transitionTo('name');
+  };
+
+  const handleNameComplete = (name: string | null) => {
+    setUserName(name);
+    transitionTo('goalSetting');
+  };
+
+  const handleGoalConfirmed = async (timestamp: number) => {
+    await setGoalConfirmation({
+      playStyle,
+      goal,
+      userName,
+      timestamp,
+    });
+    transitionTo('paywall');
+  };
+
+  const handlePaywallPurchase = async (planId: 'weekly' | 'yearly') => {
+    console.log('User purchased plan:', planId);
+
+    // Verify subscription status with RevenueCat
+    const status = await checkSubscriptionStatus();
+
+    if (status.isSubscribed) {
+      await setUserTier('paid');
+      await setPaywallState({ hasSeenPaywall: true, hasSkippedPaywall: false });
+    } else {
+      // Fallback - mark as paid if purchase callback was called
+      // (RevenueCat might have a slight delay in updating status)
+      await setUserTier('paid');
+      await setPaywallState({ hasSeenPaywall: true, hasSkippedPaywall: false });
+    }
+
+    transitionTo('whatYouGet');
+  };
+
+  const handlePaywallSkip = async () => {
+    await setUserTier('free');
+    await setPaywallState({ hasSeenPaywall: true, hasSkippedPaywall: true });
+    transitionTo('whatYouGet');
   };
 
   const handleComplete = async () => {
-    // Map playStyle to archetype
-    const archetypeMap: Record<string, string> = {
-      shark: 'shark',
-      analyst: 'strategist',
-      grinder: 'grinder',
-      student: 'student',
-    };
+    try {
+      // Map playStyle to archetype
+      const archetypeMap: Record<string, string> = {
+        shark: 'shark',
+        analyst: 'strategist',
+        grinder: 'grinder',
+        student: 'student',
+      };
 
-    // Map goal to primaryGoal
-    const goalMap: Record<string, string> = {
-      profit: 'profit',
-      win: 'compete',
-      learn: 'improve',
-      confidence: 'fun',
-    };
+      // Map goal to primaryGoal
+      const goalMap: Record<string, string> = {
+        profit: 'profit',
+        win: 'compete',
+        learn: 'improve',
+        confidence: 'fun',
+      };
 
-    const identity: UserIdentity = {
-      archetype: archetypeMap[playStyle] as UserIdentity['archetype'],
-      experienceLevel: 'intermediate', // Default
-      primaryGoal: goalMap[goal] as UserIdentity['primaryGoal'],
-      biggestChallenge: null,
-    };
+      const identity: UserIdentity = {
+        archetype: archetypeMap[playStyle] as UserIdentity['archetype'],
+        experienceLevel: 'intermediate', // Default
+        primaryGoal: goalMap[goal] as UserIdentity['primaryGoal'],
+        biggestChallenge: null,
+      };
 
-    await AsyncStorage.setItem(ONBOARDING_COMPLETE_KEY, 'true');
-    await setUserTier('free');
-    await setUserIdentity(identity);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      // Save to local storage
+      await AsyncStorage.setItem(ONBOARDING_COMPLETE_KEY, 'true');
+      await setUserTier('free');
+      await setUserIdentity(identity);
+      await setUserDisplayName(userName);
+
+      // Sync to Supabase (gracefully fails if offline)
+      try {
+        await getOrCreateUser();
+        await syncUserIdentityToSupabase(identity);
+      } catch {
+        // Silent - app works offline, will sync later
+      }
+
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (error) {
+      // Log but don't crash - proceed to complete onboarding anyway
+      console.warn('Error during onboarding completion:', error);
+    }
+
+    // Always call onComplete to exit onboarding, even if storage failed
     onComplete();
   };
 
@@ -208,43 +267,22 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
         return <IntroScreen onNext={() => transitionTo('hero')} />;
 
       case 'hero':
-        return <HeroScreen onNext={() => transitionTo('profitDemo')} />;
+        return <HeroScreen onNext={() => transitionTo('chatDemo')} />;
+
+      case 'chatDemo':
+        return <ChatDemoScreen onNext={() => transitionTo('liveDemo')} />;
 
       case 'profitDemo':
-        return <ProfitDemoScreen onNext={() => transitionTo('liveDemo')} />;
+        return <ProfitDemoScreen onNext={() => transitionTo('learningProgress')} />;
 
       case 'liveDemo':
-        return <LiveDemoScreen onNext={() => transitionTo('voice')} />;
-
-      // PHASE 2: FEATURES
-      case 'voice':
-        return (
-          <FeatureScreen
-            icon={<VoiceOrb state="listening" size="medium" />}
-            headline="Just talk."
-            subheadline="Like you're at the table."
-            description="Describe your hand naturally. PokerGPT understands position, action, stack sizes — everything."
-            buttonText="Continue"
-            onNext={() => transitionTo('analysis')}
-          />
-        );
-
-      case 'analysis':
-        return (
-          <FeatureScreen
-            icon={<Zap size={64} color={colors.onboarding.gold} />}
-            headline="Instant analysis"
-            description="Get GTO recommendations, exploitative lines, and confidence scores in seconds. No more second-guessing."
-            buttonText="Continue"
-            onNext={() => transitionTo('sessionDemo')}
-          />
-        );
+        return <LiveDemoScreen onNext={() => transitionTo('sessionDemo')} />;
 
       case 'sessionDemo':
         return <SessionDemoScreen onNext={() => transitionTo('dailyReviewDemo')} />;
 
       case 'dailyReviewDemo':
-        return <DailyReviewDemoScreen onNext={() => transitionTo('learningProgress')} />;
+        return <DailyReviewDemoScreen onNext={() => transitionTo('profitDemo')} />;
 
       case 'learningProgress':
         return <LearningProgressScreen onNext={() => transitionTo('comparison')} />;
@@ -256,12 +294,27 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
       case 'identity':
         return <QuickIdentityScreen onComplete={handleIdentityComplete} />;
 
-      case 'profileBuilt':
+      case 'name':
+        return <NameInputScreen onComplete={handleNameComplete} />;
+
+      case 'goalSetting':
         return (
-          <ProfileBuiltScreen
+          <GoalSettingScreen
             playStyle={playStyle}
             goal={goal}
-            onNext={() => transitionTo('whatYouGet')}
+            userName={userName}
+            onComplete={handleGoalConfirmed}
+          />
+        );
+
+      case 'paywall':
+        return (
+          <PaywallScreen
+            playStyle={playStyle}
+            goal={goal}
+            userName={userName}
+            onPurchase={handlePaywallPurchase}
+            onSkip={handlePaywallSkip}
           />
         );
 
@@ -280,7 +333,7 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={[colors.background.tertiary, colors.background.secondary, colors.background.primary, colors.background.primary]}
+        colors={[colors.background.primary, colors.background.primary, colors.background.primary, colors.background.primary]}
         locations={[0, 0.3, 0.7, 1]}
         style={styles.gradient}
       >
@@ -306,6 +359,12 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
 
 // Exports
 export async function checkOnboardingComplete(isAuthenticated: boolean = false): Promise<boolean> {
+  // Skip onboarding in development mode for faster iteration
+  if (__DEV__) {
+    const skipOnboarding = await AsyncStorage.getItem('@dev_skip_onboarding');
+    if (skipOnboarding === 'true') return true;
+  }
+
   if (!isAuthenticated) return false;
   try {
     const complete = await AsyncStorage.getItem(ONBOARDING_COMPLETE_KEY);
@@ -318,8 +377,18 @@ export async function checkOnboardingComplete(isAuthenticated: boolean = false):
 export async function resetOnboarding(): Promise<void> {
   try {
     await AsyncStorage.removeItem(ONBOARDING_COMPLETE_KEY);
+    await AsyncStorage.removeItem('@dev_skip_onboarding');
   } catch (error) {
     console.error('Error resetting onboarding:', error);
+  }
+}
+
+// Dev helper: Call this once to skip onboarding in development
+export async function devSkipOnboarding(): Promise<void> {
+  if (__DEV__) {
+    await AsyncStorage.setItem('@dev_skip_onboarding', 'true');
+    await AsyncStorage.setItem(ONBOARDING_COMPLETE_KEY, 'true');
+    console.log('Dev: Onboarding will be skipped on next app load');
   }
 }
 

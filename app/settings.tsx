@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   ScrollView,
@@ -9,6 +9,7 @@ import {
   Alert,
   Linking,
   Platform,
+  ActivityIndicator,
   type ViewStyle,
   type TextStyle,
 } from 'react-native';
@@ -27,10 +28,16 @@ import {
   Info,
   LogOut,
   LogIn,
+  RefreshCw,
 } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { colors } from '@/constants/colors';
 import Constants from 'expo-constants';
+import {
+  checkSubscriptionStatus,
+  restorePurchases,
+  type SubscriptionStatus,
+} from '@/services/revenueCat';
 
 // URLs - Replace with your actual URLs
 const HELP_URL = 'https://pokergpt.app/help';
@@ -86,8 +93,39 @@ export default function SettingsScreen() {
 
   // Voice input preference (stored locally for now)
   const [voiceEnabled, setVoiceEnabled] = useState(true);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus | null>(null);
+  const [isLoadingSubscription, setIsLoadingSubscription] = useState(true);
+  const [isRestoring, setIsRestoring] = useState(false);
 
   const appVersion = Constants.expoConfig?.version || '1.0.0';
+
+  // Fetch subscription status on mount
+  useEffect(() => {
+    const fetchSubscriptionStatus = async () => {
+      try {
+        const status = await checkSubscriptionStatus();
+        setSubscriptionStatus(status);
+      } catch (error) {
+        console.warn('Failed to fetch subscription status:', error);
+      } finally {
+        setIsLoadingSubscription(false);
+      }
+    };
+
+    fetchSubscriptionStatus();
+  }, []);
+
+  const getSubscriptionSubtitle = () => {
+    if (isLoadingSubscription) return 'Loading...';
+    if (!subscriptionStatus) return 'Free tier';
+    if (subscriptionStatus.isSubscribed) {
+      if (subscriptionStatus.isInTrial) {
+        return 'Pro (Trial)';
+      }
+      return 'Pro';
+    }
+    return 'Free tier';
+  };
 
   const openURL = async (url: string) => {
     try {
@@ -136,11 +174,64 @@ export default function SettingsScreen() {
   };
 
   const handleSubscription = () => {
-    Alert.alert(
-      'Coming Soon',
-      'Subscription management will be available in a future update.',
-      [{ text: 'OK' }]
-    );
+    if (subscriptionStatus?.isSubscribed) {
+      // User is subscribed - show manage options
+      Alert.alert(
+        'Manage Subscription',
+        subscriptionStatus.isInTrial
+          ? 'You are currently on a free trial.'
+          : 'You have an active Pro subscription.',
+        [
+          {
+            text: 'Manage in Settings',
+            onPress: () => {
+              // Open device subscription settings
+              if (Platform.OS === 'ios') {
+                Linking.openURL('https://apps.apple.com/account/subscriptions');
+              } else {
+                Linking.openURL('https://play.google.com/store/account/subscriptions');
+              }
+            },
+          },
+          { text: 'Close', style: 'cancel' },
+        ]
+      );
+    } else {
+      // User is not subscribed - offer to subscribe or restore
+      Alert.alert(
+        'Upgrade to Pro',
+        'Get unlimited hand analysis, voice input, and more.',
+        [
+          {
+            text: 'Restore Purchase',
+            onPress: handleRestorePurchases,
+          },
+          { text: 'Cancel', style: 'cancel' },
+        ]
+      );
+    }
+  };
+
+  const handleRestorePurchases = async () => {
+    if (isRestoring) return;
+
+    setIsRestoring(true);
+    try {
+      const result = await restorePurchases();
+
+      if (result.success) {
+        // Refresh subscription status
+        const status = await checkSubscriptionStatus();
+        setSubscriptionStatus(status);
+        Alert.alert('Restored!', 'Your subscription has been restored.');
+      } else {
+        Alert.alert('No Subscription Found', result.error || 'No active subscription to restore.');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to restore purchases. Please try again.');
+    } finally {
+      setIsRestoring(false);
+    }
   };
 
   return (
@@ -171,22 +262,23 @@ export default function SettingsScreen() {
         >
           <SettingsSection title="Account">
             <SettingsItem
-              icon={<User size={22} color={colors.accent.primary} />}
+              icon={<User size={22} color={colors.accent.gold} />}
               title="Profile"
               subtitle={isAuthenticated ? "Manage your account" : "Sign in to sync across devices"}
               onPress={() => isAuthenticated ? router.push('/profile') : router.push('/auth/login')}
             />
             <SettingsItem
-              icon={<CreditCard size={22} color={colors.accent.secondary} />}
+              icon={<CreditCard size={22} color={colors.accent.gold} />}
               title="Subscription"
-              subtitle="Free tier"
+              subtitle={getSubscriptionSubtitle()}
               onPress={handleSubscription}
+              rightElement={isLoadingSubscription ? <ActivityIndicator size="small" color={colors.text.muted} /> : undefined}
             />
           </SettingsSection>
 
           <SettingsSection title="Preferences">
             <SettingsItem
-              icon={<Mic size={22} color={colors.accent.primary} />}
+              icon={<Mic size={22} color={colors.accent.gold} />}
               title="Voice Input"
               subtitle={voiceEnabled ? 'Enabled' : 'Disabled'}
               showChevron={false}
@@ -194,13 +286,13 @@ export default function SettingsScreen() {
                 <Switch
                   value={voiceEnabled}
                   onValueChange={setVoiceEnabled}
-                  trackColor={{ false: colors.background.tertiary, true: colors.accent.primary }}
+                  trackColor={{ false: colors.background.tertiary, true: colors.accent.gold }}
                   thumbColor={colors.text.primary}
                 />
               }
             />
             <SettingsItem
-              icon={<Bell size={22} color={colors.accent.secondary} />}
+              icon={<Bell size={22} color={colors.accent.gold} />}
               title="Notifications"
               subtitle="Manage alerts"
               onPress={openNotificationSettings}
@@ -209,13 +301,13 @@ export default function SettingsScreen() {
 
           <SettingsSection title="Support">
             <SettingsItem
-              icon={<HelpCircle size={22} color={colors.accent.primary} />}
+              icon={<HelpCircle size={22} color={colors.accent.gold} />}
               title="Help Center"
               subtitle="FAQs and guides"
               onPress={() => openURL(HELP_URL)}
             />
             <SettingsItem
-              icon={<Info size={22} color={colors.accent.secondary} />}
+              icon={<Info size={22} color={colors.accent.gold} />}
               title="About"
               subtitle={`Version ${appVersion}`}
               onPress={showAbout}
@@ -224,12 +316,12 @@ export default function SettingsScreen() {
 
           <SettingsSection title="Legal">
             <SettingsItem
-              icon={<Shield size={22} color={colors.accent.primary} />}
+              icon={<Shield size={22} color={colors.accent.gold} />}
               title="Privacy Policy"
               onPress={() => openURL(PRIVACY_URL)}
             />
             <SettingsItem
-              icon={<FileText size={22} color={colors.accent.secondary} />}
+              icon={<FileText size={22} color={colors.accent.gold} />}
               title="Terms of Service"
               onPress={() => openURL(TERMS_URL)}
             />
@@ -245,7 +337,7 @@ export default function SettingsScreen() {
           ) : (
             <SettingsSection title="">
               <TouchableOpacity style={styles.signInButton} onPress={() => router.push('/auth/login')}>
-                <LogIn size={20} color={colors.accent.primary} />
+                <LogIn size={20} color={colors.accent.gold} />
                 <Text style={styles.signInText}>Sign In</Text>
               </TouchableOpacity>
             </SettingsSection>
@@ -342,7 +434,7 @@ const styles = StyleSheet.create({
   signInText: {
     fontSize: 16,
     fontWeight: '600' as const,
-    color: colors.accent.primary,
+    color: colors.accent.gold,
   } as TextStyle,
   versionContainer: {
     alignItems: 'center',

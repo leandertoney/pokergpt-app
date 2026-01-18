@@ -1,0 +1,9 @@
+{
+  "platforms": ["ios", "android"],
+  "ios": {
+    "modules": ["StreamingAudioPlayerModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.streamingaudioplayer.StreamingAudioPlayerModule"]
+  }
+}

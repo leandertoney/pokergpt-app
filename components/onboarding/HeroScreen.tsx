@@ -7,7 +7,8 @@ import {
   type ViewStyle,
   type TextStyle,
 } from 'react-native';
-import { Star, ChevronRight } from 'lucide-react-native';
+import { Star, ChevronLeft } from 'lucide-react-native';
+import { AnimatedLogo } from '@/components/AnimatedLogo';
 import { colors } from '@/constants/colors';
 
 type HeroScreenProps = {
@@ -15,6 +16,7 @@ type HeroScreenProps = {
 };
 
 export function HeroScreen({ onNext }: HeroScreenProps) {
+  const logoAnim = useRef(new Animated.Value(0)).current;
   const badgeAnim = useRef(new Animated.Value(0)).current;
   const winAnim = useRef(new Animated.Value(0)).current;
   const moreAnim = useRef(new Animated.Value(0)).current;
@@ -26,7 +28,14 @@ export function HeroScreen({ onNext }: HeroScreenProps) {
   useEffect(() => {
     // Staggered word-by-word animations
     Animated.sequence([
-      // Badge fades in first
+      // Logo fades in first
+      Animated.spring(logoAnim, {
+        toValue: 1,
+        tension: 50,
+        friction: 8,
+        useNativeDriver: true,
+      }),
+      // Badge fades in
       Animated.spring(badgeAnim, {
         toValue: 1,
         tension: 50,
@@ -91,6 +100,26 @@ export function HeroScreen({ onNext }: HeroScreenProps) {
 
   return (
     <View style={styles.container}>
+      {/* Animated Logo */}
+      <Animated.View
+        style={[
+          styles.logoContainer,
+          {
+            opacity: logoAnim,
+            transform: [
+              {
+                scale: logoAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0.8, 1],
+                }),
+              },
+            ],
+          },
+        ]}
+      >
+        <AnimatedLogo variant={1} size="medium" loop />
+      </Animated.View>
+
       {/* App Store Badge */}
       <Animated.View
         style={[
@@ -222,7 +251,7 @@ export function HeroScreen({ onNext }: HeroScreenProps) {
           },
         ]}
       >
-        <ChevronRight size={24} color="rgba(255,255,255,0.5)" />
+        <ChevronLeft size={24} color="rgba(255,255,255,0.5)" />
         <Text style={styles.swipeText}>Swipe to continue</Text>
       </Animated.View>
     </View>
@@ -244,7 +273,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 20,
     gap: 6,
-    marginBottom: 48,
+    marginBottom: 32,
   } as ViewStyle,
   badgeText: {
     fontSize: 14,
@@ -275,11 +304,14 @@ const styles = StyleSheet.create({
     textShadowRadius: 20,
   } as TextStyle,
   emphasisLess: {
-    fontSize: 44,
-    fontWeight: '400', // Thinner weight for "LESS"
-    color: 'rgba(255,255,255,0.7)', // Muted white - less emphasis
-    letterSpacing: 4, // More spaced out for "reduction" feel
+    fontSize: 40,
+    fontWeight: '300', // Extra thin weight for "LESS" - emphasizes reduction
+    color: 'rgba(255,255,255,0.4)', // Faded/muted - visually "less"
+    letterSpacing: 6, // More spaced out for "reduction" feel
   } as TextStyle,
+  logoContainer: {
+    marginBottom: 24,
+  } as ViewStyle,
   subtext: {
     fontSize: 17,
     color: 'rgba(255,255,255,0.6)',

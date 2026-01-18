@@ -139,16 +139,6 @@ export function PlayingCard({
         </Text>
       </View>
 
-      {/* Center suit */}
-      <Text
-        style={[
-          styles.centerSuit,
-          { fontSize: dimensions.suitSize * 1.5, color: suitColor },
-        ]}
-      >
-        {suitSymbol}
-      </Text>
-
       {/* Bottom right corner (rotated) */}
       <View style={styles.cornerBottom}>
         <Text
@@ -250,10 +240,6 @@ const styles = StyleSheet.create({
   } as TextStyle,
   suit: {
     marginTop: -2,
-  } as TextStyle,
-  centerSuit: {
-    position: 'absolute',
-    alignSelf: 'center',
   } as TextStyle,
   rotated: {
     transform: [{ rotate: '180deg' }],

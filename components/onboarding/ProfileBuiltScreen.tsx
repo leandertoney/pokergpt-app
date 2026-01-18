@@ -4,18 +4,19 @@ import {
   Text,
   StyleSheet,
   Animated,
-  TouchableOpacity,
   Dimensions,
   type ViewStyle,
   type TextStyle,
 } from 'react-native';
-import { ChevronRight, Sparkles } from 'lucide-react-native';
+import { ChevronLeft } from 'lucide-react-native';
+import { AnimatedLogo } from '@/components/AnimatedLogo';
 import * as Haptics from 'expo-haptics';
 import { colors } from '@/constants/colors';
 
 type ProfileBuiltScreenProps = {
   playStyle: string;
   goal: string;
+  userName?: string | null;
   onNext: () => void;
 };
 
@@ -35,26 +36,28 @@ const GOALS: Record<string, string> = {
   confidence: 'trust your decisions',
 };
 
-// Confetti particle
-type ConfettiParticle = {
+// Poker chip particle
+type ChipParticle = {
   id: number;
   x: number;
   y: Animated.Value;
   rotation: Animated.Value;
   scale: number;
   color: string;
+  stripeColor: string;
   delay: number;
 };
 
-const CONFETTI_COLORS = [
-  colors.onboarding.gold,
-  colors.onboarding.profit,
-  colors.onboarding.data,
-  '#FF6B6B',
-  '#C084FC',
+// Poker chip colors (based on real casino chips)
+const CHIP_VARIANTS = [
+  { color: '#E53935', stripeColor: '#FFFFFF' },  // $5 - Red
+  { color: '#43A047', stripeColor: '#FFFFFF' },  // $25 - Green
+  { color: '#212121', stripeColor: '#FFFFFF' },  // $100 - Black
+  { color: '#1E88E5', stripeColor: '#FFFFFF' },  // $1 - Blue
+  { color: '#7B1FA2', stripeColor: '#FFFFFF' },  // $500 - Purple
 ];
 
-export function ProfileBuiltScreen({ playStyle, goal, onNext }: ProfileBuiltScreenProps) {
+export function ProfileBuiltScreen({ playStyle, goal, userName, onNext }: ProfileBuiltScreenProps) {
   const profile = PROFILES[playStyle] || PROFILES.shark;
   const goalText = GOALS[goal] || GOALS.profit;
 
@@ -63,36 +66,40 @@ export function ProfileBuiltScreen({ playStyle, goal, onNext }: ProfileBuiltScre
   const subtitleAnim = useRef(new Animated.Value(0)).current;
   const buttonAnim = useRef(new Animated.Value(0)).current;
 
-  // Create confetti particles
-  const confettiParticles = useRef<ConfettiParticle[]>(
-    Array.from({ length: 30 }, (_, i) => ({
-      id: i,
-      x: Math.random() * SCREEN_WIDTH,
-      y: new Animated.Value(-50),
-      rotation: new Animated.Value(0),
-      scale: 0.5 + Math.random() * 0.5,
-      color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
-      delay: Math.random() * 500,
-    }))
+  // Create poker chip particles
+  const chipParticles = useRef<ChipParticle[]>(
+    Array.from({ length: 25 }, (_, i) => {
+      const variant = CHIP_VARIANTS[Math.floor(Math.random() * CHIP_VARIANTS.length)];
+      return {
+        id: i,
+        x: Math.random() * SCREEN_WIDTH,
+        y: new Animated.Value(-60),
+        rotation: new Animated.Value(0),
+        scale: 0.6 + Math.random() * 0.4,
+        color: variant.color,
+        stripeColor: variant.stripeColor,
+        delay: Math.random() * 600,
+      };
+    })
   ).current;
 
   useEffect(() => {
     // Haptic celebration
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-    // Start confetti
-    confettiParticles.forEach(particle => {
+    // Start poker chips rain
+    chipParticles.forEach(particle => {
       setTimeout(() => {
         Animated.parallel([
           Animated.timing(particle.y, {
-            toValue: SCREEN_HEIGHT + 50,
-            duration: 2500 + Math.random() * 1000,
+            toValue: SCREEN_HEIGHT + 60,
+            duration: 2800 + Math.random() * 1200,
             useNativeDriver: true,
           }),
           Animated.loop(
             Animated.timing(particle.rotation, {
               toValue: 1,
-              duration: 1000 + Math.random() * 500,
+              duration: 800 + Math.random() * 400,
               useNativeDriver: true,
             })
           ),
@@ -127,30 +134,33 @@ export function ProfileBuiltScreen({ playStyle, goal, onNext }: ProfileBuiltScre
       }).start();
     }, 600);
 
-    // Button
+    // Swipe hint with pulsing animation
     setTimeout(() => {
-      Animated.spring(buttonAnim, {
-        toValue: 1,
-        tension: 60,
-        friction: 8,
-        useNativeDriver: true,
-      }).start();
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(buttonAnim, {
+            toValue: 1,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(buttonAnim, {
+            toValue: 0.4,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
     }, 900);
   }, []);
 
-  const handlePress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    onNext();
-  };
-
   return (
     <View style={styles.container}>
-      {/* Confetti */}
-      {confettiParticles.map(particle => (
+      {/* Poker Chips Rain */}
+      {chipParticles.map(particle => (
         <Animated.View
           key={particle.id}
           style={[
-            styles.confetti,
+            styles.chipContainer,
             {
               left: particle.x,
               transform: [
@@ -166,7 +176,12 @@ export function ProfileBuiltScreen({ playStyle, goal, onNext }: ProfileBuiltScre
             },
           ]}
         >
-          <View style={[styles.confettiPiece, { backgroundColor: particle.color }]} />
+          {/* Poker chip */}
+          <View style={[styles.chip, { backgroundColor: particle.color }]}>
+            <View style={[styles.chipInner, { borderColor: particle.stripeColor }]}>
+              <View style={[styles.chipStripe, { backgroundColor: particle.stripeColor }]} />
+            </View>
+          </View>
         </Animated.View>
       ))}
 
@@ -184,11 +199,10 @@ export function ProfileBuiltScreen({ playStyle, goal, onNext }: ProfileBuiltScre
           ],
         }}
       >
-        <View style={styles.sparkleRow}>
-          <Sparkles size={24} color={colors.onboarding.gold} />
-          <Text style={styles.perfectText}>Perfect.</Text>
-          <Sparkles size={24} color={colors.onboarding.gold} />
-        </View>
+        <AnimatedLogo variant={1} size="medium" loop />
+        <Text style={styles.perfectText}>
+          {userName ? `Perfect, ${userName}.` : 'Perfect.'}
+        </Text>
       </Animated.View>
 
       {/* Profile Card */}
@@ -225,31 +239,17 @@ export function ProfileBuiltScreen({ playStyle, goal, onNext }: ProfileBuiltScre
         We'll help you {goalText}.
       </Animated.Text>
 
-      {/* Continue Button */}
+      {/* Swipe Hint */}
       <Animated.View
         style={[
-          styles.buttonContainer,
+          styles.swipeHint,
           {
             opacity: buttonAnim,
-            transform: [
-              {
-                translateY: buttonAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [20, 0],
-                }),
-              },
-            ],
           },
         ]}
       >
-        <TouchableOpacity
-          style={styles.button}
-          onPress={handlePress}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.buttonText}>See what you get</Text>
-          <ChevronRight size={20} color="#000" />
-        </TouchableOpacity>
+        <ChevronLeft size={24} color="rgba(255,255,255,0.5)" />
+        <Text style={styles.swipeText}>Swipe to continue</Text>
       </Animated.View>
     </View>
   );
@@ -262,25 +262,43 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 24,
   } as ViewStyle,
-  confetti: {
+  chipContainer: {
     position: 'absolute',
     top: 0,
+    zIndex: 100,  // Ensures confetti renders in front of animated logo
   } as ViewStyle,
-  confettiPiece: {
-    width: 10,
-    height: 10,
-    borderRadius: 2,
-  } as ViewStyle,
-  sparkleRow: {
-    flexDirection: 'row',
+  chip: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     alignItems: 'center',
-    gap: 12,
-    marginBottom: 32,
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    elevation: 4,
+  } as ViewStyle,
+  chipInner: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  } as ViewStyle,
+  chipStripe: {
+    width: 12,
+    height: 3,
+    borderRadius: 1,
   } as ViewStyle,
   perfectText: {
     fontSize: 36,
     fontWeight: '800',
     color: '#fff',
+    marginTop: 12,
+    marginBottom: 24,
+    textAlign: 'center',
   } as TextStyle,
   profileCard: {
     backgroundColor: 'rgba(255, 215, 0, 0.1)',
@@ -314,26 +332,17 @@ const styles = StyleSheet.create({
     marginTop: 32,
     lineHeight: 26,
   } as TextStyle,
-  buttonContainer: {
+  swipeHint: {
     position: 'absolute',
-    bottom: 60,
-    left: 24,
-    right: 24,
-  } as ViewStyle,
-  button: {
-    flexDirection: 'row',
+    bottom: 50,
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.accent.primary,
-    paddingVertical: 18,
-    paddingHorizontal: 32,
-    borderRadius: 14,
-    gap: 8,
+    alignSelf: 'center',
+    gap: 4,
   } as ViewStyle,
-  buttonText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#000',
+  swipeText: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.5)',
+    fontWeight: '500',
   } as TextStyle,
 });
 

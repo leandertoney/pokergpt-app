@@ -1,21 +1,22 @@
 // PokerGPT Brand Colors
-// Based on the robot card character logo (maroon/cream/red theme)
+// Based on the robot card character logo - EXACT colors from logo design
 
 export const colors = {
-  // Backgrounds (matched to logo burgundy)
+  // Backgrounds (exact match to logo)
   background: {
-    primary: '#4A0E0E',      // Logo burgundy - main background
-    secondary: '#4A0E0E',    // Same as primary (simplified)
-    tertiary: '#5A1818',     // Slightly lighter for cards/elevated surfaces
-    card: '#F5F0E6',         // Cream/off-white
+    primary: '#6A0B0B',      // Deep Background Red - matched to logo background
+    secondary: '#6A0B0B',    // Same as primary
+    tertiary: '#7A1717',     // Slightly lighter for cards/elevated surfaces
+    card: '#F4E8D8',         // Card Face Ivory - exact from logo
+    shadow: '#3A0000',       // Shadow Red - for darker elements
   },
 
-  // Accent colors
+  // Accent colors (exact match to logo)
   accent: {
-    primary: '#E63333',      // Bright red (main accent)
+    primary: '#FF3A3A',      // Glowing Circuit Red - exact from logo
     secondary: '#FF6B6B',    // Light red
-    glow: '#FF4444',         // Red glow effect
-    gold: '#D4A84B',         // Gold trim accent
+    glow: '#FF3A3A',         // Glowing Circuit Red
+    gold: '#E8B84A',         // Premium Gold Stroke - exact from logo
   },
 
   // Utility colors
@@ -28,46 +29,46 @@ export const colors = {
 
   // Text
   text: {
-    primary: '#F5F0E6',      // Cream on dark
+    primary: '#F4E8D8',      // Card Face Ivory - for text on dark
     secondary: '#CCBBA8',    // Muted cream
-    dark: '#1A0505',         // Dark on light surfaces
+    dark: '#1A1A1A',         // Black Suit / Faceplate - exact from logo
     muted: '#8B7355',        // Muted brown
-    inverse: '#1A0505',      // For text on light backgrounds
+    inverse: '#1A1A1A',      // Black for text on light backgrounds
   },
 
   // Card suit colors
   cards: {
-    spades: '#F5F0E6',       // Cream (visible on dark bg)
-    clubs: '#F5F0E6',        // Cream (visible on dark bg)
-    hearts: '#EF4444',       // Red
+    spades: '#1A1A1A',       // Black Suit / Faceplate - exact from logo
+    clubs: '#1A1A1A',        // Black Suit / Faceplate
+    hearts: '#FF3A3A',       // Glowing Circuit Red
     diamonds: '#3B82F6',     // Blue (traditional 4-color deck)
   },
 
   // Onboarding colors (Money & Royalty theme)
   onboarding: {
-    gold: '#D4A84B',           // Metallic gold for TEXT/ICONS only (not buttons)
-    goldDark: '#B8923F',       // Darker gold for accents
+    gold: '#E8B84A',           // Premium Gold Stroke - exact from logo
+    goldDark: '#C9A03A',       // Darker gold for accents
     profit: '#22C55E',         // Green for profit/money TEXT
     profitLight: '#4ADE80',    // Light green for accents
     data: '#3B82F6',           // Blue for data/graphs
     dataLight: '#60A5FA',      // Light blue for accents
-    celebration: '#D4A84B',    // Confetti/sparkle color (metallic gold)
+    celebration: '#E8B84A',    // Premium Gold Stroke
   },
 
   // Gradients (for LinearGradient components)
   gradients: {
-    background: ['#4A0E0E', '#4A0E0E', '#3A0808'] as const,
-    card: ['#5A1818', '#4A0E0E'] as const,
-    premium: ['#E63333', '#B82828'] as const,
-    goldButton: ['#FFD700', '#DAA520'] as const,
+    background: ['#6A0B0B', '#6A0B0B', '#3A0000'] as const,
+    card: ['#7A1717', '#6A0B0B'] as const,
+    premium: ['#FF3A3A', '#B82828'] as const,
+    goldButton: ['#E8B84A', '#C9A03A'] as const,
     profitGraph: ['#22C55E', '#16A34A'] as const,
     dataGraph: ['#3B82F6', '#2563EB'] as const,
   },
 
   // Semantic colors
   success: '#4CAF50',
-  error: '#E63333',
-  warning: '#D4A84B',
+  error: '#FF3A3A',
+  warning: '#E8B84A',
 
   // Opacity helpers
   withOpacity: (color: string, opacity: number) => {

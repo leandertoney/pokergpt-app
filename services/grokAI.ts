@@ -49,6 +49,8 @@ Only return the JSON object, no other text.`;
 
 const ANALYZE_HAND_PROMPT = `Analyze this poker hand and provide strategic advice. Be direct and insightful.
 
+IMPORTANT: Always include math data to help the player learn. Even for made hands, explain the equity calculation.
+
 Return a JSON object:
 {
   "recommendedAction": "clear action recommendation (e.g., 'Raise to $45', 'Call', 'Fold')",
@@ -58,9 +60,11 @@ Return a JSON object:
   "exploitLine": "exploitative adjustment if villain tendencies known",
   "hybridLine": "balanced recommendation considering both",
   "villainRange": "estimated villain range based on action",
-  "equity": number 0-100 (estimated equity vs villain range),
-  "potOdds": number (pot odds ratio, e.g., 3.5 for 3.5:1),
-  "impliedOdds": number (implied odds if applicable),
+  "equity": number 0-100 (REQUIRED - estimated equity vs villain range, even rough estimate),
+  "potOdds": number (REQUIRED - pot odds ratio if facing a bet, e.g., 3.5 for 3.5:1. Use 0 if not facing a bet),
+  "impliedOdds": number (implied odds if applicable, 0 if not relevant),
+  "outs": number (REQUIRED - count of outs to improve. For made hands like top pair, count outs to two pair/trips/boat. For draws, count draw outs. Minimum 2 for any live hand),
+  "outBreakdown": "REQUIRED - explain the outs calculation. For made hands: 'Top pair has 5 outs to two pair (3 aces + 2 kickers) and 2 outs to trips'. For draws: '9 hearts for flush + 6 straight cards - 2 overlap = 13 outs'",
   "riskLevel": "low/medium/high",
   "alternativeActions": [
     {"action": "alternative play", "reasoning": "why it's viable", "ev": number (relative EV)}
@@ -87,7 +91,7 @@ async function callGrok(messages: Array<{ role: string; content: string }>, pars
       'Authorization': `Bearer ${XAI_API_KEY}`,
     },
     body: JSON.stringify({
-      model: 'grok-4',
+      model: 'grok-beta',
       messages,
       temperature: 0.7,
     }),
@@ -171,6 +175,13 @@ export async function analyzeHandWithGrok(narrative: string): Promise<Partial<An
       { role: 'user', content: `${ANALYZE_HAND_PROMPT}\n\nHand to analyze:\n${narrative}` },
     ]);
 
+    // Ensure math fields have fallback values for education section
+    const equity = result.equity ?? 50; // Default to 50% if not provided
+    const potOdds = result.potOdds ?? 2; // Default to 2:1 if not provided
+    const outs = result.outs ?? 5; // Default to 5 outs if not provided
+    const outBreakdown = result.outBreakdown ||
+      'Outs to improve your hand (exact count depends on board texture and villain range)';
+
     return {
       recommendedAction: result.recommendedAction || 'Check/Call',
       confidence: result.confidence || 50,
@@ -179,9 +190,11 @@ export async function analyzeHandWithGrok(narrative: string): Promise<Partial<An
       exploitLine: result.exploitLine,
       hybridLine: result.hybridLine,
       villainRange: result.villainRange,
-      equity: result.equity,
-      potOdds: result.potOdds,
+      equity,
+      potOdds,
       impliedOdds: result.impliedOdds,
+      outs,
+      outBreakdown,
       riskLevel: result.riskLevel,
       alternativeActions: result.alternativeActions,
       personaAnalysis: result.personaAnalysis || {

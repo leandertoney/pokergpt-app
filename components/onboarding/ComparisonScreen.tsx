@@ -8,9 +8,10 @@ import {
   type ViewStyle,
   type TextStyle,
 } from 'react-native';
-import { ChevronRight, TrendingUp, TrendingDown } from 'lucide-react-native';
+import { ChevronLeft, TrendingUp, TrendingDown } from 'lucide-react-native';
 import Svg, { Path, Circle, Defs, LinearGradient, Stop, Line, Text as SvgText } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
+import { AnimatedLogo } from '@/components/AnimatedLogo';
 import { colors } from '@/constants/colors';
 
 type ComparisonScreenProps = {
@@ -112,23 +113,36 @@ export function ComparisonScreen({ onNext }: ComparisonScreenProps) {
   };
 
   const generatePath = (dataPoints: number[], progress: number) => {
-    if (progress === 0) return '';
+    if (progress <= 0) return '';
 
-    const pointsToShow = Math.floor(dataPoints.length * progress);
+    // Ensure we never exceed array bounds
+    const pointsToShow = Math.min(
+      Math.max(1, Math.ceil(dataPoints.length * progress)),
+      dataPoints.length
+    );
+
     const graphWidth = GRAPH_WIDTH - PADDING * 2;
     const graphHeight = GRAPH_HEIGHT - PADDING * 2;
 
     let path = '';
 
-    for (let i = 0; i <= pointsToShow; i++) {
+    for (let i = 0; i < pointsToShow; i++) {
+      // Safety check for valid data point
+      const dataPoint = dataPoints[i];
+      if (dataPoint === undefined || isNaN(dataPoint)) continue;
+
       const x = PADDING + (i / (dataPoints.length - 1)) * graphWidth;
-      const y = PADDING + graphHeight - (dataPoints[i] * graphHeight);
+      const y = PADDING + graphHeight - (dataPoint * graphHeight);
 
       if (i === 0) {
         path += `M ${x} ${y}`;
       } else {
+        // Bounds check for previous point
+        const prevDataPoint = dataPoints[i - 1];
+        if (prevDataPoint === undefined || isNaN(prevDataPoint)) continue;
+
         const prevX = PADDING + ((i - 1) / (dataPoints.length - 1)) * graphWidth;
-        const prevY = PADDING + graphHeight - (dataPoints[i - 1] * graphHeight);
+        const prevY = PADDING + graphHeight - (prevDataPoint * graphHeight);
         const midX = (prevX + x) / 2;
         path += ` Q ${prevX + (midX - prevX) * 0.8} ${prevY}, ${midX} ${(prevY + y) / 2}`;
         path += ` Q ${midX + (x - midX) * 0.2} ${y}, ${x} ${y}`;
@@ -141,14 +155,17 @@ export function ComparisonScreen({ onNext }: ComparisonScreenProps) {
   const withPath = generatePath(WITH_POKERGPT, graphProgress);
   const withoutPath = generatePath(WITHOUT_POKERGPT, graphProgress);
 
-  const lastIndex = Math.floor(WITH_POKERGPT.length * graphProgress);
+  // Clamp to valid array index to prevent NaN
+  const lastIndex = Math.max(0, Math.min(Math.floor(WITH_POKERGPT.length * graphProgress), WITH_POKERGPT.length - 1));
   const graphWidth = GRAPH_WIDTH - PADDING * 2;
   const graphHeight = GRAPH_HEIGHT - PADDING * 2;
 
+  const withDataPoint = WITH_POKERGPT[lastIndex] ?? 0;
+  const withoutDataPoint = WITHOUT_POKERGPT[lastIndex] ?? 0;
   const withLastX = PADDING + (lastIndex / (WITH_POKERGPT.length - 1)) * graphWidth;
-  const withLastY = PADDING + graphHeight - (WITH_POKERGPT[lastIndex] * graphHeight);
+  const withLastY = PADDING + graphHeight - (withDataPoint * graphHeight);
   const withoutLastX = PADDING + (lastIndex / (WITHOUT_POKERGPT.length - 1)) * graphWidth;
-  const withoutLastY = PADDING + graphHeight - (WITHOUT_POKERGPT[lastIndex] * graphHeight);
+  const withoutLastY = PADDING + graphHeight - (withoutDataPoint * graphHeight);
 
   return (
     <View style={styles.container}>
@@ -166,8 +183,11 @@ export function ComparisonScreen({ onNext }: ComparisonScreenProps) {
           ],
         }}
       >
-        <Text style={styles.headline}>The difference is clear</Text>
-        <Text style={styles.subheadline}>Your results over time</Text>
+        <View style={styles.logoContainer}>
+          <AnimatedLogo variant={1} size="medium" loop />
+        </View>
+        <Text style={styles.headline}>They're getting better.</Text>
+        <Text style={styles.subheadline}>PokerGPT players vs the rest</Text>
       </Animated.View>
 
       {/* Graph Card */}
@@ -334,7 +354,7 @@ export function ComparisonScreen({ onNext }: ComparisonScreenProps) {
             },
           ]}
         >
-          Don't leave money on the table.
+          They're at your table right now.
         </Animated.Text>
       )}
 
@@ -347,7 +367,7 @@ export function ComparisonScreen({ onNext }: ComparisonScreenProps) {
           },
         ]}
       >
-        <ChevronRight size={24} color="rgba(255,255,255,0.5)" />
+        <ChevronLeft size={24} color="rgba(255,255,255,0.5)" />
         <Text style={styles.swipeText}>Swipe to continue</Text>
       </Animated.View>
     </View>
@@ -360,6 +380,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 24,
+  } as ViewStyle,
+  logoContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+    marginBottom: 16,
   } as ViewStyle,
   headline: {
     fontSize: 28,

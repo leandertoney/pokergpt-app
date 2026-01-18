@@ -11,6 +11,7 @@ export type Action = {
 export type HandData = {
   id?: string;
   timestamp?: number;
+  sessionId?: string; // Links hand to a session for session tracking
   heroHand?: string;
   heroPosition?: Position | string;
   heroStack?: number;
@@ -54,6 +55,9 @@ export type AnalysisResult = {
   equity?: number;
   riskLevel?: 'low' | 'medium' | 'high';
   alternativeActions?: AlternativeAction[];
+  // Outs tracking for math education
+  outs?: number;
+  outBreakdown?: string; // e.g., "9 flush + 6 straight - 3 overlap = 12 outs"
   structuralAnalysis?: {
     gtoAction: string;
     potOdds?: string;

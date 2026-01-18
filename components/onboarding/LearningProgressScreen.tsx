@@ -7,8 +7,9 @@ import {
   type ViewStyle,
   type TextStyle,
 } from 'react-native';
-import { ChevronRight, Brain, Target, Calculator, Eye } from 'lucide-react-native';
+import { ChevronLeft, Target, Calculator, Eye } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
+import { AnimatedLogo } from '@/components/AnimatedLogo';
 import { colors } from '@/constants/colors';
 
 type LearningProgressScreenProps = {
@@ -126,8 +127,8 @@ export function LearningProgressScreen({ onNext }: LearningProgressScreenProps) 
           ],
         }}
       >
-        <View style={styles.iconHeader}>
-          <Brain size={28} color={colors.onboarding.gold} />
+        <View style={styles.logoContainer}>
+          <AnimatedLogo variant={1} size="medium" loop />
         </View>
         <Text style={styles.headline}>Level up your game</Text>
         <Text style={styles.subheadline}>Track what you're learning</Text>
@@ -201,7 +202,7 @@ export function LearningProgressScreen({ onNext }: LearningProgressScreenProps) 
           },
         ]}
       >
-        <ChevronRight size={24} color="rgba(255,255,255,0.5)" />
+        <ChevronLeft size={24} color="rgba(255,255,255,0.5)" />
         <Text style={styles.swipeText}>Swipe to continue</Text>
       </Animated.View>
     </View>
@@ -215,15 +216,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 24,
   } as ViewStyle,
-  iconHeader: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: 'rgba(255, 215, 0, 0.15)',
+  logoContainer: {
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
   } as ViewStyle,
   headline: {
     fontSize: 28,

@@ -8,9 +8,10 @@ import {
   type ViewStyle,
   type TextStyle,
 } from 'react-native';
-import { ChevronRight, TrendingUp, DollarSign } from 'lucide-react-native';
+import { ChevronLeft, TrendingUp, DollarSign } from 'lucide-react-native';
 import Svg, { Path, Circle, Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
+import { AnimatedLogo } from '@/components/AnimatedLogo';
 import { colors } from '@/constants/colors';
 
 type ProfitDemoScreenProps = {
@@ -108,25 +109,37 @@ export function ProfitDemoScreen({ onNext }: ProfitDemoScreenProps) {
   };
 
   const generatePath = (progress: number) => {
-    if (progress === 0) return '';
+    if (progress <= 0) return '';
 
-    const pointsToShow = Math.floor(DATA_POINTS.length * progress);
+    // Ensure we never exceed array bounds
+    const pointsToShow = Math.min(
+      Math.max(1, Math.ceil(DATA_POINTS.length * progress)),
+      DATA_POINTS.length
+    );
+
     const padding = 10;
     const graphWidth = GRAPH_WIDTH - padding * 2;
     const graphHeight = GRAPH_HEIGHT - padding * 2;
 
     let path = '';
 
-    for (let i = 0; i <= pointsToShow; i++) {
+    for (let i = 0; i < pointsToShow; i++) {
+      // Safety check for valid data point
+      const dataPoint = DATA_POINTS[i];
+      if (dataPoint === undefined || isNaN(dataPoint)) continue;
+
       const x = padding + (i / (DATA_POINTS.length - 1)) * graphWidth;
-      const y = padding + graphHeight - (DATA_POINTS[i] * graphHeight);
+      const y = padding + graphHeight - (dataPoint * graphHeight);
 
       if (i === 0) {
         path += `M ${x} ${y}`;
       } else {
-        // Smooth curve
+        // Smooth curve - with bounds check for previous point
+        const prevDataPoint = DATA_POINTS[i - 1];
+        if (prevDataPoint === undefined || isNaN(prevDataPoint)) continue;
+
         const prevX = padding + ((i - 1) / (DATA_POINTS.length - 1)) * graphWidth;
-        const prevY = padding + graphHeight - (DATA_POINTS[i - 1] * graphHeight);
+        const prevY = padding + graphHeight - (prevDataPoint * graphHeight);
         const midX = (prevX + x) / 2;
         path += ` Q ${prevX + (midX - prevX) * 0.8} ${prevY}, ${midX} ${(prevY + y) / 2}`;
         path += ` Q ${midX + (x - midX) * 0.2} ${y}, ${x} ${y}`;
@@ -137,9 +150,11 @@ export function ProfitDemoScreen({ onNext }: ProfitDemoScreenProps) {
   };
 
   const currentPath = generatePath(graphProgress);
-  const lastPointIndex = Math.floor(DATA_POINTS.length * graphProgress);
+  // Clamp to valid array index to prevent NaN when graphProgress reaches 1
+  const lastPointIndex = Math.max(0, Math.min(Math.floor(DATA_POINTS.length * graphProgress), DATA_POINTS.length - 1));
+  const lastDataPoint = DATA_POINTS[lastPointIndex] ?? 0;
   const lastPointX = 10 + (lastPointIndex / (DATA_POINTS.length - 1)) * (GRAPH_WIDTH - 20);
-  const lastPointY = 10 + (GRAPH_HEIGHT - 20) - (DATA_POINTS[lastPointIndex] * (GRAPH_HEIGHT - 20));
+  const lastPointY = 10 + (GRAPH_HEIGHT - 20) - (lastDataPoint * (GRAPH_HEIGHT - 20));
 
   return (
     <View style={styles.container}>
@@ -157,6 +172,9 @@ export function ProfitDemoScreen({ onNext }: ProfitDemoScreenProps) {
           ],
         }}
       >
+        <View style={styles.logoContainer}>
+          <AnimatedLogo variant={1} size="medium" loop />
+        </View>
         <Text style={styles.headline}>Track every session.</Text>
         <Text style={styles.headline}>Watch your bankroll grow.</Text>
       </Animated.View>
@@ -252,7 +270,7 @@ export function ProfitDemoScreen({ onNext }: ProfitDemoScreenProps) {
           },
         ]}
       >
-        <ChevronRight size={24} color="rgba(255,255,255,0.5)" />
+        <ChevronLeft size={24} color="rgba(255,255,255,0.5)" />
         <Text style={styles.swipeText}>Swipe to continue</Text>
       </Animated.View>
     </View>
@@ -265,6 +283,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 24,
+  } as ViewStyle,
+  logoContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+    marginBottom: 16,
   } as ViewStyle,
   headline: {
     fontSize: 28,

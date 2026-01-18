@@ -181,18 +181,11 @@ export function VoiceOrb({ state, size = 'large', onPress }: VoiceOrbProps) {
 
   const getGradientColors = (): readonly [string, string, ...string[]] => {
     switch (state) {
-      case 'connecting':
-        return ['#3B82F6', '#2563EB', '#1D4ED8']; // Blue for connecting
-      case 'listening':
-        return [colors.accent.primary, '#FF6B6B', colors.accent.glow];
-      case 'processing':
-        return [colors.accent.gold, '#FFD700', colors.accent.primary];
-      case 'speaking':
-        return ['#4CAF50', '#2E7D32', '#1B5E20']; // Green for speaking
       case 'error':
         return ['#FF4444', '#CC0000', '#990000'];
       default:
-        return [colors.accent.primary, '#B82828', '#8B1C1C'];
+        // Use gold accent color to match SpeakButton
+        return [colors.accent.gold, colors.onboarding.goldDark, '#A88A2A'];
     }
   };
 
@@ -201,7 +194,8 @@ export function VoiceOrb({ state, size = 'large', onPress }: VoiceOrbProps) {
       case 'error':
         return 'rgba(255, 255, 255, 0.4)';
       default:
-        return colors.text.primary;
+        // Dark bars on gold background (like SpeakButton)
+        return '#1A1A1A';
     }
   };
 
@@ -227,7 +221,7 @@ export function VoiceOrb({ state, size = 'large', onPress }: VoiceOrbProps) {
               borderRadius: dimensions.glow / 2,
               opacity: glowAnim,
               transform: [{ scale: pulseAnim }],
-              backgroundColor: state === 'speaking' ? '#4CAF50' : colors.accent.glow,
+              backgroundColor: colors.accent.gold,
             },
           ]}
         />
@@ -243,8 +237,8 @@ export function VoiceOrb({ state, size = 'large', onPress }: VoiceOrbProps) {
               height: dimensions.glow - 10,
               borderRadius: (dimensions.glow - 10) / 2,
               transform: [{ rotate: spin }],
-              borderTopColor: state === 'connecting' ? '#3B82F6' : colors.accent.gold,
-              borderRightColor: state === 'connecting' ? '#3B82F6' : colors.accent.gold,
+              borderTopColor: colors.accent.gold,
+              borderRightColor: colors.accent.gold,
             },
           ]}
         />
@@ -324,7 +318,7 @@ const styles = StyleSheet.create({
   } as ViewStyle,
   glowRing: {
     position: 'absolute',
-    backgroundColor: colors.accent.glow,
+    backgroundColor: colors.accent.gold,
     opacity: 0.3,
   } as ViewStyle,
   processingRing: {
@@ -335,7 +329,7 @@ const styles = StyleSheet.create({
     borderRightColor: colors.accent.gold,
   } as ViewStyle,
   orbWrapper: {
-    shadowColor: colors.accent.glow,
+    shadowColor: colors.accent.gold,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.5,
     shadowRadius: 20,

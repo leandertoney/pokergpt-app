@@ -1,8 +1,9 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Animated, type ViewStyle, type TextStyle } from 'react-native';
-import { ChevronDown, ChevronUp, TrendingUp, Target, Users, Lightbulb } from 'lucide-react-native';
-import type { AnalysisResult, HandData, AlternativeAction } from '@/types/poker';
+import { ChevronDown, ChevronUp, TrendingUp, Target, Users, Lightbulb, Calculator } from 'lucide-react-native';
+import type { AnalysisResult, HandData, AlternativeAction, ExperienceLevel } from '@/types/poker';
 import { colors } from '@/constants/colors';
+import { getUserIdentity } from '@/services/storageService';
 
 interface FullResultCardProps {
   analysis: AnalysisResult;
@@ -57,7 +58,128 @@ function ExpandableSection({ title, icon, children, defaultExpanded = false }: E
   );
 }
 
+/**
+ * MathEducationSection - Shows step-by-step poker math calculations
+ * Auto-expands for beginners, collapsed for advanced players
+ */
+function MathEducationSection({
+  analysis,
+  handData,
+  defaultExpanded,
+}: {
+  analysis: AnalysisResult;
+  handData: HandData;
+  defaultExpanded: boolean;
+}) {
+  // Only show if we have enough data to teach
+  const hasOutsInfo = analysis.outs !== undefined && analysis.outs !== null && analysis.outs > 0;
+  const hasEquityInfo = analysis.equity !== undefined && analysis.equity !== null;
+  const hasPotOdds = analysis.potOdds !== undefined && analysis.potOdds !== null && analysis.potOdds > 0;
+
+  // Show placeholder if no math data available
+  if (!hasOutsInfo && !hasEquityInfo && !hasPotOdds) {
+    return (
+      <ExpandableSection
+        title="Learn the Math"
+        icon={<Calculator size={18} color={colors.accent.gold} />}
+        defaultExpanded={false}
+      >
+        <View style={styles.mathPlaceholder}>
+          <Text style={styles.mathPlaceholderText}>
+            Math breakdown not available for this hand. For detailed calculations, provide pot size and bet amounts.
+          </Text>
+        </View>
+      </ExpandableSection>
+    );
+  }
+
+  // Calculate the equity needed based on pot odds
+  const equityNeeded = hasPotOdds ? (100 / (analysis.potOdds! + 1)) : 0;
+  const isProfitableCall = hasEquityInfo && hasPotOdds && analysis.equity! > equityNeeded;
+
+  return (
+    <ExpandableSection
+      title="Learn the Math"
+      icon={<Calculator size={18} color={colors.accent.gold} />}
+      defaultExpanded={defaultExpanded}
+    >
+      {/* Outs counting */}
+      {hasOutsInfo && (
+        <View style={styles.mathBlock}>
+          <Text style={styles.mathTitle}>COUNTING OUTS</Text>
+          {analysis.outBreakdown ? (
+            <Text style={styles.mathFormula}>{analysis.outBreakdown}</Text>
+          ) : (
+            <Text style={styles.mathFormula}>
+              You have {analysis.outs} outs to improve your hand
+            </Text>
+          )}
+        </View>
+      )}
+
+      {/* Equity calculation using Rule of 2/4 */}
+      {hasOutsInfo && hasEquityInfo && (
+        <View style={styles.mathBlock}>
+          <Text style={styles.mathTitle}>EQUITY (Rule of 4)</Text>
+          <Text style={styles.mathHint}>With 2 cards to come: Outs × 4</Text>
+          <Text style={styles.mathFormula}>
+            {analysis.outs} outs × 4 = ~{analysis.outs! * 4}%
+          </Text>
+          <Text style={styles.mathResult}>
+            Actual equity: {analysis.equity}%
+          </Text>
+        </View>
+      )}
+
+      {/* Pot odds calculation */}
+      {hasPotOdds && (
+        <View style={styles.mathBlock}>
+          <Text style={styles.mathTitle}>POT ODDS</Text>
+          <Text style={styles.mathHint}>
+            Pot odds tell you the minimum equity needed to call profitably
+          </Text>
+          <Text style={styles.mathFormula}>
+            Getting {analysis.potOdds}:1 odds = need {equityNeeded.toFixed(0)}% equity
+          </Text>
+        </View>
+      )}
+
+      {/* Verdict - compare equity vs pot odds */}
+      {hasEquityInfo && hasPotOdds && (
+        <View style={styles.verdictBlock}>
+          <Text style={[
+            styles.verdict,
+            { color: isProfitableCall ? '#22C55E' : colors.accent.primary }
+          ]}>
+            {analysis.equity}% equity {isProfitableCall ? '>' : '<'} {equityNeeded.toFixed(0)}% needed
+          </Text>
+          <Text style={[
+            styles.verdictResult,
+            { color: isProfitableCall ? '#22C55E' : colors.accent.primary }
+          ]}>
+            {isProfitableCall ? '✓ PROFITABLE CALL' : '✗ FOLD (not enough equity)'}
+          </Text>
+        </View>
+      )}
+    </ExpandableSection>
+  );
+}
+
 export function FullResultCard({ analysis, handData }: FullResultCardProps) {
+  // Track user experience level for progressive disclosure
+  const [experienceLevel, setExperienceLevel] = useState<ExperienceLevel>('beginner');
+
+  useEffect(() => {
+    getUserIdentity().then(identity => {
+      if (identity?.experienceLevel) {
+        setExperienceLevel(identity.experienceLevel);
+      }
+    });
+  }, []);
+
+  // Auto-expand math section for beginners
+  const showMathByDefault = experienceLevel === 'beginner';
+
   // Helper function to safely get values with fallbacks
   const getConfidence = () => analysis?.confidence ?? 0;
   const getRecommendation = () => analysis?.recommendedAction || 'Analyzing...';
@@ -76,6 +198,54 @@ export function FullResultCard({ analysis, handData }: FullResultCardProps) {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+      {/* Hand Summary - At Top */}
+      <View style={styles.handSummary}>
+        <Text style={styles.handSummaryTitle}>Your Hand</Text>
+        <View style={styles.handDetails}>
+          {handData?.heroHand && (
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Cards</Text>
+              <Text style={styles.detailValue}>{handData.heroHand}</Text>
+            </View>
+          )}
+          {handData?.heroPosition && (
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Position</Text>
+              <Text style={styles.detailValue}>
+                {handData.heroPosition}
+                {handData.villainPosition ? ` vs ${handData.villainPosition}` : ''}
+              </Text>
+            </View>
+          )}
+          {handData?.flop && handData.flop.length > 0 && (
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Board</Text>
+              <Text style={styles.detailValue}>
+                {[...(handData.flop || []), handData.turn, handData.river].filter(Boolean).join(' ')}
+              </Text>
+            </View>
+          )}
+          {handData?.potSize !== undefined && handData?.potSize !== null && (
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Pot Size</Text>
+              <Text style={styles.detailValue}>${handData.potSize}</Text>
+            </View>
+          )}
+          {(handData?.effectiveStack !== undefined || handData?.heroStack !== undefined) && (
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Effective Stack</Text>
+              <Text style={styles.detailValue}>${handData.effectiveStack ?? handData.heroStack}</Text>
+            </View>
+          )}
+          {handData?.action && (
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Action</Text>
+              <Text style={styles.detailValue}>{handData.action}</Text>
+            </View>
+          )}
+        </View>
+      </View>
+
       {/* Main Recommendation */}
       <View style={styles.mainRecommendation}>
         <Text style={styles.recommendationLabel}>RECOMMENDED ACTION</Text>
@@ -92,19 +262,19 @@ export function FullResultCard({ analysis, handData }: FullResultCardProps) {
 
       {/* Quick Stats */}
       <View style={styles.statsRow}>
-        {analysis?.equity !== undefined && (
+        {analysis?.equity !== undefined && analysis?.equity !== null && (
           <View style={styles.statBox}>
             <Text style={styles.statLabel}>Equity</Text>
             <Text style={styles.statValue}>{analysis.equity}%</Text>
           </View>
         )}
-        {analysis?.potOdds !== undefined && (
+        {analysis?.potOdds !== undefined && analysis?.potOdds !== null && (
           <View style={styles.statBox}>
             <Text style={styles.statLabel}>Pot Odds</Text>
             <Text style={styles.statValue}>{analysis.potOdds}:1</Text>
           </View>
         )}
-        {analysis?.impliedOdds !== undefined && (
+        {analysis?.impliedOdds !== undefined && analysis?.impliedOdds !== null && (
           <View style={styles.statBox}>
             <Text style={styles.statLabel}>Implied</Text>
             <Text style={styles.statValue}>{analysis.impliedOdds}:1</Text>
@@ -120,6 +290,13 @@ export function FullResultCard({ analysis, handData }: FullResultCardProps) {
         )}
       </View>
 
+      {/* Math Education Section - between stats and reasoning */}
+      <MathEducationSection
+        analysis={analysis}
+        handData={handData}
+        defaultExpanded={showMathByDefault}
+      />
+
       {/* Reasoning */}
       {getReasoning() && (
         <View style={styles.reasoningSection}>
@@ -131,7 +308,7 @@ export function FullResultCard({ analysis, handData }: FullResultCardProps) {
       {analysis?.gtoLine && (
         <ExpandableSection
           title="GTO Analysis"
-          icon={<Target size={18} color={colors.accent.primary} />}
+          icon={<Target size={18} color={colors.accent.gold} />}
         >
           <Text style={styles.expandedText}>{analysis.gtoLine}</Text>
         </ExpandableSection>
@@ -149,7 +326,7 @@ export function FullResultCard({ analysis, handData }: FullResultCardProps) {
       {analysis?.villainRange && (
         <ExpandableSection
           title="Villain Range"
-          icon={<Users size={18} color={colors.accent.secondary} />}
+          icon={<Users size={18} color={colors.text.secondary} />}
         >
           <Text style={styles.expandedText}>{analysis.villainRange}</Text>
         </ExpandableSection>
@@ -186,53 +363,6 @@ export function FullResultCard({ analysis, handData }: FullResultCardProps) {
         </View>
       )}
 
-      {/* Hand Summary */}
-      <View style={styles.handSummary}>
-        <Text style={styles.handSummaryTitle}>Hand Summary</Text>
-        <View style={styles.handDetails}>
-          {handData?.heroHand && (
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Your Hand</Text>
-              <Text style={styles.detailValue}>{handData.heroHand}</Text>
-            </View>
-          )}
-          {handData?.heroPosition && (
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Position</Text>
-              <Text style={styles.detailValue}>
-                {handData.heroPosition}
-                {handData.villainPosition ? ` vs ${handData.villainPosition}` : ''}
-              </Text>
-            </View>
-          )}
-          {handData?.potSize && (
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Pot Size</Text>
-              <Text style={styles.detailValue}>${handData.potSize}</Text>
-            </View>
-          )}
-          {(handData?.effectiveStack || handData?.heroStack) && (
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Effective Stack</Text>
-              <Text style={styles.detailValue}>${handData.effectiveStack || handData.heroStack}</Text>
-            </View>
-          )}
-          {handData?.flop && handData.flop.length > 0 && (
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Board</Text>
-              <Text style={styles.detailValue}>
-                {[...(handData.flop || []), handData.turn, handData.river].filter(Boolean).join(' ')}
-              </Text>
-            </View>
-          )}
-          {handData?.action && (
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Action</Text>
-              <Text style={styles.detailValue}>{handData.action}</Text>
-            </View>
-          )}
-        </View>
-      </View>
     </ScrollView>
   );
 }
@@ -275,13 +405,13 @@ const styles = StyleSheet.create({
   } as ViewStyle,
   confidenceBar: {
     height: 8,
-    backgroundColor: colors.accent.primary,
+    backgroundColor: colors.accent.gold,
     borderRadius: 4,
   } as ViewStyle,
   confidenceValue: {
     fontSize: 18,
     fontWeight: '700' as const,
-    color: colors.accent.primary,
+    color: colors.accent.gold,
     minWidth: 50,
   } as TextStyle,
   statsRow: {
@@ -375,18 +505,74 @@ const styles = StyleSheet.create({
     color: colors.text.muted,
     lineHeight: 20,
   } as TextStyle,
+  // Math Education Section Styles
+  mathBlock: {
+    marginBottom: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.background.tertiary,
+  } as ViewStyle,
+  mathTitle: {
+    fontSize: 11,
+    fontWeight: '700' as const,
+    color: colors.accent.gold,
+    letterSpacing: 1,
+    marginBottom: 8,
+  } as TextStyle,
+  mathHint: {
+    fontSize: 13,
+    color: colors.text.muted,
+    marginBottom: 4,
+    fontStyle: 'italic' as const,
+  } as TextStyle,
+  mathFormula: {
+    fontSize: 15,
+    fontWeight: '600' as const,
+    color: colors.text.primary,
+    fontFamily: 'monospace',
+    marginBottom: 4,
+  } as TextStyle,
+  mathResult: {
+    fontSize: 14,
+    color: colors.text.secondary,
+    marginTop: 4,
+  } as TextStyle,
+  verdictBlock: {
+    backgroundColor: colors.background.tertiary,
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center' as const,
+  } as ViewStyle,
+  verdict: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    marginBottom: 4,
+  } as TextStyle,
+  verdictResult: {
+    fontSize: 16,
+    fontWeight: '700' as const,
+  } as TextStyle,
+  mathPlaceholder: {
+    padding: 8,
+  } as ViewStyle,
+  mathPlaceholderText: {
+    fontSize: 14,
+    color: colors.text.muted,
+    fontStyle: 'italic' as const,
+    lineHeight: 20,
+  } as TextStyle,
   narrativeSection: {
     backgroundColor: colors.background.secondary,
     padding: 16,
     borderRadius: 12,
     borderLeftWidth: 4,
-    borderLeftColor: colors.accent.primary,
+    borderLeftColor: colors.accent.gold,
     marginBottom: 20,
   } as ViewStyle,
   narrativeTitle: {
     fontSize: 14,
     fontWeight: '600' as const,
-    color: colors.accent.primary,
+    color: colors.accent.gold,
     marginBottom: 8,
   } as TextStyle,
   narrativeText: {
@@ -399,11 +585,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background.secondary,
     borderRadius: 12,
     padding: 16,
+    marginBottom: 20,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.accent.gold,
   } as ViewStyle,
   handSummaryTitle: {
     fontSize: 14,
     fontWeight: '600' as const,
-    color: colors.text.muted,
+    color: colors.accent.gold,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: 12,

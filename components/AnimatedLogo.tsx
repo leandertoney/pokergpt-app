@@ -1,7 +1,6 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { View, StyleSheet, type ViewStyle } from 'react-native';
-import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
-import { colors } from '@/constants/colors';
+import { useVideoPlayer, VideoView } from 'expo-video';
 
 interface AnimatedLogoProps {
   variant: 1 | 2 | 3 | 4;
@@ -17,47 +16,47 @@ const sizeMap = {
   large: 250,
 };
 
-const sources = {
+const sources: Record<1 | 2 | 3 | 4, string> = {
   1: require('@/assets/videos/pokergpt_animation_1.mp4'),
   2: require('@/assets/videos/pokergpt_animation_2.mp4'),
   3: require('@/assets/videos/pokergpt_animation_3.mp4'),
   4: require('@/assets/videos/pokergpt_animation_4.mp4'),
 };
 
-export function AnimatedLogo({ 
-  variant, 
-  size = 'medium', 
-  loop = false, 
+export function AnimatedLogo({
+  variant,
+  size = 'medium',
+  loop = false,
   onFinish,
   style,
 }: AnimatedLogoProps) {
-  const videoRef = useRef<Video>(null);
   const dimension = sizeMap[size];
 
-  const handlePlaybackStatusUpdate = (status: AVPlaybackStatus) => {
-    if (status.isLoaded && status.didJustFinish && !loop && onFinish) {
-      onFinish();
-    }
-  };
+  const player = useVideoPlayer(sources[variant], (player) => {
+    player.loop = loop;
+    player.muted = true;
+    player.play();
+  });
 
   useEffect(() => {
-    // Ensure video plays when component mounts
-    if (videoRef.current) {
-      videoRef.current.playAsync();
-    }
-  }, []);
+    if (!onFinish) return;
+
+    const subscription = player.addListener('playToEnd', () => {
+      if (!loop) {
+        onFinish();
+      }
+    });
+
+    return () => subscription.remove();
+  }, [player, loop, onFinish]);
 
   return (
     <View style={[styles.container, { width: dimension, height: dimension }, style]}>
-      <Video
-        ref={videoRef}
-        source={sources[variant]}
+      <VideoView
+        player={player}
         style={styles.video}
-        resizeMode={ResizeMode.CONTAIN}
-        shouldPlay
-        isLooping={loop}
-        isMuted
-        onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
+        contentFit="contain"
+        nativeControls={false}
       />
     </View>
   );

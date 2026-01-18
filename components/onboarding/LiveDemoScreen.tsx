@@ -8,11 +8,25 @@ import {
   type ViewStyle,
   type TextStyle,
 } from 'react-native';
-import { Check, ChevronRight, TrendingUp, Target, Calculator } from 'lucide-react-native';
+import { Check, ChevronLeft, TrendingUp, Target, Calculator } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { VoiceOrb, type VoiceOrbState } from '@/components/VoiceOrb';
-import { PlayingCard, EmptyCard } from '@/components/PlayingCard';
 import { colors } from '@/constants/colors';
+
+// Card display component - centered rank + suit design
+function MiniCard({ rank, suit, size = 'medium' }: { rank: string; suit: string; size?: 'small' | 'medium' }) {
+  const suitSymbols: Record<string, string> = { s: '♠', h: '♥', d: '♦', c: '♣' };
+  const suitSymbol = suitSymbols[suit] || suit;
+  const isRed = suit === 'h' || suit === 'd';
+  const isSmall = size === 'small';
+
+  return (
+    <View style={[miniCardStyles.card, isSmall && miniCardStyles.cardSmall]}>
+      <Text style={[miniCardStyles.rank, isSmall && miniCardStyles.rankSmall, isRed && miniCardStyles.redText]}>{rank}</Text>
+      <Text style={[miniCardStyles.suit, isSmall && miniCardStyles.suitSmall, isRed && miniCardStyles.redText]}>{suitSymbol}</Text>
+    </View>
+  );
+}
 
 type LiveDemoScreenProps = {
   onNext: () => void;
@@ -27,6 +41,9 @@ const DEMO_RESULT = {
   reasoning: "Strong implied odds with position. Villain's range is capped here.",
 };
 
+// Demo transcription text that appears word by word
+const TRANSCRIPTION_TEXT = '"I had ace king suited... villain 3-bet to 45... pot was 120..."';
+
 export function LiveDemoScreen({ onNext }: LiveDemoScreenProps) {
   const [orbState, setOrbState] = useState<VoiceOrbState>('idle');
   const [showCards, setShowCards] = useState(false);
@@ -34,13 +51,35 @@ export function LiveDemoScreen({ onNext }: LiveDemoScreenProps) {
   const [showResult, setShowResult] = useState(false);
   const [confidenceWidth, setConfidenceWidth] = useState(0);
   const [animationComplete, setAnimationComplete] = useState(false);
+  const [displayedText, setDisplayedText] = useState('');
 
   const titleAnim = useRef(new Animated.Value(0)).current;
+  const transcriptAnim = useRef(new Animated.Value(0)).current;
   const handAnim = useRef(new Animated.Value(0)).current;
   const boardAnim = useRef(new Animated.Value(0)).current;
   const actionAnim = useRef(new Animated.Value(0)).current;
   const resultAnim = useRef(new Animated.Value(0)).current;
   const buttonAnim = useRef(new Animated.Value(0)).current;
+
+  // Animate transcription text word by word
+  const animateTranscription = async () => {
+    const words = TRANSCRIPTION_TEXT.split(' ');
+    for (let i = 0; i < words.length; i++) {
+      await delay(120); // Speed per word
+      setDisplayedText(words.slice(0, i + 1).join(' '));
+
+      // Show cards when we mention them
+      if (i === 3) { // After "ace king suited"
+        setShowCards(true);
+        Animated.spring(handAnim, {
+          toValue: 1,
+          tension: 60,
+          friction: 8,
+          useNativeDriver: true,
+        }).start();
+      }
+    }
+  };
 
   useEffect(() => {
     // Start the demo sequence
@@ -53,18 +92,22 @@ export function LiveDemoScreen({ onNext }: LiveDemoScreenProps) {
         useNativeDriver: true,
       }).start();
 
-      // Phase 2: Show hero cards
+      // Phase 2: Start listening immediately + show transcript area
       await delay(400);
-      setShowCards(true);
-      Animated.spring(handAnim, {
+      setOrbState('listening');
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      Animated.timing(transcriptAnim, {
         toValue: 1,
-        tension: 60,
-        friction: 8,
+        duration: 300,
         useNativeDriver: true,
       }).start();
 
-      // Phase 3: Show board cards
-      await delay(600);
+      // Phase 3: Animate transcription text word by word (cards appear during this)
+      await delay(300);
+      await animateTranscription();
+
+      // Phase 4: Show board cards after transcription
+      await delay(300);
       setShowBoard(true);
       Animated.spring(boardAnim, {
         toValue: 1,
@@ -73,21 +116,16 @@ export function LiveDemoScreen({ onNext }: LiveDemoScreenProps) {
         useNativeDriver: true,
       }).start();
 
-      // Phase 4: Show action context
-      await delay(400);
+      // Phase 5: Show action context
+      await delay(300);
       Animated.timing(actionAnim, {
         toValue: 1,
         duration: 200,
         useNativeDriver: true,
       }).start();
 
-      // Phase 5: Start listening
-      await delay(300);
-      setOrbState('listening');
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
       // Phase 6: Processing
-      await delay(1200);
+      await delay(400);
       setOrbState('processing');
 
       // Phase 7: Show result
@@ -174,8 +212,27 @@ export function LiveDemoScreen({ onNext }: LiveDemoScreenProps) {
           },
         ]}
       >
-        Real-time analysis
+        Just speak your hand
       </Animated.Text>
+
+      {/* Voice Orb - Now at top to show this is voice-first */}
+      <View style={styles.orbContainer}>
+        <VoiceOrb state={orbState} size="small" />
+      </View>
+
+      {/* Live Transcription Text */}
+      <Animated.View
+        style={[
+          styles.transcriptContainer,
+          {
+            opacity: transcriptAnim,
+          },
+        ]}
+      >
+        <Text style={styles.transcriptText}>
+          {displayedText || '...'}
+        </Text>
+      </Animated.View>
 
       {/* Hand Display Card */}
       <Animated.View
@@ -200,8 +257,8 @@ export function LiveDemoScreen({ onNext }: LiveDemoScreenProps) {
           <View style={styles.cardsRow}>
             {showCards && (
               <>
-                <PlayingCard rank="A" suit="s" size="medium" animateIn delay={0} />
-                <PlayingCard rank="K" suit="h" size="medium" animateIn delay={100} />
+                <MiniCard rank="A" suit="s" size="medium" />
+                <MiniCard rank="K" suit="h" size="medium" />
               </>
             )}
           </View>
@@ -216,15 +273,13 @@ export function LiveDemoScreen({ onNext }: LiveDemoScreenProps) {
             },
           ]}
         >
-          <Text style={styles.sectionLabel}>Board</Text>
+          <Text style={styles.sectionLabel}>Flop</Text>
           <View style={styles.cardsRow}>
             {showBoard && (
               <>
-                <PlayingCard rank="Q" suit="d" size="small" animateIn delay={0} />
-                <PlayingCard rank="J" suit="c" size="small" animateIn delay={100} />
-                <PlayingCard rank="3" suit="s" size="small" animateIn delay={200} />
-                <EmptyCard size="small" />
-                <EmptyCard size="small" />
+                <MiniCard rank="Q" suit="d" size="small" />
+                <MiniCard rank="J" suit="c" size="small" />
+                <MiniCard rank="3" suit="s" size="small" />
               </>
             )}
           </View>
@@ -243,11 +298,6 @@ export function LiveDemoScreen({ onNext }: LiveDemoScreenProps) {
           <Text style={styles.potText}>Pot: $120</Text>
         </Animated.View>
       </Animated.View>
-
-      {/* Voice Orb */}
-      <View style={styles.orbContainer}>
-        <VoiceOrb state={orbState} size="medium" />
-      </View>
 
       {/* Result Card */}
       {showResult && (
@@ -321,7 +371,7 @@ export function LiveDemoScreen({ onNext }: LiveDemoScreenProps) {
           },
         ]}
       >
-        <ChevronRight size={24} color="rgba(255,255,255,0.5)" />
+        <ChevronLeft size={24} color="rgba(255,255,255,0.5)" />
         <Text style={styles.swipeText}>Swipe to continue</Text>
       </Animated.View>
     </TouchableOpacity>
@@ -333,25 +383,25 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingTop: 50,
+    paddingTop: 24,
   } as ViewStyle,
   title: {
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: '700',
     color: '#fff',
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: 12,
   } as TextStyle,
   handCard: {
     backgroundColor: 'rgba(255,255,255,0.06)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
     borderRadius: 16,
-    padding: 16,
+    padding: 12,
     width: '100%',
   } as ViewStyle,
   handSection: {
-    marginBottom: 16,
+    marginBottom: 12,
   } as ViewStyle,
   sectionLabel: {
     fontSize: 12,
@@ -369,7 +419,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 12,
+    paddingTop: 8,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.1)',
   } as ViewStyle,
@@ -384,40 +434,57 @@ const styles = StyleSheet.create({
     color: colors.onboarding.gold,
   } as TextStyle,
   orbContainer: {
-    marginVertical: 16,
+    marginVertical: 8,
   } as ViewStyle,
+  transcriptContainer: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginBottom: 12,
+    width: '100%',
+    minHeight: 44,
+  } as ViewStyle,
+  transcriptText: {
+    fontSize: 16,
+    color: '#fff',
+    fontStyle: 'italic',
+    textAlign: 'center',
+    lineHeight: 22,
+  } as TextStyle,
   resultCard: {
     backgroundColor: 'rgba(255,255,255,0.06)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
     borderRadius: 16,
-    padding: 16,
+    padding: 12,
+    marginTop: 10,
     width: '100%',
   } as ViewStyle,
   resultHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginBottom: 16,
+    gap: 10,
+    marginBottom: 10,
   } as ViewStyle,
   checkCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     backgroundColor: colors.onboarding.gold,
     alignItems: 'center',
     justifyContent: 'center',
   } as ViewStyle,
   resultAction: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '800',
     color: '#fff',
   } as TextStyle,
   statsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 16,
-    paddingHorizontal: 8,
+    marginBottom: 10,
+    paddingHorizontal: 4,
   } as ViewStyle,
   statItem: {
     alignItems: 'center',
@@ -440,8 +507,8 @@ const styles = StyleSheet.create({
   confidenceContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginBottom: 12,
+    gap: 10,
+    marginBottom: 8,
   } as ViewStyle,
   confidenceBar: {
     flex: 1,
@@ -452,7 +519,7 @@ const styles = StyleSheet.create({
   } as ViewStyle,
   confidenceFill: {
     height: '100%',
-    backgroundColor: colors.accent.primary,
+    backgroundColor: colors.onboarding.gold,
     borderRadius: 4,
   } as ViewStyle,
   confidenceText: {
@@ -462,9 +529,9 @@ const styles = StyleSheet.create({
     width: 45,
   } as TextStyle,
   resultReasoning: {
-    fontSize: 14,
+    fontSize: 13,
     color: 'rgba(255,255,255,0.6)',
-    lineHeight: 20,
+    lineHeight: 18,
     fontStyle: 'italic',
   } as TextStyle,
   swipeHint: {
@@ -478,6 +545,46 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: 'rgba(255,255,255,0.5)',
     fontWeight: '500',
+  } as TextStyle,
+});
+
+// Mini card styles - centered rank + suit design
+const miniCardStyles = StyleSheet.create({
+  card: {
+    backgroundColor: colors.background.card,
+    borderRadius: 6,
+    width: 48,
+    height: 66,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  } as ViewStyle,
+  cardSmall: {
+    width: 38,
+    height: 52,
+  } as ViewStyle,
+  rank: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1A1A1A',
+  } as TextStyle,
+  rankSmall: {
+    fontSize: 18,
+  } as TextStyle,
+  suit: {
+    fontSize: 18,
+    marginTop: -2,
+    color: '#1A1A1A',
+  } as TextStyle,
+  suitSmall: {
+    fontSize: 14,
+  } as TextStyle,
+  redText: {
+    color: '#FF3A3A',
   } as TextStyle,
 });
 

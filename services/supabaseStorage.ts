@@ -16,7 +16,7 @@ interface User {
 
 export async function getOrCreateUser(): Promise<User | null> {
   if (!isSupabaseConfigured() || !supabase) {
-    console.warn("Supabase not configured");
+    // Silent return - app works offline
     return null;
   }
 
@@ -66,7 +66,7 @@ export async function getOrCreateUser(): Promise<User | null> {
       .single();
 
     if (insertError) {
-      console.error("Error creating auth user:", JSON.stringify(insertError, null, 2));
+      // Silently handle - app works offline
       return null;
     }
 
@@ -93,49 +93,43 @@ export async function getOrCreateUser(): Promise<User | null> {
     .select()
     .single();
 
-  // Debug: log full response
-  console.log("Insert response - data:", newUser, "error:", insertError);
-
   if (insertError) {
-    console.error("Error creating user:", insertError.message, insertError.code, insertError.details);
+    // Silently handle network errors - app works offline
     return null;
   }
 
   if (!newUser) {
-    console.error("Insert succeeded but no user returned");
     return null;
   }
 
   return newUser as User;
-  } catch (error) {
-    console.error("Network error in getOrCreateUser:", error);
-    // Return null to allow app to continue in offline mode
+  } catch {
+    // Silent catch - app works offline when network unavailable
     return null;
   }
 }
 
 export async function updateUserIdentity(identity: UserIdentity): Promise<void> {
   if (!isSupabaseConfigured() || !supabase) {
-    console.warn("Supabase not configured");
     return;
   }
 
-  const visitorId = await getVisitorId();
+  try {
+    const visitorId = await getVisitorId();
 
-  const { error } = await supabase
-    .from("users")
-    .update({
-      archetype: identity.archetype,
-      experience_level: identity.experienceLevel,
-      primary_goal: identity.primaryGoal,
-      biggest_challenge: identity.biggestChallenge,
-      onboarding_complete: true,
-    })
-    .eq("visitor_id", visitorId);
-
-  if (error) {
-    console.error("Error updating identity:", error);
-    throw error;
+    await supabase
+      .from("users")
+      .update({
+        archetype: identity.archetype,
+        experience_level: identity.experienceLevel,
+        primary_goal: identity.primaryGoal,
+        biggest_challenge: identity.biggestChallenge,
+        onboarding_complete: true,
+      })
+      .eq("visitor_id", visitorId);
+    // Silent - identity updates can fail gracefully offline
+  } catch {
+    // Silent catch - works offline
   }
 }
 
@@ -144,15 +138,19 @@ export async function getUserIdentity(): Promise<UserIdentity | null> {
     return null;
   }
 
-  const user = await getOrCreateUser();
-  if (!user) return null;
+  try {
+    const user = await getOrCreateUser();
+    if (!user) return null;
 
-  return {
-    archetype: user.archetype as UserIdentity["archetype"],
-    experienceLevel: user.experience_level as UserIdentity["experienceLevel"],
-    primaryGoal: user.primary_goal as UserIdentity["primaryGoal"],
-    biggestChallenge: user.biggest_challenge as UserIdentity["biggestChallenge"],
-  };
+    return {
+      archetype: user.archetype as UserIdentity["archetype"],
+      experienceLevel: user.experience_level as UserIdentity["experienceLevel"],
+      primaryGoal: user.primary_goal as UserIdentity["primaryGoal"],
+      biggestChallenge: user.biggest_challenge as UserIdentity["biggestChallenge"],
+    };
+  } catch {
+    return null;
+  }
 }
 
 export async function storeHand(
@@ -160,47 +158,46 @@ export async function storeHand(
   analysis: AnalysisResult
 ): Promise<void> {
   if (!isSupabaseConfigured() || !supabase) {
-    console.warn("Supabase not configured. Hand not stored.");
     return;
   }
 
-  const user = await getOrCreateUser();
-  if (!user) {
-    throw new Error("Could not get or create user");
-  }
+  try {
+    const user = await getOrCreateUser();
+    if (!user) {
+      // Offline - can't store hand, fail silently
+      return;
+    }
 
-  // Check free tier limit (5 hands)
-  if (user.tier === "free") {
-    const { count } = await supabase
-      .from("hands")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", user.id);
-
-    if (count && count >= 5) {
-      // Delete oldest hand to make room
-      const { data: oldest } = await supabase
+    // Check free tier limit (5 hands)
+    if (user.tier === "free") {
+      const { count } = await supabase
         .from("hands")
-        .select("id")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: true })
-        .limit(1)
-        .single();
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id);
 
-      if (oldest) {
-        await supabase.from("hands").delete().eq("id", oldest.id);
+      if (count && count >= 5) {
+        // Delete oldest hand to make room
+        const { data: oldest } = await supabase
+          .from("hands")
+          .select("id")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: true })
+          .limit(1)
+          .single();
+
+        if (oldest) {
+          await supabase.from("hands").delete().eq("id", oldest.id);
+        }
       }
     }
-  }
 
-  const { error } = await supabase.from("hands").insert({
-    user_id: user.id,
-    hand_data: handData,
-    analysis,
-  });
-
-  if (error) {
-    console.error("Error storing hand:", error);
-    throw error;
+    await supabase.from("hands").insert({
+      user_id: user.id,
+      hand_data: handData,
+      analysis,
+    });
+  } catch {
+    // Silent catch - hand storage fails gracefully offline
   }
 }
 
@@ -211,25 +208,25 @@ export async function getHandHistory(): Promise<
     return [];
   }
 
-  const user = await getOrCreateUser();
-  if (!user) return [];
+  try {
+    const user = await getOrCreateUser();
+    if (!user) return [];
 
-  const { data, error } = await supabase
-    .from("hands")
-    .select("*")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false });
+    const { data } = await supabase
+      .from("hands")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
 
-  if (error) {
-    console.error("Error fetching hand history:", error);
+    return (data || []).map((row) => ({
+      handData: row.hand_data as HandData,
+      analysis: row.analysis as AnalysisResult,
+      createdAt: row.created_at,
+    }));
+  } catch {
+    // Silent catch - returns empty array when offline
     return [];
   }
-
-  return (data || []).map((row) => ({
-    handData: row.hand_data as HandData,
-    analysis: row.analysis as AnalysisResult,
-    createdAt: row.created_at,
-  }));
 }
 
 export async function isOnboardingComplete(): Promise<boolean> {
@@ -237,8 +234,12 @@ export async function isOnboardingComplete(): Promise<boolean> {
     return false;
   }
 
-  const user = await getOrCreateUser();
-  return user?.onboarding_complete ?? false;
+  try {
+    const user = await getOrCreateUser();
+    return user?.onboarding_complete ?? false;
+  } catch {
+    return false;
+  }
 }
 
 export async function getUserTier(): Promise<"free" | "paid"> {
@@ -246,6 +247,10 @@ export async function getUserTier(): Promise<"free" | "paid"> {
     return "free";
   }
 
-  const user = await getOrCreateUser();
-  return user?.tier ?? "free";
+  try {
+    const user = await getOrCreateUser();
+    return user?.tier ?? "free";
+  } catch {
+    return "free";
+  }
 }

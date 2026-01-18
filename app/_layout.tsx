@@ -8,8 +8,14 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { PokerFlowProvider } from "@/hooks/usePokerFlow";
 import { SplashFlow } from "@/components/SplashFlow";
 import { colors } from "@/constants/colors";
+import { initializeRevenueCat } from "@/services/revenueCat";
 
 SplashScreen.preventAutoHideAsync();
+
+// Initialize RevenueCat early
+initializeRevenueCat().catch((error) => {
+  console.warn('RevenueCat initialization failed:', error);
+});
 
 const queryClient = new QueryClient();
 

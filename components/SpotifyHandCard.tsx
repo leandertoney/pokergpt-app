@@ -9,7 +9,6 @@ interface SpotifyHandCardProps {
   position?: string;
   villainPosition?: string;
   createdAt?: string;
-  confidence?: number;
   onPress: () => void;
 }
 
@@ -65,7 +64,6 @@ export function SpotifyHandCard({
   position,
   villainPosition,
   createdAt,
-  confidence,
   onPress,
 }: SpotifyHandCardProps) {
   // Split hero hand into individual cards
@@ -112,17 +110,6 @@ export function SpotifyHandCard({
             )}
           </View>
 
-          {/* Subtle confidence indicator */}
-          {confidence !== undefined && (
-            <View style={styles.confidenceBar}>
-              <View
-                style={[
-                  styles.confidenceFill,
-                  { width: `${confidence}%` }
-                ]}
-              />
-            </View>
-          )}
         </View>
       </LinearGradient>
     </TouchableOpacity>
@@ -251,16 +238,4 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.text.muted,
   } as TextStyle,
-  confidenceBar: {
-    height: 2,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 1,
-    marginTop: 8,
-    overflow: 'hidden',
-  } as ViewStyle,
-  confidenceFill: {
-    height: '100%',
-    backgroundColor: colors.accent.primary,
-    borderRadius: 1,
-  } as ViewStyle,
 });

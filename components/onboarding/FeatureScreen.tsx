@@ -7,7 +7,7 @@ import {
   type ViewStyle,
   type TextStyle,
 } from 'react-native';
-import { ChevronRight } from 'lucide-react-native';
+import { ChevronLeft } from 'lucide-react-native';
 import { colors } from '@/constants/colors';
 
 type FeatureScreenProps = {
@@ -177,7 +177,7 @@ export function FeatureScreen({
           },
         ]}
       >
-        <ChevronRight size={24} color="rgba(255,255,255,0.5)" />
+        <ChevronLeft size={24} color="rgba(255,255,255,0.5)" />
         <Text style={styles.swipeText}>Swipe to continue</Text>
       </Animated.View>
     </View>

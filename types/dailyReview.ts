@@ -65,3 +65,55 @@ export const DEFAULT_DAILY_REVIEW_STATE: DailyReviewState = {
   totalReviewed: 0,
   correctAnswers: 0,
 };
+
+// ============================================
+// FULL HAND TRAINING - Multi-Decision Scenarios
+// ============================================
+
+// A single decision point within a full hand
+export type FullHandDecision = {
+  street: 'preflop' | 'flop' | 'turn' | 'river';
+  board: string | null;           // null for preflop, "K♠ 9♥ 2♣" for flop, etc.
+  potSize: number;
+  villainAction: string;          // "raises to $15", "checks", "bets $50"
+  options: ReviewAnswer[];        // Available actions for this spot
+  correctAction: ReviewAnswer;
+  explanation: string;            // Why this is correct
+
+  // Educational data (optional)
+  potOddsPercent?: string;        // "33%" - pot odds as percentage
+  equityNeeded?: string;          // "28%" - equity needed to call
+  tipText?: string;               // "Tip: Calculate pot odds..."
+  villainRangeDescription?: string; // "Villain's range: AA-TT, AK-AQ"
+};
+
+// Complete full hand scenario with multiple decisions
+export type FullHandScenario = {
+  id: string;
+  title: string;                  // "Value Betting with Top Pair"
+  description: string;            // Brief scenario context
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  heroHand: string;               // "A♠ K♦"
+  heroPosition: Position;
+  villainPosition: Position;
+  villainProfile?: string;        // "Tight-passive regular" - optional context
+  decisions: FullHandDecision[];  // Array of decision points
+};
+
+// User's progress through a full hand
+export type FullHandProgress = {
+  scenarioId: string;
+  currentDecisionIndex: number;
+  userAnswers: ReviewAnswer[];    // What user chose at each point
+  scores: boolean[];              // Whether each answer was correct
+  startedAt: string;              // ISO timestamp
+  completedAt: string | null;
+};
+
+// State for full hand training feature
+export type FullHandTrainingState = {
+  completedScenarioIds: string[];
+  totalCompleted: number;
+  totalCorrectDecisions: number;
+  totalDecisions: number;
+};
