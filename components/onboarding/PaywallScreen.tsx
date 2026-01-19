@@ -12,7 +12,7 @@ import {
   type ViewStyle,
   type TextStyle,
 } from 'react-native';
-import { Check, X } from 'lucide-react-native';
+import { Check, X, Mic, Brain, Clock, Target, MessageCircle, Sparkles } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { colors } from '@/constants/colors';
 import { AnimatedLogo } from '@/components/AnimatedLogo';
@@ -35,12 +35,21 @@ type PaywallScreenProps = {
 const TERMS_URL = 'https://pokergpt.app/terms';
 const PRIVACY_URL = 'https://pokergpt.app/privacy';
 
-// Features included in premium
-const FEATURES = [
-  'Unlimited hand analysis',
-  'Voice input',
-  'Full AI breakdowns',
-  'Hand history',
+// Feature categories with icons and accent colors
+type FeatureItem = {
+  icon: typeof Check;
+  text: string;
+  highlight?: boolean; // Gold highlight for premium features
+  profit?: boolean; // Green highlight for profit-related features
+};
+
+const FEATURES: FeatureItem[] = [
+  { icon: MessageCircle, text: 'Unlimited hand analysis', highlight: true },
+  { icon: Mic, text: 'Voice coaching - hands free', highlight: true },
+  { icon: Brain, text: 'GTO & exploitative breakdowns' },
+  { icon: Clock, text: 'Complete hand history' },
+  { icon: Target, text: 'Daily review quiz + streaks', profit: true },
+  { icon: Sparkles, text: 'Full hand training scenarios', profit: true },
 ];
 
 export function PaywallScreen({ playStyle, goal, userName, onPurchase, onSkip }: PaywallScreenProps) {
@@ -48,8 +57,8 @@ export function PaywallScreen({ playStyle, goal, userName, onPurchase, onSkip }:
   const [isLoading, setIsLoading] = useState(false);
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [prices, setPrices] = useState<{ weekly: string; yearly: string }>({
-    weekly: '$4.99/wk',
-    yearly: '$29.99/yr',
+    weekly: '$9.99/wk',
+    yearly: '$49/yr',
   });
 
   const headerAnim = useRef(new Animated.Value(0)).current;
@@ -67,8 +76,8 @@ export function PaywallScreen({ playStyle, goal, userName, onPurchase, onSkip }:
           const yearlyPrice = offerings.annual?.product.priceString;
 
           setPrices({
-            weekly: weeklyPrice ? `${weeklyPrice}/wk` : '$4.99/wk',
-            yearly: yearlyPrice ? `${yearlyPrice}/yr` : '$29.99/yr',
+            weekly: weeklyPrice ? `${weeklyPrice}/wk` : '$9.99/wk',
+            yearly: yearlyPrice ? `${yearlyPrice}/yr` : '$49/yr',
           });
         }
       } catch (error) {
@@ -223,11 +232,13 @@ export function PaywallScreen({ playStyle, goal, userName, onPurchase, onSkip }:
             },
           ]}
         >
-          <View style={styles.logoContainer}>
+          <View style={styles.headerRow}>
             <AnimatedLogo variant={1} size="small" loop />
+            <View style={styles.headerText}>
+              <Text style={styles.headline}>Get PokerGPT Pro</Text>
+              <Text style={styles.subtitle}>Unlock your edge at the table</Text>
+            </View>
           </View>
-          <Text style={styles.headline}>Get PokerGPT Pro</Text>
-          <Text style={styles.subtitle}>Your pocket coach, unlimited</Text>
         </Animated.View>
 
         {/* Features Card */}
@@ -247,13 +258,34 @@ export function PaywallScreen({ playStyle, goal, userName, onPurchase, onSkip }:
             },
           ]}
         >
+          <Text style={styles.featuresTitle}>Everything you need to win</Text>
           <View style={styles.featuresContainer}>
-            {FEATURES.map((feature, index) => (
-              <View key={index} style={styles.featureRow}>
-                <Check size={20} color={colors.onboarding.gold} />
-                <Text style={styles.featureText}>{feature}</Text>
-              </View>
-            ))}
+            {FEATURES.map((feature, index) => {
+              const IconComponent = feature.icon;
+              const iconColor = feature.profit
+                ? colors.onboarding.profit
+                : feature.highlight
+                ? colors.onboarding.gold
+                : 'rgba(255,255,255,0.7)';
+              return (
+                <View key={index} style={styles.featureRow}>
+                  <View style={[
+                    styles.featureIconContainer,
+                    feature.profit && styles.featureIconProfit,
+                    feature.highlight && styles.featureIconHighlight,
+                  ]}>
+                    <IconComponent size={14} color={iconColor} />
+                  </View>
+                  <Text style={[
+                    styles.featureText,
+                    feature.profit && styles.featureTextProfit,
+                    feature.highlight && styles.featureTextHighlight,
+                  ]}>
+                    {feature.text}
+                  </Text>
+                </View>
+              );
+            })}
           </View>
         </Animated.View>
 
@@ -285,11 +317,11 @@ export function PaywallScreen({ playStyle, goal, userName, onPurchase, onSkip }:
           >
             {/* Discount Badge */}
             <View style={styles.discountBadge}>
-              <Text style={styles.discountText}>88% OFF</Text>
+              <Text style={styles.discountText}>91% OFF</Text>
             </View>
 
             <Text style={styles.planName}>Yearly</Text>
-            <Text style={styles.planPrice}>$2.50/mo</Text>
+            <Text style={styles.planPrice}>$4.08/mo</Text>
             <Text style={styles.planBilling}>Billed at {prices.yearly.replace('/yr', '')}/yr{'\n'}after free trial</Text>
 
             {/* Selection Indicator */}
@@ -404,63 +436,96 @@ const styles = StyleSheet.create({
   } as ViewStyle,
   scrollContent: {
     paddingHorizontal: 20,
-    paddingTop: 60,
+    paddingTop: 50,
     alignItems: 'center',
   } as ViewStyle,
   header: {
-    alignItems: 'center',
-    marginBottom: 24,
-  } as ViewStyle,
-  logoContainer: {
+    width: '100%',
     marginBottom: 16,
   } as ViewStyle,
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  } as ViewStyle,
+  headerText: {
+    flex: 1,
+  } as ViewStyle,
   headline: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: '700',
     color: '#fff',
-    textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: 4,
   } as TextStyle,
   subtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: 'rgba(255,255,255,0.6)',
-    textAlign: 'center',
   } as TextStyle,
   featuresCard: {
     width: '100%',
-    backgroundColor: 'rgba(232, 184, 74, 0.08)',
+    backgroundColor: 'rgba(255,255,255,0.04)',
     borderWidth: 1,
-    borderColor: 'rgba(232, 184, 74, 0.3)',
+    borderColor: 'rgba(255,255,255,0.1)',
     borderRadius: 16,
-    padding: 20,
-    marginBottom: 24,
+    padding: 16,
+    marginBottom: 16,
   } as ViewStyle,
+  featuresTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#fff',
+    textAlign: 'center',
+    marginBottom: 12,
+  } as TextStyle,
   featuresContainer: {
-    gap: 14,
+    gap: 8,
   } as ViewStyle,
   featureRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
+  } as ViewStyle,
+  featureIconContainer: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  } as ViewStyle,
+  featureIconHighlight: {
+    backgroundColor: 'rgba(232, 184, 74, 0.15)',
+  } as ViewStyle,
+  featureIconProfit: {
+    backgroundColor: 'rgba(34, 197, 94, 0.15)',
   } as ViewStyle,
   featureText: {
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: '500',
-    color: 'rgba(255,255,255,0.9)',
+    color: 'rgba(255,255,255,0.8)',
+    flex: 1,
+  } as TextStyle,
+  featureTextHighlight: {
+    color: colors.onboarding.gold,
+    fontWeight: '600',
+  } as TextStyle,
+  featureTextProfit: {
+    color: colors.onboarding.profit,
+    fontWeight: '600',
   } as TextStyle,
   pricingContainer: {
     flexDirection: 'row',
     width: '100%',
-    gap: 12,
-    marginBottom: 24,
+    gap: 10,
+    marginBottom: 16,
   } as ViewStyle,
   pricingCard: {
     flex: 1,
     backgroundColor: 'rgba(255,255,255,0.06)',
     borderWidth: 2,
     borderColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 14,
+    padding: 12,
     alignItems: 'center',
     position: 'relative',
   } as ViewStyle,
@@ -511,13 +576,13 @@ const styles = StyleSheet.create({
   } as ViewStyle,
   ctaContainer: {
     width: '100%',
-    marginBottom: 20,
+    marginBottom: 12,
   } as ViewStyle,
   ctaButton: {
     width: '100%',
     backgroundColor: colors.onboarding.gold,
-    borderRadius: 16,
-    paddingVertical: 18,
+    borderRadius: 14,
+    paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: colors.onboarding.gold,
@@ -550,7 +615,7 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.3)',
   } as TextStyle,
   bottomSpacer: {
-    height: 40,
+    height: 20,
   } as ViewStyle,
 });
 

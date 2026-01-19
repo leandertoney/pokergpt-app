@@ -117,7 +117,7 @@ export function HeroScreen({ onNext }: HeroScreenProps) {
           },
         ]}
       >
-        <AnimatedLogo variant={1} size="small" loop />
+        <AnimatedLogo variant={1} size="large" loop />
       </Animated.View>
 
       {/* App Store Badge */}
