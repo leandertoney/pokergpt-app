@@ -8,7 +8,7 @@ import {
   type ViewStyle,
   type TextStyle,
 } from 'react-native';
-import { ChevronLeft, TrendingUp, Target, Calculator, Check } from 'lucide-react-native';
+import { TrendingUp, Target, Calculator, Check } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { colors } from '@/constants/colors';
 import { getOnboardingDemoHand } from '@/services/dailyReviewService';
@@ -292,12 +292,6 @@ export function DailyReviewDemoScreen({ onNext }: DailyReviewDemoScreenProps) {
           >
             <Text style={styles.tryButtonText}>Try It Now</Text>
           </TouchableOpacity>
-        </Animated.View>
-
-        {/* Swipe hint */}
-        <Animated.View style={[styles.swipeHint, { opacity: buttonAnim }]}>
-          <ChevronLeft size={24} color="rgba(255,255,255,0.5)" />
-          <Text style={styles.swipeText}>Or swipe to skip</Text>
         </Animated.View>
       </View>
     );
@@ -682,17 +676,6 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '700',
     color: '#fff',
-  } as TextStyle,
-  swipeHint: {
-    position: 'absolute',
-    bottom: 50,
-    alignItems: 'center',
-    gap: 4,
-  } as ViewStyle,
-  swipeText: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.5)',
-    fontWeight: '500',
   } as TextStyle,
   // Question phase
   questionContent: {

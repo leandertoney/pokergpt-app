@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
-import { sendPokerChatMessage, type ChatMessage } from '@/services/pokerAI';
+import { type ChatMessage } from '@/services/pokerAI';
+import { conversationalChat } from '@/services/supabaseAI';
 import {
   createChat,
   updateChat,
@@ -29,8 +30,7 @@ function generateId(): string {
 const WELCOME_MESSAGE: ChatMessage = {
   id: 'welcome',
   role: 'assistant',
-  content:
-    "How can I help with your poker questions? Ask me about pot odds, equity, hand ranges, or any strategy question.",
+  content: "What's up? Tell me about the hand or ask me anything about poker.",
   timestamp: new Date(),
 };
 
@@ -114,11 +114,14 @@ export function usePokerChat(options?: UsePokerChatOptions): UsePokerChatReturn 
       setError(null);
 
       try {
-        // Get AI response
-        const response = await sendPokerChatMessage(
-          text,
-          messages.filter((m) => m.id !== 'welcome') // Don't include welcome message in context
-        );
+        // Format messages for the conversational API
+        const formattedMessages = messages
+          .filter((m) => m.id !== 'welcome')
+          .map((m) => ({ role: m.role, content: m.content }));
+        formattedMessages.push({ role: 'user' as const, content: text.trim() });
+
+        // Get AI response using conversational chat
+        const { response } = await conversationalChat(formattedMessages, {});
 
         const assistantMessage: ChatMessage = {
           id: generateId(),

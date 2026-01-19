@@ -1,9 +1,9 @@
-// Supabase Edge Function: Claude AI Proxy
+// Supabase Edge Function: OpenAI Proxy
 // Deploy with: supabase functions deploy ai
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,41 +11,45 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-interface AnthropicMessage {
-  role: "user" | "assistant";
+interface Message {
+  role: "user" | "assistant" | "system";
   content: string;
 }
 
-async function callClaude(
-  messages: AnthropicMessage[],
+async function callOpenAI(
+  messages: Message[],
   systemPrompt?: string
 ): Promise<string> {
-  if (!ANTHROPIC_API_KEY) {
-    throw new Error("ANTHROPIC_API_KEY not configured");
+  if (!OPENAI_API_KEY) {
+    throw new Error("OPENAI_API_KEY not configured");
   }
 
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
+  const allMessages: Message[] = [];
+  if (systemPrompt) {
+    allMessages.push({ role: "system", content: systemPrompt });
+  }
+  allMessages.push(...messages);
+
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-api-key": ANTHROPIC_API_KEY,
-      "anthropic-version": "2023-06-01",
+      "Authorization": `Bearer ${OPENAI_API_KEY}`,
     },
     body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
+      model: "gpt-4o",
       max_tokens: 4096,
-      system: systemPrompt,
-      messages,
+      messages: allMessages,
     }),
   });
 
   if (!response.ok) {
     const error = await response.text();
-    throw new Error(`Anthropic API error: ${error}`);
+    throw new Error(`OpenAI API error: ${error}`);
   }
 
   const data = await response.json();
-  return data.content[0]?.type === "text" ? data.content[0].text : "";
+  return data.choices[0]?.message?.content || "";
 }
 
 serve(async (req) => {
@@ -59,7 +63,7 @@ serve(async (req) => {
     const { action, prompt, systemPrompt, narrative, messages: chatMessages, currentHandData } = body;
 
     if (action === "generateText") {
-      const text = await callClaude(
+      const text = await callOpenAI(
         [{ role: "user", content: prompt }],
         systemPrompt
       );
@@ -90,23 +94,23 @@ Return a JSON object with these fields:
 - isComplete: boolean (true if enough info for analysis)
 - missingFields: array of field names still needed
 
-Be thorough but only return valid JSON.`;
+Return ONLY valid JSON, no other text.`;
 
-      const text = await callClaude(
-        [
-          { role: "user", content: narrative },
-          { role: "assistant", content: "{" },
-        ],
+      const text = await callOpenAI(
+        [{ role: "user", content: narrative }],
         systemMessage
       );
 
-      // Ensure valid JSON
-      const jsonText = "{" + text;
       try {
-        JSON.parse(jsonText);
-        return new Response(jsonText, {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        // Try to extract JSON from response
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          JSON.parse(jsonMatch[0]);
+          return new Response(jsonMatch[0], {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        throw new Error("No JSON found");
       } catch {
         return new Response(
           JSON.stringify({
@@ -122,53 +126,55 @@ Be thorough but only return valid JSON.`;
     }
 
     if (action === "conversationalChat") {
-      const systemMessage = `You are a poker coach chatting with a friend about a hand they played. You're knowledgeable but casual - like that buddy at the table who happens to be a pro.
+      const systemMessage = `You're chatting with a friend about a poker hand. Talk like a real person, not a robot collecting data.
 
-## How to Respond
+## YOUR #1 RULE: REACT TO WHAT THEY SAID
+When they tell you about their hand, your FIRST response must be a reaction to that specific situation. DO NOT ask clarifying questions first. React, give your take, THEN ask what happened next.
 
-**REACT FIRST, THEN ASK.** When they tell you something about the hand:
-1. Give your immediate take on the situation - what you're thinking, concerns, opportunities
-2. Then naturally ask what happened next
+## FORBIDDEN RESPONSES (never say these):
+- "What are the effective stack sizes?" - DON'T ask this upfront
+- "What position were you in?" - if they already told you
+- "What's the board texture?" - too robotic
+- "How did you proceed?" - sounds like a form
+- Any question that ignores what they just told you
 
-**Examples of GOOD responses:**
-- User: "I bet $20 and three people called"
-  You: "Oof, three callers with pocket 7s? Your hand just got a lot worse - you're basically set mining now. But hey, $80 in the pot and you've got position? Not terrible. What'd the flop bring?"
+## REQUIRED RESPONSE FORMAT:
+1. REACT to their situation ("Oof, three callers with 7s? That's rough multiway")
+2. Give your TAKE ("You're basically set mining now")
+3. THEN ask what happened next ("What'd the flop bring?")
 
-- User: "Flop is 8-4-2 all hearts, I have the 7 of hearts"
-  You: "Okay so second pair with a backdoor flush draw - that's actually decent equity. But monotone board with 3 others in? Someone's got a heart for sure. Did action come to you?"
+## Example - User says: "I'm in middle position with pocket sevens, bump it to $20, get three callers"
 
-- User: "No, I have pocket sevens" (correcting you)
-  You: "My bad! So yeah, second pair not an overpair. Still got that backdoor flush draw working for you at least. What'd you do?"
+GOOD response: "Pocket 7s from MP, $20 open - that's fine. But damn, three callers? Your hand just got way worse. Multiway with a medium pair you're basically hoping to flop a set. What came on the flop?"
 
-**Examples of BAD responses (don't do this):**
-- "What's the board texture?" (too clinical)
-- "How did you proceed on the flop?" (sounds like a form)
-- "You've flopped an overpair and a backdoor flush draw." (wrong read + no personality)
+BAD response: "What are the effective stack sizes?" (WRONG - this ignores everything they said!)
 
-## Your Personality
-- Casual but sharp - you know your stuff
-- React genuinely - "nice!", "oof", "interesting spot"
-- Point out concerns: "three callers killed your equity"
-- Show what YOU would be thinking: "I'd be worried about the flush completing"
-- Use poker slang naturally: "set mining", "backdoor draw", "monotone board"
+## Poker Terms
+- "bump it to X" / "make it X" / "open to X" = raise to X
+- "flatted" / "peeled" = called
+- UTG/MP/CO/BTN = positions
 
-## Hand Data Tracking
-While chatting, keep track of what you've learned. In your response, include a JSON block with updated hand data.
+## Your Vibe
+- Talk like a poker buddy, not a coach
+- "oof", "damn", "nice", "interesting spot"
+- Point out concerns naturally
+- Use slang: set mining, backdoor draw, monotone board
 
-Current hand data: ${JSON.stringify(currentHandData || {})}
+## Hand Tracking (internal)
+Current data: ${JSON.stringify(currentHandData || {})}
 
-After your conversational response, add:
+After your conversational response, add on a new line:
 ---HANDDATA---
-{json with updated fields: heroHand, heroPosition, villainPosition, heroStack, villainStack, potSize, streets, isComplete, missingFields}
+{updated JSON with: heroHand, heroPosition, potSize, streets array, isComplete boolean}
 
-Set isComplete to true when you have enough info for a full analysis (hero's hand, position, key action on at least one street, and a decision point).`;
+Set isComplete:true when there's a clear decision point to analyze.`;
 
-      const formattedMessages: AnthropicMessage[] = chatMessages?.map((m: { role: string; content: string }) => ({
+      const formattedMessages: Message[] = chatMessages?.map((m: { role: string; content: string }) => ({
         role: m.role as "user" | "assistant",
         content: m.content,
       })) || [];
 
-      const text = await callClaude(formattedMessages, systemMessage);
+      const text = await callOpenAI(formattedMessages, systemMessage);
 
       // Parse out the hand data from the response
       const parts = text.split("---HANDDATA---");
@@ -178,7 +184,10 @@ Set isComplete to true when you have enough info for a full analysis (hero's han
       if (parts[1]) {
         try {
           const jsonStr = parts[1].trim();
-          handData = JSON.parse(jsonStr);
+          const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            handData = JSON.parse(jsonMatch[0]);
+          }
         } catch (e) {
           console.error("Failed to parse hand data:", e);
         }
@@ -204,22 +213,22 @@ Return a JSON object with:
 - confidence: number (0-100, how confident in the analysis)
 - keyInsights: array of strings (2-3 key takeaways)
 
-Be concise but thorough. Focus on practical advice.`;
+Be concise but thorough. Focus on practical advice. Return ONLY valid JSON.`;
 
-      const text = await callClaude(
-        [
-          { role: "user", content: narrative },
-          { role: "assistant", content: "{" },
-        ],
+      const text = await callOpenAI(
+        [{ role: "user", content: narrative }],
         systemMessage
       );
 
-      const jsonText = "{" + text;
       try {
-        JSON.parse(jsonText);
-        return new Response(jsonText, {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          JSON.parse(jsonMatch[0]);
+          return new Response(jsonMatch[0], {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        throw new Error("No JSON found");
       } catch {
         return new Response(
           JSON.stringify({

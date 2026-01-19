@@ -1,12 +1,15 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import type { User, Session } from '@supabase/supabase-js';
+import { migrateGuestDataToUser, type MigrationResult } from '@/services/syncService';
 
 interface AuthState {
   user: User | null;
   session: Session | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  migrationStatus: 'idle' | 'in_progress' | 'complete' | 'failed';
+  lastMigrationResult: MigrationResult | null;
 }
 
 interface AuthContextType extends AuthState {
@@ -24,6 +27,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     session: null,
     isLoading: true,
     isAuthenticated: false,
+    migrationStatus: 'idle',
+    lastMigrationResult: null,
   });
 
   // Initialize auth state
@@ -34,24 +39,73 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setState({
         user: session?.user ?? null,
         session,
         isLoading: false,
         isAuthenticated: !!session?.user,
+        migrationStatus: 'idle',
+        lastMigrationResult: null,
       });
+
+      // Trigger migration for existing session (app restart with logged in user)
+      if (session?.user) {
+        console.log('Existing session found, triggering migration for user:', session.user.id);
+        setState((prev) => ({ ...prev, migrationStatus: 'in_progress' }));
+
+        try {
+          const result = await migrateGuestDataToUser(session.user.id);
+          console.log('Initial migration completed:', result);
+          setState((prev) => ({
+            ...prev,
+            migrationStatus: result.success ? 'complete' : 'failed',
+            lastMigrationResult: result,
+          }));
+        } catch (error) {
+          console.error('Initial migration failed:', error);
+          setState((prev) => ({
+            ...prev,
+            migrationStatus: 'failed',
+            lastMigrationResult: null,
+          }));
+        }
+      }
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setState({
+      async (event, session) => {
+        setState((prev) => ({
+          ...prev,
           user: session?.user ?? null,
           session,
           isLoading: false,
           isAuthenticated: !!session?.user,
-        });
+        }));
+
+        // Trigger migration when user signs in
+        if ((event === 'SIGNED_IN' || event === 'USER_UPDATED') && session?.user) {
+          console.log('Auth state changed, triggering migration for user:', session.user.id);
+          setState((prev) => ({ ...prev, migrationStatus: 'in_progress' }));
+
+          try {
+            const result = await migrateGuestDataToUser(session.user.id);
+            console.log('Migration completed:', result);
+            setState((prev) => ({
+              ...prev,
+              migrationStatus: result.success ? 'complete' : 'failed',
+              lastMigrationResult: result,
+            }));
+          } catch (error) {
+            console.error('Migration failed:', error);
+            setState((prev) => ({
+              ...prev,
+              migrationStatus: 'failed',
+              lastMigrationResult: null,
+            }));
+          }
+        }
       }
     );
 
@@ -121,6 +175,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session: null,
       isLoading: false,
       isAuthenticated: false,
+      migrationStatus: 'idle',
+      lastMigrationResult: null,
     });
   }, []);
 

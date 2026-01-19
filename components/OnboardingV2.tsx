@@ -5,8 +5,10 @@ import {
   Animated,
   PanResponder,
   Dimensions,
+  TouchableOpacity,
   type ViewStyle,
 } from 'react-native';
+import { ChevronLeft } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
@@ -92,6 +94,7 @@ const ALL_STEPS: OnboardingStep[] = [
 
 export function OnboardingV2({ onComplete }: OnboardingV2Props) {
   const [step, setStep] = useState<OnboardingStep>('splash');
+  const [stepHistory, setStepHistory] = useState<OnboardingStep[]>(['splash']);
   const [playStyle, setPlayStyle] = useState<string>('shark');
   const [goal, setGoal] = useState<string>('profit');
   const [userName, setUserName] = useState<string | null>(null);
@@ -119,6 +122,7 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
 
   const transitionTo = useCallback((nextStep: OnboardingStep) => {
     setCanSwipe(false);
+    setStepHistory(prev => [...prev, nextStep]);
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 0,
@@ -151,6 +155,47 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
     });
   }, [fadeAnim, slideAnim]);
 
+  const transitionBack = useCallback(() => {
+    if (stepHistory.length <= 1) return;
+
+    setCanSwipe(false);
+    const previousStep = stepHistory[stepHistory.length - 2];
+
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 40,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setStep(previousStep);
+      setStepHistory(prev => prev.slice(0, -1));
+      slideAnim.setValue(-40);
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 250,
+          useNativeDriver: true,
+        }),
+        Animated.spring(slideAnim, {
+          toValue: 0,
+          tension: 50,
+          friction: 8,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        setCanSwipe(true);
+      });
+    });
+  }, [stepHistory, fadeAnim, slideAnim]);
+
   // Swipe left to advance to next screen
   const handleSwipeLeft = useCallback(() => {
     if (!canSwipe) return;
@@ -171,6 +216,12 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
     handleSwipeRef.current = handleSwipeLeft;
   }, [handleSwipeLeft]);
 
+  // Keep a ref to the latest back handler to avoid stale closures
+  const handleBackRef = useRef(transitionBack);
+  useEffect(() => {
+    handleBackRef.current = transitionBack;
+  }, [transitionBack]);
+
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
@@ -179,15 +230,16 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
         return Math.abs(gestureState.dx) > 10 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
       },
       onPanResponderMove: (_, gestureState) => {
-        // Only allow leftward swipe animation
-        if (gestureState.dx < 0) {
-          swipeAnim.setValue(gestureState.dx * 0.3);
-        }
+        // Allow both left and right swipe animation
+        swipeAnim.setValue(gestureState.dx * 0.3);
       },
       onPanResponderRelease: (_, gestureState) => {
         if (gestureState.dx < -SWIPE_THRESHOLD && gestureState.vx < 0) {
-          // Swipe left detected - use ref to get latest handler
+          // Swipe left detected - go forward
           handleSwipeRef.current();
+        } else if (gestureState.dx > SWIPE_THRESHOLD && gestureState.vx > 0) {
+          // Swipe right detected - go back
+          handleBackRef.current();
         }
         // Reset swipe animation
         Animated.spring(swipeAnim, {
@@ -383,6 +435,17 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
         locations={[0, 0.3, 0.7, 1]}
         style={styles.gradient}
       >
+        {/* Back Button */}
+        {step !== 'splash' && step !== 'hero' && stepHistory.length > 1 && (
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={transitionBack}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <ChevronLeft size={24} color="rgba(255,255,255,0.7)" />
+          </TouchableOpacity>
+        )}
+
         {/* Progress Bar */}
         {showProgress && (
           <View style={styles.progressContainer}>
@@ -479,6 +542,18 @@ const styles = StyleSheet.create({
   } as ViewStyle,
   gradient: {
     flex: 1,
+  } as ViewStyle,
+  backButton: {
+    position: 'absolute',
+    top: 54,
+    left: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
   } as ViewStyle,
   progressContainer: {
     paddingHorizontal: 60,

@@ -1,5 +1,10 @@
 import { supabase, getVisitorId, getCurrentUserId, isSupabaseConfigured } from "@/lib/supabase";
-import type { HandData, AnalysisResult, UserIdentity } from "@/types/poker";
+import type { HandData, AnalysisResult, UserIdentity, StoredHand } from "@/types/poker";
+import type { Session } from "@/types/session";
+import type { ChatConversation } from "@/types/chat";
+import type { FavoriteItem } from "@/types/favorites";
+import type { VoiceSettings } from "@/types/voice";
+import type { SessionPreferences } from "@/types/session";
 
 interface User {
   id: string;
@@ -282,5 +287,343 @@ export async function getUserTier(): Promise<"free" | "paid"> {
     return user?.tier ?? "free";
   } catch {
     return "free";
+  }
+}
+
+// ============================================
+// Sync Functions for Guest-to-User Migration
+// ============================================
+
+export interface UserPreferences {
+  voiceSettings?: VoiceSettings;
+  dailyReviewState?: {
+    currentStreak: number;
+    bestStreak: number;
+    lastReviewDate: string | null;
+    reviewedHandIds: string[];
+    totalReviewed: number;
+    correctAnswers: number;
+  };
+  sessionPreferences?: SessionPreferences;
+}
+
+/**
+ * Upsert a hand with local_id for deduplication
+ */
+export async function upsertHand(userId: string, hand: StoredHand): Promise<void> {
+  if (!isSupabaseConfigured() || !supabase) {
+    return;
+  }
+
+  try {
+    const localId = hand.handData.id || `hand_${hand.timestamp}`;
+
+    await supabase
+      .from("hands")
+      .upsert(
+        {
+          user_id: userId,
+          local_id: localId,
+          hand_data: hand.handData,
+          analysis: hand.analysis,
+        },
+        {
+          onConflict: "user_id,local_id",
+        }
+      );
+  } catch (error) {
+    console.error("Error upserting hand:", error);
+    throw error;
+  }
+}
+
+/**
+ * Get all hands from cloud for a user
+ */
+export async function getCloudHands(userId: string): Promise<StoredHand[]> {
+  if (!isSupabaseConfigured() || !supabase) {
+    return [];
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("hands")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+
+    return (data || []).map((row) => ({
+      handData: row.hand_data as HandData,
+      analysis: row.analysis as AnalysisResult,
+      timestamp: new Date(row.created_at).getTime(),
+    }));
+  } catch (error) {
+    console.error("Error getting cloud hands:", error);
+    return [];
+  }
+}
+
+/**
+ * Upsert a session to cloud
+ */
+export async function upsertSession(userId: string, session: Session): Promise<void> {
+  if (!isSupabaseConfigured() || !supabase) {
+    return;
+  }
+
+  try {
+    await supabase
+      .from("sessions")
+      .upsert(
+        {
+          user_id: userId,
+          local_id: session.id,
+          name: session.name,
+          start_time: session.startTime,
+          end_time: session.endTime,
+          stakes: session.stakes,
+          custom_stakes: session.customStakes,
+          buy_in: session.buyIn,
+          cash_out: session.cashOut,
+          result: session.result,
+          location: session.location,
+          table_type: session.tableType,
+          notes: session.notes,
+          hand_ids: session.handIds,
+          chat_ids: session.chatIds,
+          is_auto_suggested: session.isAutoSuggested,
+          created_at: session.createdAt,
+          updated_at: session.updatedAt,
+        },
+        {
+          onConflict: "user_id,local_id",
+        }
+      );
+  } catch (error) {
+    console.error("Error upserting session:", error);
+    throw error;
+  }
+}
+
+/**
+ * Get all sessions from cloud for a user
+ */
+export async function getCloudSessions(userId: string): Promise<Session[]> {
+  if (!isSupabaseConfigured() || !supabase) {
+    return [];
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("sessions")
+      .select("*")
+      .eq("user_id", userId)
+      .order("start_time", { ascending: false });
+
+    if (error) throw error;
+
+    return (data || []).map((row) => ({
+      id: row.local_id,
+      name: row.name,
+      startTime: row.start_time,
+      endTime: row.end_time,
+      stakes: row.stakes,
+      customStakes: row.custom_stakes,
+      buyIn: row.buy_in,
+      cashOut: row.cash_out,
+      result: row.result,
+      location: row.location,
+      tableType: row.table_type,
+      notes: row.notes,
+      handIds: row.hand_ids || [],
+      chatIds: row.chat_ids || [],
+      isAutoSuggested: row.is_auto_suggested,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }));
+  } catch (error) {
+    console.error("Error getting cloud sessions:", error);
+    return [];
+  }
+}
+
+/**
+ * Upsert a chat to cloud
+ */
+export async function upsertChat(userId: string, chat: ChatConversation): Promise<void> {
+  if (!isSupabaseConfigured() || !supabase) {
+    return;
+  }
+
+  try {
+    await supabase
+      .from("chats")
+      .upsert(
+        {
+          user_id: userId,
+          local_id: chat.id,
+          session_id: chat.sessionId,
+          title: chat.title,
+          messages: chat.messages,
+          message_count: chat.messageCount,
+          preview: chat.preview,
+          created_at: chat.createdAt,
+          updated_at: chat.updatedAt,
+        },
+        {
+          onConflict: "user_id,local_id",
+        }
+      );
+  } catch (error) {
+    console.error("Error upserting chat:", error);
+    throw error;
+  }
+}
+
+/**
+ * Get all chats from cloud for a user
+ */
+export async function getCloudChats(userId: string): Promise<ChatConversation[]> {
+  if (!isSupabaseConfigured() || !supabase) {
+    return [];
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("chats")
+      .select("*")
+      .eq("user_id", userId)
+      .order("updated_at", { ascending: false });
+
+    if (error) throw error;
+
+    return (data || []).map((row) => ({
+      id: row.local_id,
+      sessionId: row.session_id,
+      title: row.title,
+      messages: row.messages || [],
+      messageCount: row.message_count,
+      preview: row.preview,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }));
+  } catch (error) {
+    console.error("Error getting cloud chats:", error);
+    return [];
+  }
+}
+
+/**
+ * Upsert a favorite to cloud
+ */
+export async function upsertFavorite(userId: string, favorite: FavoriteItem): Promise<void> {
+  if (!isSupabaseConfigured() || !supabase) {
+    return;
+  }
+
+  try {
+    await supabase
+      .from("favorites")
+      .upsert(
+        {
+          user_id: userId,
+          item_id: favorite.id,
+          item_type: favorite.type,
+          favorited_at: favorite.favoritedAt,
+        },
+        {
+          onConflict: "user_id,item_id,item_type",
+        }
+      );
+  } catch (error) {
+    console.error("Error upserting favorite:", error);
+    throw error;
+  }
+}
+
+/**
+ * Get all favorites from cloud for a user
+ */
+export async function getCloudFavorites(userId: string): Promise<FavoriteItem[]> {
+  if (!isSupabaseConfigured() || !supabase) {
+    return [];
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("favorites")
+      .select("*")
+      .eq("user_id", userId)
+      .order("favorited_at", { ascending: false });
+
+    if (error) throw error;
+
+    return (data || []).map((row) => ({
+      id: row.item_id,
+      type: row.item_type as "hand" | "chat",
+      favoritedAt: row.favorited_at,
+    }));
+  } catch (error) {
+    console.error("Error getting cloud favorites:", error);
+    return [];
+  }
+}
+
+/**
+ * Upsert user preferences to cloud
+ */
+export async function upsertPreferences(userId: string, prefs: UserPreferences): Promise<void> {
+  if (!isSupabaseConfigured() || !supabase) {
+    return;
+  }
+
+  try {
+    await supabase
+      .from("user_preferences")
+      .upsert(
+        {
+          user_id: userId,
+          voice_settings: prefs.voiceSettings || {},
+          daily_review_state: prefs.dailyReviewState || {},
+          session_preferences: prefs.sessionPreferences || {},
+          updated_at: Date.now(),
+        },
+        {
+          onConflict: "user_id",
+        }
+      );
+  } catch (error) {
+    console.error("Error upserting preferences:", error);
+    throw error;
+  }
+}
+
+/**
+ * Get user preferences from cloud
+ */
+export async function getCloudPreferences(userId: string): Promise<UserPreferences | null> {
+  if (!isSupabaseConfigured() || !supabase) {
+    return null;
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("user_preferences")
+      .select("*")
+      .eq("user_id", userId)
+      .single();
+
+    if (error || !data) return null;
+
+    return {
+      voiceSettings: data.voice_settings as VoiceSettings,
+      dailyReviewState: data.daily_review_state,
+      sessionPreferences: data.session_preferences as SessionPreferences,
+    };
+  } catch (error) {
+    console.error("Error getting cloud preferences:", error);
+    return null;
   }
 }
