@@ -430,6 +430,20 @@ export async function checkOnboardingComplete(isAuthenticated: boolean = false):
     if (skipOnboarding === 'true') return true;
   }
 
+  // Check if user is already subscribed via RevenueCat - skip onboarding for subscribers
+  try {
+    const subscriptionStatus = await checkSubscriptionStatus();
+    if (subscriptionStatus.isSubscribed) {
+      // Mark onboarding as complete and set user tier
+      await AsyncStorage.setItem(ONBOARDING_COMPLETE_KEY, 'true');
+      await setUserTier('paid');
+      return true;
+    }
+  } catch (error) {
+    console.warn('Failed to check subscription status:', error);
+    // Continue with normal flow if RevenueCat check fails
+  }
+
   if (!isAuthenticated) return false;
   try {
     const complete = await AsyncStorage.getItem(ONBOARDING_COMPLETE_KEY);
