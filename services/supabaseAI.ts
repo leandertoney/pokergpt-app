@@ -9,6 +9,17 @@ function getEdgeFunctionUrl(): string {
   return `${baseUrl}/functions/v1/ai`;
 }
 
+function getHeaders(): Record<string, string> {
+  const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+  return {
+    "Content-Type": "application/json",
+    ...(anonKey && {
+      "apikey": anonKey,
+      "Authorization": `Bearer ${anonKey}`,
+    }),
+  };
+}
+
 export async function parseHandWithAI(narrative: string): Promise<Partial<HandData>> {
   if (!isSupabaseConfigured()) {
     // Fallback for development without Supabase
@@ -23,7 +34,7 @@ export async function parseHandWithAI(narrative: string): Promise<Partial<HandDa
   try {
     const response = await fetch(getEdgeFunctionUrl(), {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getHeaders(),
       body: JSON.stringify({ action: "parseHand", narrative }),
     });
 
@@ -54,7 +65,7 @@ export async function analyzeHand(narrative: string): Promise<Partial<AnalysisRe
   try {
     const response = await fetch(getEdgeFunctionUrl(), {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getHeaders(),
       body: JSON.stringify({ action: "analyzeHand", narrative }),
     });
 
@@ -82,7 +93,7 @@ export async function generateText(
   try {
     const response = await fetch(getEdgeFunctionUrl(), {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getHeaders(),
       body: JSON.stringify({ action: "generateText", prompt, systemPrompt }),
     });
 

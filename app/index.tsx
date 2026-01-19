@@ -25,6 +25,7 @@ import { useFavorites } from '@/hooks/useFavorites';
 import { useSessionManagement } from '@/hooks/useSessionManagement';
 import { useAuth } from '@/contexts/AuthContext';
 import { colors } from '@/constants/colors';
+import { generateText } from '@/services/supabaseAI';
 import type { HandData, AnalysisResult, StoredHand } from '@/types/poker';
 import type { ChatConversation } from '@/types/chat';
 import type { Session, SuggestedSession, CreateSessionPayload } from '@/types/session';
@@ -75,7 +76,7 @@ export default function HomeScreen() {
   const [isCheckingOnboarding, setIsCheckingOnboarding] = useState(true);
 
   // Hand history
-  const { hands, isLoading, isRefreshing, error, refresh, searchQuery, setSearchQuery, submitSearch, deleteHand } = useHandHistory();
+  const { hands, isLoading, isRefreshing, error, refresh, searchQuery, setSearchQuery, deleteHand } = useHandHistory();
 
   // Chat history
   const {
@@ -120,6 +121,84 @@ export default function HomeScreen() {
   const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [showSessionDetail, setShowSessionDetail] = useState(false);
+
+  // AI search state
+  const [isAISearching, setIsAISearching] = useState(false);
+  const [aiSearchResults, setAISearchResults] = useState<Set<string> | null>(null);
+
+  // Unified AI search across all content types
+  const performAISearch = useCallback(async () => {
+    if (!searchQuery.trim()) {
+      setAISearchResults(null);
+      return;
+    }
+
+    setIsAISearching(true);
+
+    try {
+      // Create summaries for all content types
+      const handsSummary = hands.slice(0, 50).map((h) => ({
+        id: h.handData.id,
+        type: 'hand',
+        heroHand: h.handData.heroHand,
+        name: h.handName,
+        position: h.handData.heroPosition,
+        narrative: h.handData.originalNarrative?.slice(0, 150),
+      }));
+
+      const chatsSummary = chats.slice(0, 50).map((c) => ({
+        id: c.id,
+        type: 'chat',
+        title: c.title,
+        preview: c.preview?.slice(0, 150),
+      }));
+
+      const sessionsSummary = sessions.slice(0, 20).map((s) => ({
+        id: s.id,
+        type: 'session',
+        name: s.name,
+        location: s.location,
+        stakes: s.stakes === 'custom' ? s.customStakes : s.stakes,
+        notes: s.notes?.slice(0, 100),
+      }));
+
+      const allItems = [...handsSummary, ...chatsSummary, ...sessionsSummary];
+
+      if (allItems.length === 0) {
+        setAISearchResults(new Set());
+        setIsAISearching(false);
+        return;
+      }
+
+      const searchPrompt = `You are a poker app search assistant. Given a user's search query and a list of items (hands, chats, sessions), return the IDs of items that match the query.
+
+User query: "${searchQuery}"
+
+Available items:
+${JSON.stringify(allItems, null, 2)}
+
+Return a JSON array of matching item IDs. If no items match, return [].
+For example: ["id1", "id2", "id3"]
+
+Consider semantic meaning - for example "pocket threes" should match hands with "33" or "3♠ 3♥", "$500" should match sessions with buy-ins around that amount.
+
+Only return the JSON array, nothing else.`;
+
+      const response = await generateText(searchPrompt);
+
+      // Parse the response
+      const cleanedResponse = response.trim().replace(/```json\n?/g, '').replace(/```\n?/g, '');
+      const matchingIds: string[] = JSON.parse(cleanedResponse);
+
+      setAISearchResults(new Set(matchingIds));
+    } catch (error) {
+      console.error('AI search error:', error);
+      // Fall back to text search (which is already happening via instant filter)
+      setAISearchResults(null);
+    } finally {
+      setIsAISearching(false);
+    }
+  }, [searchQuery, hands, chats, sessions]);
 
   // Check onboarding - guests always see it, authenticated users can skip
   useEffect(() => {
@@ -227,10 +306,48 @@ export default function HomeScreen() {
     await createFromSuggestion(suggestionId);
   }, [createFromSuggestion]);
 
-  // Get filtered content based on active filter
+  // Helper function to check if item matches search query
+  const matchesSearch = useCallback((item: CombinedListItem, query: string): boolean => {
+    const lowerQuery = query.toLowerCase();
+
+    if (item.type === 'hand') {
+      const hand = item.data;
+      return (
+        (hand.handName?.toLowerCase().includes(lowerQuery)) ||
+        (hand.handData.heroHand?.toLowerCase().includes(lowerQuery)) ||
+        (hand.handData.heroPosition?.toLowerCase().includes(lowerQuery)) ||
+        (hand.handData.villainPosition?.toLowerCase().includes(lowerQuery)) ||
+        (hand.handData.originalNarrative?.toLowerCase().includes(lowerQuery)) ||
+        (hand.analysis?.recommendedAction?.toLowerCase().includes(lowerQuery)) ||
+        false
+      );
+    } else if (item.type === 'chat') {
+      const chat = item.data;
+      return (
+        (chat.title?.toLowerCase().includes(lowerQuery)) ||
+        (chat.preview?.toLowerCase().includes(lowerQuery)) ||
+        false
+      );
+    } else if (item.type === 'session') {
+      const session = item.data;
+      return (
+        (session.name?.toLowerCase().includes(lowerQuery)) ||
+        (session.location?.toLowerCase().includes(lowerQuery)) ||
+        (session.stakes?.toLowerCase().includes(lowerQuery)) ||
+        (session.customStakes?.toLowerCase().includes(lowerQuery)) ||
+        (session.notes?.toLowerCase().includes(lowerQuery)) ||
+        false
+      );
+    }
+    return false;
+  }, []);
+
+  // Get filtered content based on active filter and search query
   const getFilteredContent = useMemo((): CombinedListItem[] => {
     const favoriteHandIds = getFavoriteHandIds();
     const favoriteChatIds = getFavoriteChatIds();
+
+    let items: CombinedListItem[];
 
     switch (activeFilter) {
       case 'all': {
@@ -245,26 +362,30 @@ export default function HomeScreen() {
           data: c,
           timestamp: c.updatedAt,
         }));
-        return [...handItems, ...chatItems].sort((a, b) => b.timestamp - a.timestamp);
+        items = [...handItems, ...chatItems].sort((a, b) => b.timestamp - a.timestamp);
+        break;
       }
       case 'hands':
-        return hands.map(h => ({
+        items = hands.map(h => ({
           type: 'hand' as const,
           data: h,
           timestamp: h.createdAt ? new Date(h.createdAt).getTime() : 0,
         }));
+        break;
       case 'chats':
-        return chats.map(c => ({
+        items = chats.map(c => ({
           type: 'chat' as const,
           data: c,
           timestamp: c.updatedAt,
         }));
+        break;
       case 'sessions':
-        return sessions.map(s => ({
+        items = sessions.map(s => ({
           type: 'session' as const,
           data: s,
           timestamp: s.startTime,
         }));
+        break;
       case 'favorites': {
         // Only favorited items
         const favoriteHands: CombinedListItem[] = hands
@@ -281,12 +402,30 @@ export default function HomeScreen() {
             data: c,
             timestamp: c.updatedAt,
           }));
-        return [...favoriteHands, ...favoriteChats].sort((a, b) => b.timestamp - a.timestamp);
+        items = [...favoriteHands, ...favoriteChats].sort((a, b) => b.timestamp - a.timestamp);
+        break;
       }
       default:
-        return [];
+        items = [];
     }
-  }, [activeFilter, hands, chats, sessions, getFavoriteHandIds, getFavoriteChatIds]);
+
+    // Apply text search filter if there's a search query
+    if (searchQuery.trim()) {
+      // If AI search has run, use those results; otherwise use text matching
+      if (aiSearchResults !== null) {
+        items = items.filter(item => {
+          const id = item.type === 'hand' ? item.data.handData.id :
+                     item.type === 'chat' ? item.data.id :
+                     item.data.id;
+          return id && aiSearchResults.has(id);
+        });
+      } else {
+        items = items.filter(item => matchesSearch(item, searchQuery));
+      }
+    }
+
+    return items;
+  }, [activeFilter, hands, chats, sessions, searchQuery, aiSearchResults, getFavoriteHandIds, getFavoriteChatIds, matchesSearch]);
 
   // Filter counts for badges
   const filterCounts = useMemo(() => {
@@ -541,8 +680,14 @@ export default function HomeScreen() {
               {/* Search Bar with Speak Button */}
               <SearchBottomBar
                 value={searchQuery}
-                onChangeText={setSearchQuery}
-                onSubmit={submitSearch}
+                onChangeText={(text) => {
+                  setSearchQuery(text);
+                  // Clear AI results when typing to show instant text filter
+                  if (aiSearchResults !== null) {
+                    setAISearchResults(null);
+                  }
+                }}
+                onSubmit={performAISearch}
                 openaiApiKey={OPENAI_API_KEY}
               />
             </View>
