@@ -113,10 +113,20 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions) {
 
   // Start streaming audio to the realtime service
   const startAudioStreaming = useCallback(async () => {
-    if (!audioRecorderRef.current || !serviceRef.current) return;
+    console.log('[RealtimeVoice] startAudioStreaming() called');
+
+    if (!audioRecorderRef.current) {
+      console.error('[RealtimeVoice] No audio recorder available');
+      return;
+    }
+    if (!serviceRef.current) {
+      console.error('[RealtimeVoice] No realtime service available');
+      return;
+    }
 
     try {
       // Configure audio mode for recording using expo-av
+      console.log('[RealtimeVoice] Setting audio mode for recording...');
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: true,
         playsInSilentModeIOS: true,
@@ -126,14 +136,21 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions) {
         shouldDuckAndroid: true,
         playThroughEarpieceAndroid: false,
       });
+      console.log('[RealtimeVoice] Audio mode set successfully');
 
       // Start recording with callback for each audio chunk
+      console.log('[RealtimeVoice] Starting audio recorder...');
+      let chunksSent = 0;
       await audioRecorderRef.current.start((base64Chunk: string) => {
         // Send audio chunk to OpenAI Realtime
+        chunksSent++;
+        if (chunksSent <= 3) {
+          console.log('[RealtimeVoice] Sending audio chunk #' + chunksSent + ', length:', base64Chunk.length);
+        }
         serviceRef.current?.sendAudioChunk(base64Chunk);
       });
 
-      console.log('[RealtimeVoice] Audio streaming started');
+      console.log('[RealtimeVoice] Audio streaming started successfully');
     } catch (error) {
       console.error('[RealtimeVoice] Failed to start audio streaming:', error);
       onErrorRef.current?.(error);
@@ -260,27 +277,32 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions) {
     }
 
     if (!openaiApiKey) {
+      console.error('[RealtimeVoice] No OpenAI API key provided');
       const error = new Error('OpenAI API key is required');
       onErrorRef.current?.(error);
       return;
     }
 
-    console.log('[RealtimeVoice] Connecting...');
+    console.log('[RealtimeVoice] Connecting... (API key exists:', !!openaiApiKey, ')');
     updateState('connecting');
     isActiveRef.current = true;
     isDisconnectingRef.current = false;
 
     try {
       // Request microphone permission using expo-av
+      console.log('[RealtimeVoice] Requesting microphone permission...');
       const permissionResponse = await Audio.requestPermissionsAsync();
+      console.log('[RealtimeVoice] Permission status:', permissionResponse.status);
       if (permissionResponse.status !== 'granted') {
         throw new Error('Microphone permission denied');
       }
 
       // Get or create service instance
+      console.log('[RealtimeVoice] Getting realtime service...');
       serviceRef.current = getRealtimeService(openaiApiKey);
 
       // Connect with callbacks
+      console.log('[RealtimeVoice] Connecting to OpenAI Realtime API...');
       await serviceRef.current.connect(setupCallbacks());
 
       setIsConnected(true);

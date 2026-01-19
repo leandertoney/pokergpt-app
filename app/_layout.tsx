@@ -121,6 +121,14 @@ function RootLayoutNav() {
         }}
       />
       <Stack.Screen
+        name="voice-settings"
+        options={{
+          headerShown: true,
+          title: "Voice Settings",
+          presentation: 'modal',
+        }}
+      />
+      <Stack.Screen
         name="profile"
         options={{
           headerShown: true,

@@ -25,6 +25,7 @@ import {
   FileText,
   ChevronRight,
   Mic,
+  Volume2,
   Info,
   LogOut,
   LogIn,
@@ -290,6 +291,12 @@ export default function SettingsScreen() {
                   thumbColor={colors.text.primary}
                 />
               }
+            />
+            <SettingsItem
+              icon={<Volume2 size={22} color={colors.accent.gold} />}
+              title="Voice Settings"
+              subtitle="Configure voice provider"
+              onPress={() => router.push('/voice-settings')}
             />
             <SettingsItem
               icon={<Bell size={22} color={colors.accent.gold} />}

@@ -120,6 +120,8 @@ Ask about ONE thing at a time. Make it feel natural, not like a form.`;
         outs: analysis.outs,
         outBreakdown: analysis.outBreakdown,
         riskLevel: analysis.riskLevel,
+        reasoningBullets: analysis.reasoningBullets,
+        situationSummary: analysis.situationSummary,
         alternativeActions: analysis.alternativeActions,
         structuralAnalysis: {
           gtoAction: analysis.gtoLine || "",

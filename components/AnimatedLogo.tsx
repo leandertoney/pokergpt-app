@@ -4,13 +4,14 @@ import { useVideoPlayer, VideoView } from 'expo-video';
 
 interface AnimatedLogoProps {
   variant: 1 | 2 | 3 | 4;
-  size?: 'small' | 'medium' | 'large';
+  size?: 'mini' | 'small' | 'medium' | 'large';
   loop?: boolean;
   onFinish?: () => void;
   style?: ViewStyle;
 }
 
 const sizeMap = {
+  mini: 36,
   small: 80,
   medium: 150,
   large: 250,

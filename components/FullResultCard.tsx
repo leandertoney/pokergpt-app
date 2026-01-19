@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Animated, type ViewStyle, type TextStyle } from 'react-native';
-import { ChevronDown, TrendingUp, Target, Users, Lightbulb, Calculator } from 'lucide-react-native';
+import { ChevronDown, TrendingUp, TrendingDown, Target, Users, Lightbulb, Calculator, Shield, Zap, Clock, MessageSquare } from 'lucide-react-native';
 import { PlayingCard } from '@/components/PlayingCard';
 import type { AnalysisResult, HandData, ExperienceLevel } from '@/types/poker';
 import { colors } from '@/constants/colors';
@@ -13,7 +13,6 @@ type ParsedCard = { rank: string; suit: Suit };
 function parseCardString(cardStr: string): ParsedCard | null {
   if (!cardStr || cardStr.length < 2) return null;
 
-  // Handle formats like "Th", "Ts", "T♠", "10h", etc.
   const suitMap: Record<string, Suit> = {
     'h': 'h', '♥': 'h', 'H': 'h',
     'd': 'd', '♦': 'd', 'D': 'd',
@@ -28,7 +27,6 @@ function parseCardString(cardStr: string): ParsedCard | null {
   if (!suit) return null;
 
   let rank = normalized.slice(0, -1).toUpperCase();
-  // Handle 10 -> T
   if (rank === '10') rank = 'T';
 
   return { rank, suit };
@@ -37,10 +35,7 @@ function parseCardString(cardStr: string): ParsedCard | null {
 function parseHeroHand(heroHand: string): ParsedCard[] {
   if (!heroHand) return [];
 
-  // Handle formats: "TT", "Th Ts", "T♠ T♥", "ThTs", "pocket tens"
   const cards: ParsedCard[] = [];
-
-  // Split by spaces or find card patterns
   const cardPattern = /([AKQJT2-9]|10)[hdcs♥♦♣♠]/gi;
   const matches = heroHand.match(cardPattern);
 
@@ -51,11 +46,9 @@ function parseHeroHand(heroHand: string): ParsedCard[] {
     }
   }
 
-  // Handle pocket pair format like "TT" (no suits)
   if (cards.length === 0 && heroHand.length === 2) {
     const rank = heroHand[0].toUpperCase();
     if (/[AKQJT2-9]/.test(rank)) {
-      // Default to spades and hearts for pocket pairs
       cards.push({ rank, suit: 's' });
       cards.push({ rank, suit: 'h' });
     }
@@ -92,14 +85,233 @@ interface FullResultCardProps {
   handData: HandData;
 }
 
+// ========================================
+// Odds Comparison Component
+// ========================================
+function OddsComparison({ equity, potOdds }: { equity?: number; potOdds?: number }) {
+  if (equity === undefined || potOdds === undefined || potOdds === 0) {
+    return null;
+  }
+
+  const equityNeeded = 100 / (potOdds + 1);
+  const isProfitable = equity > equityNeeded;
+
+  return (
+    <View style={oddsStyles.container}>
+      {/* Equity Bar */}
+      <View style={oddsStyles.barSection}>
+        <Text style={oddsStyles.barLabel}>YOUR EQUITY</Text>
+        <View style={oddsStyles.barBackground}>
+          <Animated.View style={[oddsStyles.barFill, { width: `${Math.min(equity, 100)}%`, backgroundColor: '#22C55E' }]} />
+        </View>
+        <Text style={oddsStyles.barValue}>{equity}%</Text>
+      </View>
+
+      {/* Pot Odds Bar */}
+      <View style={oddsStyles.barSection}>
+        <Text style={oddsStyles.barLabel}>NEED TO CALL</Text>
+        <View style={oddsStyles.barBackground}>
+          <Animated.View style={[oddsStyles.barFill, { width: `${Math.min(equityNeeded, 100)}%`, backgroundColor: colors.accent.gold }]} />
+          {/* Equity marker line */}
+          <View style={[oddsStyles.markerLine, { left: `${Math.min(equity, 100)}%` }]} />
+        </View>
+        <Text style={oddsStyles.barValue}>{equityNeeded.toFixed(0)}%</Text>
+      </View>
+
+      {/* Verdict Badge */}
+      <View style={[oddsStyles.verdictBadge, { backgroundColor: isProfitable ? 'rgba(34, 197, 94, 0.15)' : 'rgba(255, 58, 58, 0.15)' }]}>
+        {isProfitable ? (
+          <TrendingUp size={16} color="#22C55E" />
+        ) : (
+          <TrendingDown size={16} color={colors.accent.primary} />
+        )}
+        <Text style={[oddsStyles.verdictText, { color: isProfitable ? '#22C55E' : colors.accent.primary }]}>
+          {isProfitable ? '+EV CALL' : 'FOLD'}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+const oddsStyles = StyleSheet.create({
+  container: {
+    backgroundColor: colors.background.secondary,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+  } as ViewStyle,
+  barSection: {
+    marginBottom: 12,
+  } as ViewStyle,
+  barLabel: {
+    fontSize: 10,
+    fontWeight: '600' as const,
+    color: colors.text.muted,
+    letterSpacing: 1,
+    marginBottom: 6,
+  } as TextStyle,
+  barBackground: {
+    height: 12,
+    backgroundColor: colors.background.tertiary,
+    borderRadius: 6,
+    overflow: 'hidden',
+    position: 'relative',
+  } as ViewStyle,
+  barFill: {
+    height: 12,
+    borderRadius: 6,
+  } as ViewStyle,
+  markerLine: {
+    position: 'absolute',
+    top: 0,
+    width: 2,
+    height: 12,
+    backgroundColor: '#22C55E',
+    marginLeft: -1,
+  } as ViewStyle,
+  barValue: {
+    fontSize: 14,
+    fontWeight: '700' as const,
+    color: colors.text.primary,
+    marginTop: 4,
+  } as TextStyle,
+  verdictBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    marginTop: 4,
+  } as ViewStyle,
+  verdictText: {
+    fontSize: 14,
+    fontWeight: '700' as const,
+    letterSpacing: 0.5,
+  } as TextStyle,
+});
+
+// ========================================
+// Reasoning Bullets Component
+// ========================================
+const BULLET_ICONS: Record<string, React.ComponentType<{ size: number; color: string }>> = {
+  position: Target,
+  range: Users,
+  odds: Calculator,
+  strength: Shield,
+  implied: TrendingUp,
+  aggression: Zap,
+  timing: Clock,
+  default: Lightbulb,
+};
+
+function getIconForBullet(text: string): React.ComponentType<{ size: number; color: string }> {
+  const lowerText = text.toLowerCase();
+  if (lowerText.includes('position')) return BULLET_ICONS.position;
+  if (lowerText.includes('range') || lowerText.includes('villain')) return BULLET_ICONS.range;
+  if (lowerText.includes('odds') || lowerText.includes('equity')) return BULLET_ICONS.odds;
+  if (lowerText.includes('strong') || lowerText.includes('hand')) return BULLET_ICONS.strength;
+  if (lowerText.includes('implied') || lowerText.includes('stack')) return BULLET_ICONS.implied;
+  if (lowerText.includes('aggress') || lowerText.includes('pressure')) return BULLET_ICONS.aggression;
+  if (lowerText.includes('street') || lowerText.includes('turn') || lowerText.includes('river')) return BULLET_ICONS.timing;
+  return BULLET_ICONS.default;
+}
+
+function ReasoningBullets({ bullets }: { bullets?: string[] }) {
+  if (!bullets || bullets.length === 0) {
+    return null;
+  }
+
+  return (
+    <View style={bulletStyles.container}>
+      {bullets.slice(0, 3).map((bullet, idx) => {
+        const Icon = getIconForBullet(bullet);
+        return (
+          <View key={idx} style={bulletStyles.row}>
+            <View style={bulletStyles.iconCircle}>
+              <Icon size={16} color={colors.accent.gold} />
+            </View>
+            <Text style={bulletStyles.text}>{bullet}</Text>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+const bulletStyles = StyleSheet.create({
+  container: {
+    marginBottom: 16,
+  } as ViewStyle,
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.05)',
+  } as ViewStyle,
+  iconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(232, 184, 74, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  } as ViewStyle,
+  text: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '500' as const,
+    color: colors.text.secondary,
+    lineHeight: 20,
+  } as TextStyle,
+});
+
+// ========================================
+// Situation Summary Component
+// ========================================
+function SituationSummary({ summary }: { summary?: string }) {
+  if (!summary) return null;
+
+  return (
+    <View style={situationStyles.container}>
+      <Text style={situationStyles.text}>{summary}</Text>
+    </View>
+  );
+}
+
+const situationStyles = StyleSheet.create({
+  container: {
+    backgroundColor: colors.background.secondary,
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 16,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.accent.gold,
+  } as ViewStyle,
+  text: {
+    fontSize: 15,
+    fontWeight: '500' as const,
+    color: colors.text.secondary,
+    lineHeight: 22,
+    fontStyle: 'italic',
+  } as TextStyle,
+});
+
+// ========================================
+// Expandable Section Component
+// ========================================
 interface ExpandableSectionProps {
   title: string;
   icon: React.ReactNode;
   children: React.ReactNode;
+  preview?: string;
   defaultExpanded?: boolean;
 }
 
-function ExpandableSection({ title, icon, children, defaultExpanded = false }: ExpandableSectionProps) {
+function ExpandableSection({ title, icon, children, preview, defaultExpanded = false }: ExpandableSectionProps) {
   const [expanded, setExpanded] = useState(defaultExpanded);
   const animValue = useRef(new Animated.Value(defaultExpanded ? 1 : 0)).current;
 
@@ -127,7 +339,12 @@ function ExpandableSection({ title, icon, children, defaultExpanded = false }: E
       <TouchableOpacity style={styles.expandableHeader} onPress={toggleExpand} activeOpacity={0.7}>
         <View style={styles.expandableHeaderLeft}>
           {icon}
-          <Text style={styles.expandableTitle}>{title}</Text>
+          <View style={styles.expandableTitleContainer}>
+            <Text style={styles.expandableTitle}>{title}</Text>
+            {!expanded && preview && (
+              <Text style={styles.expandablePreview} numberOfLines={1}>{preview}</Text>
+            )}
+          </View>
         </View>
         <Animated.View style={{ transform: [{ rotateZ }] }}>
           <ChevronDown size={20} color={colors.text.muted} />
@@ -140,106 +357,57 @@ function ExpandableSection({ title, icon, children, defaultExpanded = false }: E
   );
 }
 
-/**
- * MathEducationSection - Shows step-by-step poker math calculations
- * Auto-expands for beginners, collapsed for advanced players
- */
+// ========================================
+// Math Education Section (Compact)
+// ========================================
 function MathEducationSection({
   analysis,
-  handData,
   defaultExpanded,
 }: {
   analysis: AnalysisResult;
-  handData: HandData;
   defaultExpanded: boolean;
 }) {
-  // Only show if we have enough data to teach
   const hasOutsInfo = analysis.outs !== undefined && analysis.outs !== null && analysis.outs > 0;
   const hasEquityInfo = analysis.equity !== undefined && analysis.equity !== null;
   const hasPotOdds = analysis.potOdds !== undefined && analysis.potOdds !== null && analysis.potOdds > 0;
 
-  // Show placeholder if no math data available
   if (!hasOutsInfo && !hasEquityInfo && !hasPotOdds) {
-    return (
-      <ExpandableSection
-        title="Learn the Math"
-        icon={<Calculator size={18} color={colors.accent.gold} />}
-        defaultExpanded={false}
-      >
-        <View style={styles.mathPlaceholder}>
-          <Text style={styles.mathPlaceholderText}>
-            Math breakdown not available for this hand. For detailed calculations, provide pot size and bet amounts.
-          </Text>
-        </View>
-      </ExpandableSection>
-    );
+    return null;
   }
 
-  // Calculate the equity needed based on pot odds
   const equityNeeded = hasPotOdds ? (100 / (analysis.potOdds! + 1)) : 0;
-  const isProfitableCall = hasEquityInfo && hasPotOdds && analysis.equity! > equityNeeded;
+  const preview = `${analysis.outs || '?'} outs | ${analysis.equity || '?'}% equity`;
 
   return (
     <ExpandableSection
       title="Learn the Math"
       icon={<Calculator size={18} color={colors.accent.gold} />}
+      preview={preview}
       defaultExpanded={defaultExpanded}
     >
-      {/* Outs counting */}
       {hasOutsInfo && (
         <View style={styles.mathBlock}>
           <Text style={styles.mathTitle}>COUNTING OUTS</Text>
-          {analysis.outBreakdown ? (
-            <Text style={styles.mathFormula}>{analysis.outBreakdown}</Text>
-          ) : (
-            <Text style={styles.mathFormula}>
-              You have {analysis.outs} outs to improve your hand
-            </Text>
-          )}
+          <Text style={styles.mathFormula}>
+            {analysis.outBreakdown || `${analysis.outs} outs to improve`}
+          </Text>
         </View>
       )}
 
-      {/* Equity calculation using Rule of 2/4 */}
       {hasOutsInfo && hasEquityInfo && (
         <View style={styles.mathBlock}>
           <Text style={styles.mathTitle}>EQUITY (Rule of 4)</Text>
-          <Text style={styles.mathHint}>With 2 cards to come: Outs × 4</Text>
           <Text style={styles.mathFormula}>
-            {analysis.outs} outs × 4 = ~{analysis.outs! * 4}%
-          </Text>
-          <Text style={styles.mathResult}>
-            Actual equity: {analysis.equity}%
+            {analysis.outs} × 4 = ~{analysis.outs! * 4}% → Actual: {analysis.equity}%
           </Text>
         </View>
       )}
 
-      {/* Pot odds calculation */}
       {hasPotOdds && (
         <View style={styles.mathBlock}>
           <Text style={styles.mathTitle}>POT ODDS</Text>
-          <Text style={styles.mathHint}>
-            Pot odds tell you the minimum equity needed to call profitably
-          </Text>
           <Text style={styles.mathFormula}>
-            Getting {analysis.potOdds}:1 odds = need {equityNeeded.toFixed(0)}% equity
-          </Text>
-        </View>
-      )}
-
-      {/* Verdict - compare equity vs pot odds */}
-      {hasEquityInfo && hasPotOdds && (
-        <View style={styles.verdictBlock}>
-          <Text style={[
-            styles.verdict,
-            { color: isProfitableCall ? '#22C55E' : colors.accent.primary }
-          ]}>
-            {analysis.equity}% equity {isProfitableCall ? '>' : '<'} {equityNeeded.toFixed(0)}% needed
-          </Text>
-          <Text style={[
-            styles.verdictResult,
-            { color: isProfitableCall ? '#22C55E' : colors.accent.primary }
-          ]}>
-            {isProfitableCall ? '✓ PROFITABLE CALL' : '✗ FOLD (not enough equity)'}
+            {analysis.potOdds}:1 odds = need {equityNeeded.toFixed(0)}% equity
           </Text>
         </View>
       )}
@@ -247,8 +415,10 @@ function MathEducationSection({
   );
 }
 
+// ========================================
+// Main Component
+// ========================================
 export function FullResultCard({ analysis, handData }: FullResultCardProps) {
-  // Track user experience level for progressive disclosure
   const [experienceLevel, setExperienceLevel] = useState<ExperienceLevel>('beginner');
 
   useEffect(() => {
@@ -259,217 +429,183 @@ export function FullResultCard({ analysis, handData }: FullResultCardProps) {
     });
   }, []);
 
-  // Auto-expand math section for beginners
   const showMathByDefault = experienceLevel === 'beginner';
-
-  // Helper function to safely get values with fallbacks
   const getConfidence = () => analysis?.confidence ?? 0;
   const getRecommendation = () => analysis?.recommendedAction || 'Analyzing...';
-  const getReasoning = () => analysis?.reasoning || analysis?.hybridLine || '';
 
-  // Calculate risk color
-  const getRiskColor = () => {
-    const risk = analysis?.riskLevel || 'medium';
-    switch (risk) {
-      case 'low': return '#22C55E';
-      case 'medium': return colors.accent.gold;
-      case 'high': return colors.accent.primary;
-      default: return colors.accent.gold;
-    }
+  const getConfidenceLabel = () => {
+    const confidence = getConfidence();
+    if (confidence >= 80) return 'HIGH';
+    if (confidence >= 50) return 'MODERATE';
+    return 'LOW';
+  };
+
+  const getConfidenceColor = () => {
+    const confidence = getConfidence();
+    if (confidence >= 80) return colors.accent.gold;
+    if (confidence >= 50) return colors.text.secondary;
+    return colors.text.muted;
   };
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      {/* Visual Hand Display */}
+      {/* Visual Hand Section - Compact */}
       <View style={styles.visualHandSection}>
-        {/* Hero Cards */}
-        <View style={styles.heroCardsRow}>
-          {parseHeroHand(handData?.heroHand || '').map((card, idx) => (
-            <PlayingCard
-              key={`hero-${idx}`}
-              rank={card.rank}
-              suit={card.suit}
-              size="large"
-              animateIn
-              delay={idx * 100}
-            />
-          ))}
-          {parseHeroHand(handData?.heroHand || '').length === 0 && handData?.heroHand && (
-            <View style={styles.fallbackHand}>
-              <Text style={styles.fallbackHandText}>{handData.heroHand}</Text>
-            </View>
-          )}
-        </View>
-
-        {/* Position Badge */}
-        {handData?.heroPosition && (
-          <View style={styles.positionBadge}>
-            <Text style={styles.positionText}>
-              {handData.heroPosition}
-              {handData.villainPosition ? ` vs ${handData.villainPosition}` : ''}
-            </Text>
-          </View>
-        )}
-
-        {/* Board Cards */}
-        {handData?.flop && handData.flop.length > 0 && (
-          <View style={styles.boardSection}>
-            <Text style={styles.boardLabel}>BOARD</Text>
-            <View style={styles.boardCardsRow}>
-              {parseBoardCards(handData.flop, handData.turn, handData.river).map((card, idx) => (
+        <View style={styles.handRow}>
+          {/* Hero Cards */}
+          <View style={styles.cardContainer}>
+            <Text style={styles.cardContainerLabel}>YOUR HAND</Text>
+            <View style={styles.heroCardsRow}>
+              {parseHeroHand(handData?.heroHand || '').map((card, idx) => (
                 <PlayingCard
-                  key={`board-${idx}`}
+                  key={`hero-${idx}`}
                   rank={card.rank}
                   suit={card.suit}
-                  size="medium"
+                  size="large"
                   animateIn
-                  delay={200 + idx * 80}
+                  delay={idx * 100}
                 />
               ))}
             </View>
           </View>
-        )}
 
-        {/* Quick Info Row - Pot & Stack */}
+          {/* Board Cards */}
+          {handData?.flop && handData.flop.length > 0 && (
+            <View style={styles.cardContainer}>
+              <Text style={styles.cardContainerLabel}>BOARD</Text>
+              <View style={styles.boardCardsRow}>
+                {parseBoardCards(handData.flop, handData.turn, handData.river).map((card, idx) => (
+                  <PlayingCard
+                    key={`board-${idx}`}
+                    rank={card.rank}
+                    suit={card.suit}
+                    size="small"
+                    animateIn
+                    delay={200 + idx * 80}
+                  />
+                ))}
+              </View>
+            </View>
+          )}
+        </View>
+
+        {/* Info Row - Position, Pot, Stack */}
         <View style={styles.quickInfoRow}>
-          {handData?.potSize !== undefined && handData?.potSize !== null && (
-            <View style={styles.quickInfoItem}>
-              <Text style={styles.quickInfoLabel}>POT</Text>
-              <Text style={styles.quickInfoValue}>${handData.potSize}</Text>
+          {handData?.heroPosition && (
+            <View style={styles.positionBadge}>
+              <Text style={styles.positionText}>
+                {handData.heroPosition}
+                {handData.villainPosition ? ` vs ${handData.villainPosition}` : ''}
+              </Text>
             </View>
           )}
-          {(handData?.effectiveStack !== undefined || handData?.heroStack !== undefined) && (
-            <View style={styles.quickInfoItem}>
-              <Text style={styles.quickInfoLabel}>STACK</Text>
-              <Text style={styles.quickInfoValue}>${handData.effectiveStack ?? handData.heroStack}</Text>
-            </View>
+          {handData?.potSize !== undefined && (
+            <Text style={styles.infoPill}>Pot ${handData.potSize}</Text>
           )}
-          {handData?.action && (
-            <View style={[styles.quickInfoItem, styles.actionItem]}>
-              <Text style={styles.quickInfoLabel}>ACTION</Text>
-              <Text style={styles.actionText}>{handData.action}</Text>
-            </View>
+          {(handData?.effectiveStack || handData?.heroStack) && (
+            <Text style={styles.infoPill}>Stack ${handData.effectiveStack ?? handData.heroStack}</Text>
           )}
         </View>
       </View>
 
-      {/* Main Recommendation */}
-      <View style={styles.mainRecommendation}>
+      {/* SITUATION SUMMARY */}
+      <SituationSummary summary={analysis?.situationSummary} />
+
+      {/* RECOMMENDATION CENTERPIECE */}
+      <View style={styles.recommendationSection}>
         <Text style={styles.recommendationLabel}>RECOMMENDED ACTION</Text>
         <Text style={styles.recommendationText}>{getRecommendation()}</Text>
 
-        {/* Confidence Bar */}
+        {/* Enhanced Confidence Display */}
         <View style={styles.confidenceContainer}>
           <View style={styles.confidenceBarBg}>
             <View style={[styles.confidenceBar, { width: `${getConfidence()}%` }]} />
           </View>
-          <Text style={styles.confidenceValue}>{getConfidence()}%</Text>
-        </View>
-      </View>
-
-      {/* Quick Stats */}
-      <View style={styles.statsRow}>
-        {analysis?.equity !== undefined && analysis?.equity !== null && (
-          <View style={styles.statBox}>
-            <Text style={styles.statLabel}>Equity</Text>
-            <Text style={styles.statValue}>{analysis.equity}%</Text>
-          </View>
-        )}
-        {analysis?.potOdds !== undefined && analysis?.potOdds !== null && (
-          <View style={styles.statBox}>
-            <Text style={styles.statLabel}>Pot Odds</Text>
-            <Text style={styles.statValue}>{analysis.potOdds}:1</Text>
-          </View>
-        )}
-        {analysis?.impliedOdds !== undefined && analysis?.impliedOdds !== null && (
-          <View style={styles.statBox}>
-            <Text style={styles.statLabel}>Implied</Text>
-            <Text style={styles.statValue}>{analysis.impliedOdds}:1</Text>
-          </View>
-        )}
-        {analysis?.riskLevel && (
-          <View style={styles.statBox}>
-            <Text style={styles.statLabel}>Risk</Text>
-            <Text style={[styles.statValue, { color: getRiskColor() }]}>
-              {analysis.riskLevel.charAt(0).toUpperCase() + analysis.riskLevel.slice(1)}
+          <View style={styles.confidenceInfo}>
+            <Text style={styles.confidenceValue}>{getConfidence()}%</Text>
+            <Text style={[styles.confidenceLabel, { color: getConfidenceColor() }]}>
+              {getConfidenceLabel()}
             </Text>
           </View>
-        )}
+        </View>
       </View>
 
-      {/* Math Education Section - between stats and reasoning */}
-      <MathEducationSection
-        analysis={analysis}
-        handData={handData}
-        defaultExpanded={showMathByDefault}
-      />
+      {/* EQUITY vs POT ODDS VISUAL */}
+      <OddsComparison equity={analysis?.equity} potOdds={analysis?.potOdds} />
 
-      {/* Reasoning */}
-      {getReasoning() && (
-        <View style={styles.reasoningSection}>
-          <Text style={styles.reasoningText}>{getReasoning()}</Text>
-        </View>
-      )}
+      {/* QUICK REASONING BULLETS */}
+      <ReasoningBullets bullets={analysis?.reasoningBullets} />
 
-      {/* Expandable Sections */}
-      {analysis?.gtoLine && (
-        <ExpandableSection
-          title="GTO Analysis"
-          icon={<Target size={18} color={colors.accent.gold} />}
-        >
-          <Text style={styles.expandedText}>{analysis.gtoLine}</Text>
-        </ExpandableSection>
-      )}
+      {/* EXPANDABLE DETAILS */}
+      <View style={styles.expandableGrid}>
+        {analysis?.gtoLine && (
+          <ExpandableSection
+            title="GTO Analysis"
+            icon={<Target size={18} color={colors.accent.gold} />}
+            preview={analysis.gtoLine.slice(0, 40) + '...'}
+          >
+            <Text style={styles.expandedText}>{analysis.gtoLine}</Text>
+          </ExpandableSection>
+        )}
 
-      {analysis?.exploitLine && (
-        <ExpandableSection
-          title="Exploitative Line"
-          icon={<TrendingUp size={18} color={colors.accent.gold} />}
-        >
-          <Text style={styles.expandedText}>{analysis.exploitLine}</Text>
-        </ExpandableSection>
-      )}
+        {analysis?.exploitLine && (
+          <ExpandableSection
+            title="Exploitative Line"
+            icon={<TrendingUp size={18} color={colors.accent.gold} />}
+            preview={analysis.exploitLine.slice(0, 40) + '...'}
+          >
+            <Text style={styles.expandedText}>{analysis.exploitLine}</Text>
+          </ExpandableSection>
+        )}
 
-      {analysis?.villainRange && (
-        <ExpandableSection
-          title="Villain Range"
-          icon={<Users size={18} color={colors.text.secondary} />}
-        >
-          <Text style={styles.expandedText}>{analysis.villainRange}</Text>
-        </ExpandableSection>
-      )}
+        <MathEducationSection
+          analysis={analysis}
+          defaultExpanded={showMathByDefault}
+        />
 
-      {analysis?.alternativeActions && analysis.alternativeActions.length > 0 && (
-        <ExpandableSection
-          title="Alternative Actions"
-          icon={<Lightbulb size={18} color={colors.accent.gold} />}
-        >
-          {analysis.alternativeActions.map((alt, index) => (
-            <View key={index} style={styles.altActionRow}>
-              <View style={styles.altActionHeader}>
-                <Text style={styles.altActionName}>{alt.action}</Text>
-                {alt.ev !== undefined && (
-                  <Text style={[styles.altActionEV, { color: alt.ev >= 0 ? '#22C55E' : colors.accent.primary }]}>
-                    {alt.ev >= 0 ? '+' : ''}{alt.ev} EV
-                  </Text>
-                )}
+        {analysis?.villainRange && (
+          <ExpandableSection
+            title="Villain Range"
+            icon={<Users size={18} color={colors.text.secondary} />}
+            preview={analysis.villainRange.slice(0, 40) + '...'}
+          >
+            <Text style={styles.expandedText}>{analysis.villainRange}</Text>
+          </ExpandableSection>
+        )}
+
+        {analysis?.alternativeActions && analysis.alternativeActions.length > 0 && (
+          <ExpandableSection
+            title="Alternative Actions"
+            icon={<Lightbulb size={18} color={colors.accent.gold} />}
+            preview={analysis.alternativeActions[0]?.action}
+          >
+            {analysis.alternativeActions.map((alt, index) => (
+              <View key={index} style={styles.altActionRow}>
+                <View style={styles.altActionHeader}>
+                  <Text style={styles.altActionName}>{alt.action}</Text>
+                  {alt.ev !== undefined && (
+                    <Text style={[styles.altActionEV, { color: alt.ev >= 0 ? '#22C55E' : colors.accent.primary }]}>
+                      {alt.ev >= 0 ? '+' : ''}{alt.ev} EV
+                    </Text>
+                  )}
+                </View>
+                <Text style={styles.altActionReasoning}>{alt.reasoning}</Text>
               </View>
-              <Text style={styles.altActionReasoning}>{alt.reasoning}</Text>
-            </View>
-          ))}
-        </ExpandableSection>
-      )}
+            ))}
+          </ExpandableSection>
+        )}
 
-      {/* Persona Analysis */}
-      {analysis?.personaAnalysis?.narrative && (
-        <View style={styles.narrativeSection}>
-          <Text style={styles.narrativeTitle}>
-            {analysis.personaAnalysis.tone === 'mariano' ? 'Mariano Says' : 'Coach Notes'}
-          </Text>
-          <Text style={styles.narrativeText}>{analysis.personaAnalysis.narrative}</Text>
-        </View>
-      )}
-
+        {/* Your Hand Story - shows original narrative (last) */}
+        {handData?.originalNarrative && (
+          <ExpandableSection
+            title="Your Hand Story"
+            icon={<MessageSquare size={18} color={colors.text.secondary} />}
+            preview={handData.originalNarrative.slice(0, 50) + '...'}
+          >
+            <Text style={styles.narrativeText}>{handData.originalNarrative}</Text>
+          </ExpandableSection>
+        )}
+      </View>
     </ScrollView>
   );
 }
@@ -480,104 +616,92 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background.primary,
   } as ViewStyle,
   contentContainer: {
-    padding: 20,
+    padding: 16,
     paddingBottom: 40,
   } as ViewStyle,
-  // Visual Hand Display Styles
+  // Visual Hand Section
   visualHandSection: {
-    alignItems: 'center',
-    marginBottom: 24,
-    paddingBottom: 20,
+    marginBottom: 20,
+    paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: colors.background.tertiary,
   } as ViewStyle,
-  heroCardsRow: {
+  handRow: {
     flexDirection: 'row',
-    gap: 12,
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
     marginBottom: 12,
   } as ViewStyle,
-  fallbackHand: {
-    backgroundColor: colors.background.tertiary,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+  cardContainer: {
+    backgroundColor: colors.background.secondary,
     borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: colors.background.tertiary,
   } as ViewStyle,
-  fallbackHandText: {
-    fontSize: 24,
+  cardContainerLabel: {
+    fontSize: 10,
     fontWeight: '700' as const,
-    color: colors.text.primary,
+    color: colors.text.muted,
+    letterSpacing: 1,
+    marginBottom: 8,
+    textAlign: 'center',
   } as TextStyle,
+  heroCardsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    justifyContent: 'center',
+  } as ViewStyle,
+  boardCardsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 3,
+    justifyContent: 'center',
+  } as ViewStyle,
+  quickInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+  } as ViewStyle,
   positionBadge: {
     backgroundColor: colors.accent.gold,
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 16,
-    marginBottom: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
   } as ViewStyle,
   positionText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700' as const,
     color: colors.text.inverse,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
   } as TextStyle,
-  boardSection: {
-    alignItems: 'center',
-    marginBottom: 16,
+  infoPill: {
+    fontSize: 12,
+    fontWeight: '600' as const,
+    color: colors.text.secondary,
+    backgroundColor: colors.background.secondary,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 10,
+  } as TextStyle,
+  // Recommendation Section
+  recommendationSection: {
+    marginBottom: 20,
+    backgroundColor: 'rgba(232, 184, 74, 0.08)',
+    padding: 16,
+    borderRadius: 16,
   } as ViewStyle,
-  boardLabel: {
+  recommendationLabel: {
     fontSize: 11,
     fontWeight: '600' as const,
     color: colors.text.muted,
     letterSpacing: 1,
     marginBottom: 8,
   } as TextStyle,
-  boardCardsRow: {
-    flexDirection: 'row',
-    gap: 6,
-  } as ViewStyle,
-  quickInfoRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 20,
-  } as ViewStyle,
-  quickInfoItem: {
-    alignItems: 'center',
-  } as ViewStyle,
-  quickInfoLabel: {
-    fontSize: 10,
-    fontWeight: '600' as const,
-    color: colors.text.muted,
-    letterSpacing: 0.5,
-    marginBottom: 2,
-  } as TextStyle,
-  quickInfoValue: {
-    fontSize: 18,
-    fontWeight: '700' as const,
-    color: colors.accent.gold,
-  } as TextStyle,
-  actionItem: {
-    maxWidth: 120,
-  } as ViewStyle,
-  actionText: {
-    fontSize: 14,
-    fontWeight: '600' as const,
-    color: colors.text.primary,
-    textAlign: 'center',
-  } as TextStyle,
-  mainRecommendation: {
-    marginBottom: 20,
-  } as ViewStyle,
-  recommendationLabel: {
-    fontSize: 12,
-    fontWeight: '600' as const,
-    color: colors.text.muted,
-    letterSpacing: 1,
-    marginBottom: 8,
-  } as TextStyle,
   recommendationText: {
-    fontSize: 28,
-    fontWeight: '700' as const,
+    fontSize: 32,
+    fontWeight: '800' as const,
     color: colors.text.primary,
     marginBottom: 16,
   } as TextStyle,
@@ -588,89 +712,94 @@ const styles = StyleSheet.create({
   } as ViewStyle,
   confidenceBarBg: {
     flex: 1,
-    height: 8,
+    height: 10,
     backgroundColor: colors.background.tertiary,
-    borderRadius: 4,
+    borderRadius: 5,
   } as ViewStyle,
   confidenceBar: {
-    height: 8,
+    height: 10,
     backgroundColor: colors.accent.gold,
-    borderRadius: 4,
+    borderRadius: 5,
+  } as ViewStyle,
+  confidenceInfo: {
+    alignItems: 'flex-end',
   } as ViewStyle,
   confidenceValue: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700' as const,
     color: colors.accent.gold,
-    minWidth: 50,
   } as TextStyle,
-  statsRow: {
-    flexDirection: 'row',
+  confidenceLabel: {
+    fontSize: 10,
+    fontWeight: '600' as const,
+    letterSpacing: 0.5,
+  } as TextStyle,
+  // Expandable Sections
+  expandableGrid: {
     gap: 8,
-    marginBottom: 20,
   } as ViewStyle,
-  statBox: {
-    flex: 1,
-    backgroundColor: colors.background.secondary,
-    padding: 12,
-    borderRadius: 12,
-    alignItems: 'center',
-  } as ViewStyle,
-  statLabel: {
-    fontSize: 11,
-    color: colors.text.muted,
-    marginBottom: 4,
-    textTransform: 'uppercase',
-  } as TextStyle,
-  statValue: {
-    fontSize: 16,
-    fontWeight: '700' as const,
-    color: colors.text.primary,
-  } as TextStyle,
-  reasoningSection: {
-    backgroundColor: colors.background.secondary,
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 20,
-  } as ViewStyle,
-  reasoningText: {
-    fontSize: 16,
-    lineHeight: 24,
-    color: colors.text.secondary,
-  } as TextStyle,
   expandableContainer: {
     backgroundColor: colors.background.secondary,
     borderRadius: 12,
-    marginBottom: 12,
     overflow: 'hidden',
   } as ViewStyle,
   expandableHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
+    padding: 14,
   } as ViewStyle,
   expandableHeaderLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+    flex: 1,
+  } as ViewStyle,
+  expandableTitleContainer: {
+    flex: 1,
   } as ViewStyle,
   expandableTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600' as const,
     color: colors.text.primary,
   } as TextStyle,
+  expandablePreview: {
+    fontSize: 12,
+    color: colors.text.muted,
+    marginTop: 2,
+  } as TextStyle,
   expandableContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
+    paddingHorizontal: 14,
+    paddingBottom: 14,
   } as ViewStyle,
   expandedText: {
-    fontSize: 15,
-    lineHeight: 22,
+    fontSize: 14,
+    lineHeight: 20,
     color: colors.text.secondary,
   } as TextStyle,
-  altActionRow: {
+  // Math Section
+  mathBlock: {
     marginBottom: 12,
     paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.background.tertiary,
+  } as ViewStyle,
+  mathTitle: {
+    fontSize: 10,
+    fontWeight: '700' as const,
+    color: colors.accent.gold,
+    letterSpacing: 1,
+    marginBottom: 6,
+  } as TextStyle,
+  mathFormula: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: colors.text.primary,
+  } as TextStyle,
+  // Alternative Actions
+  altActionRow: {
+    marginBottom: 10,
+    paddingBottom: 10,
     borderBottomWidth: 1,
     borderBottomColor: colors.background.tertiary,
   } as ViewStyle,
@@ -681,93 +810,24 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   } as ViewStyle,
   altActionName: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600' as const,
     color: colors.text.primary,
   } as TextStyle,
   altActionEV: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600' as const,
   } as TextStyle,
   altActionReasoning: {
-    fontSize: 14,
-    color: colors.text.muted,
-    lineHeight: 20,
-  } as TextStyle,
-  // Math Education Section Styles
-  mathBlock: {
-    marginBottom: 16,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.background.tertiary,
-  } as ViewStyle,
-  mathTitle: {
-    fontSize: 11,
-    fontWeight: '700' as const,
-    color: colors.accent.gold,
-    letterSpacing: 1,
-    marginBottom: 8,
-  } as TextStyle,
-  mathHint: {
     fontSize: 13,
     color: colors.text.muted,
-    marginBottom: 4,
-    fontStyle: 'italic' as const,
+    lineHeight: 18,
   } as TextStyle,
-  mathFormula: {
-    fontSize: 15,
-    fontWeight: '600' as const,
-    color: colors.text.primary,
-    fontFamily: 'monospace',
-    marginBottom: 4,
-  } as TextStyle,
-  mathResult: {
-    fontSize: 14,
-    color: colors.text.secondary,
-    marginTop: 4,
-  } as TextStyle,
-  verdictBlock: {
-    backgroundColor: colors.background.tertiary,
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center' as const,
-  } as ViewStyle,
-  verdict: {
-    fontSize: 14,
-    fontWeight: '600' as const,
-    marginBottom: 4,
-  } as TextStyle,
-  verdictResult: {
-    fontSize: 16,
-    fontWeight: '700' as const,
-  } as TextStyle,
-  mathPlaceholder: {
-    padding: 8,
-  } as ViewStyle,
-  mathPlaceholderText: {
-    fontSize: 14,
-    color: colors.text.muted,
-    fontStyle: 'italic' as const,
-    lineHeight: 20,
-  } as TextStyle,
-  narrativeSection: {
-    backgroundColor: colors.background.secondary,
-    padding: 16,
-    borderRadius: 12,
-    borderLeftWidth: 4,
-    borderLeftColor: colors.accent.gold,
-    marginBottom: 20,
-  } as ViewStyle,
-  narrativeTitle: {
-    fontSize: 14,
-    fontWeight: '600' as const,
-    color: colors.accent.gold,
-    marginBottom: 8,
-  } as TextStyle,
+  // Narrative text for "Your Hand Story"
   narrativeText: {
-    fontSize: 15,
+    fontSize: 14,
     lineHeight: 22,
-    color: colors.text.primary,
-    fontStyle: 'italic' as const,
+    color: colors.text.secondary,
+    fontStyle: 'italic',
   } as TextStyle,
 });

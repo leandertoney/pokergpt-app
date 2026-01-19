@@ -318,6 +318,8 @@ export class PCMAudioRecorder {
    * @param onChunk Callback for each audio chunk (base64 PCM16)
    */
   async start(onChunk: (base64Chunk: string) => void): Promise<void> {
+    console.log('[PCMAudioRecorder] start() called');
+
     // Clean up any existing recording first to avoid "Only one Recording" error
     await this.cleanupExistingRecording();
 
@@ -332,6 +334,7 @@ export class PCMAudioRecorder {
     try {
       // Configure audio mode for recording
       // Use DuckOthers instead of DoNotMix to allow VAD to work properly
+      console.log('[PCMAudioRecorder] Setting audio mode...');
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: true,
         playsInSilentModeIOS: true,
@@ -341,11 +344,12 @@ export class PCMAudioRecorder {
         shouldDuckAndroid: true,
         playThroughEarpieceAndroid: false,
       });
+      console.log('[PCMAudioRecorder] Audio mode set successfully');
 
       // Start continuous recording with periodic chunk extraction
       await this.startRecordingLoop();
 
-      console.log('[PCMAudioRecorder] Recording started');
+      console.log('[PCMAudioRecorder] Recording started successfully');
     } catch (error) {
       console.error('[PCMAudioRecorder] Failed to start recording:', error);
       this.isRecording = false;
@@ -357,12 +361,15 @@ export class PCMAudioRecorder {
    * Start the recording loop that extracts chunks periodically
    */
   private async startRecordingLoop(): Promise<void> {
+    console.log('[PCMAudioRecorder] startRecordingLoop() called');
+
     // Ensure no existing recording before creating new one
     await this.cleanupExistingRecording();
 
     const recording = new Audio.Recording();
 
     try {
+      console.log('[PCMAudioRecorder] Preparing recording...');
       await recording.prepareToRecordAsync({
         android: {
           extension: '.wav',
@@ -389,10 +396,13 @@ export class PCMAudioRecorder {
         },
       });
 
+      console.log('[PCMAudioRecorder] Starting recording...');
       await recording.startAsync();
       this.recording = recording;
+      console.log('[PCMAudioRecorder] Recording active, starting chunk extraction loop');
 
       // Periodically extract and send audio chunks
+      let chunkCount = 0;
       this.recordingInterval = setInterval(async () => {
         if (!this.isRecording || !this.recording) return;
 
@@ -400,6 +410,10 @@ export class PCMAudioRecorder {
           const status = await this.recording.getStatusAsync();
 
           if (status.isRecording && status.durationMillis > 0) {
+            chunkCount++;
+            if (chunkCount <= 3) {
+              console.log('[PCMAudioRecorder] Extracting chunk #' + chunkCount + ', duration:', status.durationMillis + 'ms');
+            }
             await this.extractAndSendChunk();
           }
         } catch (error) {

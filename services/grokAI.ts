@@ -66,6 +66,8 @@ Return a JSON object:
   "outs": number (REQUIRED - count of outs to improve. For made hands like top pair, count outs to two pair/trips/boat. For draws, count draw outs. Minimum 2 for any live hand),
   "outBreakdown": "REQUIRED - explain the outs calculation. For made hands: 'Top pair has 5 outs to two pair (3 aces + 2 kickers) and 2 outs to trips'. For draws: '9 hearts for flush + 6 straight cards - 2 overlap = 13 outs'",
   "riskLevel": "low/medium/high",
+  "reasoningBullets": ["REQUIRED - exactly 3 short bullet points (max 8 words each) explaining key reasons for your recommendation. Focus on: position advantage, hand strength, range analysis, pot odds, implied odds. Example: ['Strong position on button', 'Villain range is capped here', 'Getting great pot odds to call']"],
+  "situationSummary": "REQUIRED - 1-2 sentence summary of the hand situation from hero's perspective. Start with 'You...' and describe the key situation. Example: 'You flopped top pair with AK on a dry board. Villain donk-bet into you on the flop.'",
   "alternativeActions": [
     {"action": "alternative play", "reasoning": "why it's viable", "ev": number (relative EV)}
   ],
@@ -196,6 +198,8 @@ export async function analyzeHandWithGrok(narrative: string): Promise<Partial<An
       outs,
       outBreakdown,
       riskLevel: result.riskLevel,
+      reasoningBullets: result.reasoningBullets || [],
+      situationSummary: result.situationSummary,
       alternativeActions: result.alternativeActions,
       personaAnalysis: result.personaAnalysis || {
         tone: 'mariano',

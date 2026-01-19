@@ -9,8 +9,10 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  Image,
   type ViewStyle,
   type TextStyle,
+  type ImageStyle,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useRouter } from 'expo-router';
@@ -267,13 +269,12 @@ export default function VoiceScreen() {
       case 'processing':
         return 'Thinking...';
       case 'speaking':
-        return 'Coach speaking...';
+        return 'Speaking...';
       case 'error':
         return 'Tap Speak to retry';
       case 'idle':
-        return messages.length > 0 ? 'Tap Speak to continue' : 'Connecting...';
       default:
-        return 'Connecting...';
+        return messages.length > 0 ? 'Tap Speak to continue' : 'Tap Speak to start';
     }
   };
 
@@ -290,15 +291,13 @@ export default function VoiceScreen() {
 
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-        <TouchableOpacity
-          style={styles.closeButton}
-          onPress={handleClose}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <X size={24} color={colors.text.primary} />
-        </TouchableOpacity>
-        <Text style={styles.title}>Voice Coach</Text>
-        {messages.length > 0 ? (
+        <Image
+          source={require('@/assets/images/pokergpt_logo.png')}
+          style={styles.headerLogo}
+          resizeMode="contain"
+        />
+        <Text style={styles.headerTitle}>PokerGPT</Text>
+        {messages.length > 0 && (
           <TouchableOpacity
             style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
             onPress={handleSave}
@@ -308,9 +307,14 @@ export default function VoiceScreen() {
               {isSaving ? 'Saving...' : 'Save'}
             </Text>
           </TouchableOpacity>
-        ) : (
-          <View style={styles.placeholder} />
         )}
+        <TouchableOpacity
+          style={styles.closeButton}
+          onPress={handleClose}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <X size={24} color={colors.text.primary} />
+        </TouchableOpacity>
       </View>
 
       {/* Conversation Area */}
@@ -322,7 +326,8 @@ export default function VoiceScreen() {
       >
         {messages.length === 0 && (voiceState === 'idle' || voiceState === 'connecting') && (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyTitle}>Ask me anything about poker</Text>
+            <Text style={styles.emptyTitle}>Tell me about your hand</Text>
+            <Text style={styles.emptySubtitle}>Talk like you're with a friend at the table</Text>
           </View>
         )}
 
@@ -466,29 +471,32 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingBottom: 12,
   } as ViewStyle,
+  headerLogo: {
+    width: 32,
+    height: 32,
+  } as ImageStyle,
+  headerTitle: {
+    flex: 1,
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.onboarding.gold,
+    marginLeft: 12,
+  } as TextStyle,
   closeButton: {
     width: 40,
     height: 40,
     alignItems: 'center',
     justifyContent: 'center',
   } as ViewStyle,
-  title: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.text.primary,
-  } as TextStyle,
-  placeholder: {
-    width: 40,
-  } as ViewStyle,
   saveButton: {
     backgroundColor: colors.accent.gold,
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 16,
+    marginRight: 8,
   } as ViewStyle,
   saveButtonDisabled: {
     opacity: 0.7,
@@ -517,6 +525,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.text.primary,
     textAlign: 'center',
+  } as TextStyle,
+  emptySubtitle: {
+    fontSize: 14,
+    color: colors.text.muted,
+    textAlign: 'center',
+    marginTop: 8,
   } as TextStyle,
   messageBubble: {
     maxWidth: '85%',

@@ -61,7 +61,7 @@ export class OpenAIRealtimeService {
         ]);
 
         this.ws.onopen = () => {
-          console.log('Connected to OpenAI Realtime API');
+          console.log('[OpenAIRealtime] WebSocket connected to OpenAI Realtime API');
           this.isConnected = true;
           this.configureSession();
           resolve();
@@ -72,13 +72,13 @@ export class OpenAIRealtimeService {
         };
 
         this.ws.onerror = (error) => {
-          console.error('WebSocket error:', error);
+          console.error('[OpenAIRealtime] WebSocket error:', error);
           this.callbacks.onError?.(error);
           reject(error);
         };
 
         this.ws.onclose = (event) => {
-          console.log('WebSocket closed:', event.code, event.reason);
+          console.log('[OpenAIRealtime] WebSocket closed:', event.code, event.reason);
           this.isConnected = false;
           this.ws = null;
         };
@@ -89,7 +89,12 @@ export class OpenAIRealtimeService {
   }
 
   private configureSession(): void {
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      console.error('[OpenAIRealtime] Cannot configure session - WebSocket not open');
+      return;
+    }
+
+    console.log('[OpenAIRealtime] Configuring session...');
 
     // Configure the session for poker hand analysis - concise coaching style
     const sessionConfig = {
@@ -136,31 +141,53 @@ Start by asking: "What hand are we looking at?"`,
     };
 
     this.ws.send(JSON.stringify(sessionConfig));
+    console.log('[OpenAIRealtime] Session configuration sent');
   }
 
   private handleMessage(data: string): void {
     try {
-      const event = JSON.parse(data) as RealtimeEvent;
+      const event = JSON.parse(data) as any;
+
+      // Log all events for debugging
+      if (!['response.audio.delta', 'response.audio_transcript.delta'].includes(event.type)) {
+        console.log('[OpenAIRealtime] Event received:', event.type);
+      }
 
       switch (event.type) {
         case 'session.created':
-          console.log('Session created');
+          console.log('[OpenAIRealtime] Session created successfully');
           this.callbacks.onSessionCreated?.();
           break;
 
+        case 'session.updated':
+          console.log('[OpenAIRealtime] Session updated');
+          break;
+
         case 'input_audio_buffer.speech_started':
-          console.log('User started speaking');
+          console.log('[OpenAIRealtime] User started speaking');
           this.callbacks.onSpeechStarted?.();
           break;
 
         case 'input_audio_buffer.speech_stopped':
-          console.log('User stopped speaking');
+          console.log('[OpenAIRealtime] User stopped speaking');
           this.callbacks.onSpeechStopped?.();
           break;
 
+        case 'input_audio_buffer.committed':
+          console.log('[OpenAIRealtime] Audio buffer committed');
+          break;
+
+        case 'conversation.item.created':
+          console.log('[OpenAIRealtime] Conversation item created:', event.item?.type);
+          break;
+
         case 'conversation.item.input_audio_transcription.completed':
-          console.log('User transcript:', event.transcript);
+          console.log('[OpenAIRealtime] User transcript received:', event.transcript);
           this.callbacks.onUserTranscript?.(event.transcript);
+          break;
+
+        case 'response.created':
+          console.log('[OpenAIRealtime] Response started');
           break;
 
         case 'response.audio_transcript.delta':
@@ -169,6 +196,7 @@ Start by asking: "What hand are we looking at?"`,
           break;
 
         case 'response.audio_transcript.done':
+          console.log('[OpenAIRealtime] AI transcript complete:', event.transcript);
           this.transcriptBuffer = event.transcript;
           this.callbacks.onTranscript?.(event.transcript, true);
           this.transcriptBuffer = '';
@@ -178,17 +206,25 @@ Start by asking: "What hand are we looking at?"`,
           this.callbacks.onAudioResponse?.(event.delta);
           break;
 
+        case 'response.audio.done':
+          console.log('[OpenAIRealtime] Audio response complete');
+          break;
+
         case 'response.done':
+          console.log('[OpenAIRealtime] Response complete');
           this.callbacks.onResponseDone?.(event.response);
           break;
 
         case 'error':
-          console.error('Realtime API error:', event.error);
+          console.error('[OpenAIRealtime] API error:', JSON.stringify(event.error));
           this.callbacks.onError?.(event.error);
           break;
+
+        default:
+          console.log('[OpenAIRealtime] Unhandled event type:', event.type);
       }
     } catch (error) {
-      console.error('Error parsing message:', error);
+      console.error('[OpenAIRealtime] Error parsing message:', error);
     }
   }
 

@@ -182,17 +182,17 @@ const plans: PricingPlan[] = [
   {
     id: 'weekly',
     name: 'Weekly',
-    price: '$6.99',
-    perMonth: '$6.99/week',
+    price: '$9.99',
+    perMonth: '$9.99/week',
     features: ['Unlimited hand analysis', 'Voice input', 'Full AI breakdowns', 'Hand history'],
   },
   {
     id: 'yearly',
     name: 'Yearly',
-    price: '$34.99',
-    perMonth: '$2.91/month',
-    badge: 'SAVE 50%',
-    savings: 'Save $329 vs weekly',
+    price: '$49',
+    perMonth: '$4.08/month',
+    badge: 'SAVE 91%',
+    savings: 'Save $470 vs weekly',
     features: ['Everything in Weekly', 'Priority support', 'Early features', 'Best for serious players'],
   },
   {

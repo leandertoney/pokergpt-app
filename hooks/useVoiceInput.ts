@@ -2,6 +2,8 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { useAudioRecorder, RecordingPresets, AudioModule, setAudioModeAsync } from 'expo-audio';
 import { Audio } from 'expo-av';
 import * as FileSystem from 'expo-file-system/legacy';
+import { getVoiceSettings } from '@/services/storageService';
+import { speak } from '@/services/ttsService';
 
 export type VoiceState = 'idle' | 'connecting' | 'listening' | 'processing' | 'speaking' | 'error';
 
@@ -59,7 +61,7 @@ export function useVoiceInput(options: UseVoiceInputOptions) {
     }
   };
 
-  // Text-to-Speech using OpenAI TTS API
+  // Text-to-Speech using configured provider (OpenAI or ElevenLabs)
   const speakText = async (text: string): Promise<void> => {
     if (!openaiApiKey || !text.trim()) {
       console.log('[TTS] Skipping - no API key or empty text');
@@ -79,45 +81,17 @@ export function useVoiceInput(options: UseVoiceInputOptions) {
         playsInSilentMode: true,
       });
 
-      // Request TTS from OpenAI
-      const response = await fetch('https://api.openai.com/v1/audio/speech', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${openaiApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'tts-1',
-          input: text,
-          voice: 'onyx', // Deep authoritative voice for poker coach
-          speed: 1.0,
-          response_format: 'mp3',
-        }),
-      });
+      // Get voice settings and generate speech using configured provider
+      const voiceSettings = await getVoiceSettings();
+      const result = await speak(text, voiceSettings, openaiApiKey);
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('[TTS] API error:', response.status, errorText);
-        throw new Error(`TTS API error: ${response.status}`);
+      if (result.usedFallback) {
+        console.log('[TTS] Used fallback provider:', result.provider);
       }
-
-      // Get audio as blob and convert to base64
-      const audioBlob = await response.blob();
-      const reader = new FileReader();
-      const base64Promise = new Promise<string>((resolve, reject) => {
-        reader.onload = () => {
-          const result = reader.result as string;
-          const base64 = result.split(',')[1];
-          resolve(base64);
-        };
-        reader.onerror = reject;
-      });
-      reader.readAsDataURL(audioBlob);
-      const base64Audio = await base64Promise;
 
       // Save to temp file
       const tempFile = `${FileSystem.cacheDirectory}tts_response.mp3`;
-      await FileSystem.writeAsStringAsync(tempFile, base64Audio, {
+      await FileSystem.writeAsStringAsync(tempFile, result.audioBase64, {
         encoding: FileSystem.EncodingType.Base64,
       });
 
