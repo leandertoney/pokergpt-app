@@ -11,8 +11,10 @@ interface SpotifyHandCardProps {
   villainPosition?: string;
   createdAt?: string;
   onPress: () => void;
+  onLongPress?: () => void;
   isFavorite?: boolean;
   onToggleFavorite?: () => void;
+  sessionName?: string;
 }
 
 function formatRelativeTime(dateString?: string): string {
@@ -68,8 +70,10 @@ export function SpotifyHandCard({
   villainPosition,
   createdAt,
   onPress,
+  onLongPress,
   isFavorite = false,
   onToggleFavorite,
+  sessionName,
 }: SpotifyHandCardProps) {
   // Split hero hand into individual cards
   const cards = heroHand.split(' ').filter(c => c.length > 0);
@@ -81,7 +85,13 @@ export function SpotifyHandCard({
   const displayName = handName || generateHandName(heroHand);
 
   return (
-    <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.8}>
+    <TouchableOpacity
+      style={styles.container}
+      onPress={onPress}
+      onLongPress={onLongPress}
+      delayLongPress={500}
+      activeOpacity={0.8}
+    >
       <LinearGradient
         colors={['#2D1212', '#1A0808']}
         start={{ x: 0, y: 0 }}
@@ -112,6 +122,14 @@ export function SpotifyHandCard({
             )}
             {createdAt && (
               <Text style={styles.timestamp}>{formatRelativeTime(createdAt)}</Text>
+            )}
+            {sessionName && (
+              <>
+                <Text style={styles.separator}>·</Text>
+                <View style={styles.sessionBadge}>
+                  <Text style={styles.sessionBadgeText}>{sessionName}</Text>
+                </View>
+              </>
             )}
           </View>
 
@@ -255,4 +273,15 @@ const styles = StyleSheet.create({
   favoriteButton: {
     marginLeft: 8,
   } as ViewStyle,
+  sessionBadge: {
+    backgroundColor: 'rgba(232, 184, 74, 0.2)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  } as ViewStyle,
+  sessionBadgeText: {
+    fontSize: 11,
+    fontWeight: '600' as const,
+    color: colors.accent.gold,
+  } as TextStyle,
 });

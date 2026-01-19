@@ -19,7 +19,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-export type FilterOption = 'all' | 'hands' | 'chats' | 'favorites';
+export type FilterOption = 'all' | 'hands' | 'chats' | 'sessions' | 'favorites';
 
 interface FilterChipsProps {
   activeFilter: FilterOption;
@@ -28,6 +28,7 @@ interface FilterChipsProps {
     all?: number;
     hands?: number;
     chats?: number;
+    sessions?: number;
     favorites?: number;
   };
 }
@@ -36,6 +37,7 @@ const FILTER_OPTIONS: { key: FilterOption; label: string }[] = [
   { key: 'all', label: 'All' },
   { key: 'hands', label: 'Hands' },
   { key: 'chats', label: 'Chats' },
+  { key: 'sessions', label: 'Sessions' },
   { key: 'favorites', label: 'Favorites' },
 ];
 

@@ -1,10 +1,16 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import { View, StyleSheet, Text, TouchableOpacity, FlatList, Animated, KeyboardAvoidingView, Platform, type ViewStyle, type TextStyle } from 'react-native';
+import { View, StyleSheet, Text, TouchableOpacity, FlatList, Animated, KeyboardAvoidingView, Platform, Image, type ViewStyle, type TextStyle, type ImageStyle } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { Settings, MessageCircle, Star } from 'lucide-react-native';
 import { SpotifyHandCard } from '@/components/SpotifyHandCard';
 import { ChatCard } from '@/components/ChatCard';
+import { SessionCard } from '@/components/SessionCard';
+import { SessionSuggestionCard } from '@/components/SessionSuggestionCard';
+import { CreateSessionModal } from '@/components/CreateSessionModal';
+import { AddToSessionSheet } from '@/components/AddToSessionSheet';
+import { SessionDetailSheet } from '@/components/SessionDetailSheet';
 import { SwipeableRow } from '@/components/SwipeableRow';
 import { FilterChips, type FilterOption } from '@/components/FilterChips';
 import { SearchBottomBar } from '@/components/SearchBottomBar';
@@ -16,15 +22,18 @@ import { DailyReviewCard } from '@/components/DailyReviewCard';
 import { useHandHistory, type StoredHandEntryWithName } from '@/hooks/useHandHistory';
 import { useChatHistory } from '@/hooks/useChatHistory';
 import { useFavorites } from '@/hooks/useFavorites';
+import { useSessionManagement } from '@/hooks/useSessionManagement';
 import { useAuth } from '@/contexts/AuthContext';
 import { colors } from '@/constants/colors';
-import type { HandData, AnalysisResult } from '@/types/poker';
+import type { HandData, AnalysisResult, StoredHand } from '@/types/poker';
 import type { ChatConversation } from '@/types/chat';
+import type { Session, SuggestedSession, CreateSessionPayload } from '@/types/session';
 
-// Type for combined list items (hands + chats)
+// Type for combined list items (hands + chats + sessions)
 type CombinedListItem =
   | { type: 'hand'; data: StoredHandEntryWithName; timestamp: number }
-  | { type: 'chat'; data: ChatConversation; timestamp: number };
+  | { type: 'chat'; data: ChatConversation; timestamp: number }
+  | { type: 'session'; data: Session; timestamp: number };
 
 const { height: screenHeight } = require('react-native').Dimensions.get('window');
 const OPENAI_API_KEY = process.env.EXPO_PUBLIC_OPENAI_API_KEY || '';
@@ -88,6 +97,29 @@ export default function HomeScreen() {
 
   // Card picker state
   const [showCardPicker, setShowCardPicker] = useState(false);
+
+  // Session management
+  const {
+    sessions,
+    suggestedSessions,
+    createSession,
+    updateSession,
+    deleteSession,
+    addHandsToSession,
+    removeHandsFromSession,
+    createFromSuggestion,
+    dismissSuggestion,
+    getHandsForSession,
+    refresh: refreshSessions,
+  } = useSessionManagement();
+
+  // Session UI state
+  const [showCreateSession, setShowCreateSession] = useState(false);
+  const [showAddToSession, setShowAddToSession] = useState(false);
+  const [selectedHandForSession, setSelectedHandForSession] = useState<StoredHandEntryWithName | null>(null);
+  const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null);
+  const [selectedSession, setSelectedSession] = useState<Session | null>(null);
+  const [showSessionDetail, setShowSessionDetail] = useState(false);
 
   // Check onboarding - guests always see it, authenticated users can skip
   useEffect(() => {
@@ -163,6 +195,38 @@ export default function HomeScreen() {
     setActiveFilter(filter);
   }, []);
 
+  // Handle long press on hand (to add to session)
+  const handleLongPressHand = useCallback((hand: StoredHandEntryWithName) => {
+    setSelectedHandForSession(hand);
+    setShowAddToSession(true);
+  }, []);
+
+  // Handle session selection
+  const handleSelectSession = useCallback((session: Session) => {
+    setSelectedSession(session);
+    setShowSessionDetail(true);
+  }, []);
+
+  // Handle adding hand to session from sheet
+  const handleAddHandToSession = useCallback(async (sessionId: string) => {
+    if (selectedHandForSession?.handData.id) {
+      await addHandsToSession(sessionId, [selectedHandForSession.handData.id]);
+    }
+    setShowAddToSession(false);
+    setSelectedHandForSession(null);
+  }, [selectedHandForSession, addHandsToSession]);
+
+  // Handle creating new session
+  const handleCreateSession = useCallback(async (payload: CreateSessionPayload) => {
+    await createSession(payload);
+    setShowCreateSession(false);
+  }, [createSession]);
+
+  // Handle creating session from suggestion
+  const handleCreateFromSuggestion = useCallback(async (suggestionId: string) => {
+    await createFromSuggestion(suggestionId);
+  }, [createFromSuggestion]);
+
   // Get filtered content based on active filter
   const getFilteredContent = useMemo((): CombinedListItem[] => {
     const favoriteHandIds = getFavoriteHandIds();
@@ -195,6 +259,12 @@ export default function HomeScreen() {
           data: c,
           timestamp: c.updatedAt,
         }));
+      case 'sessions':
+        return sessions.map(s => ({
+          type: 'session' as const,
+          data: s,
+          timestamp: s.startTime,
+        }));
       case 'favorites': {
         // Only favorited items
         const favoriteHands: CombinedListItem[] = hands
@@ -216,7 +286,7 @@ export default function HomeScreen() {
       default:
         return [];
     }
-  }, [activeFilter, hands, chats, getFavoriteHandIds, getFavoriteChatIds]);
+  }, [activeFilter, hands, chats, sessions, getFavoriteHandIds, getFavoriteChatIds]);
 
   // Filter counts for badges
   const filterCounts = useMemo(() => {
@@ -226,10 +296,11 @@ export default function HomeScreen() {
       all: hands.length + chats.length,
       hands: hands.length,
       chats: chats.length,
+      sessions: sessions.length,
       favorites: hands.filter(h => h.handData.id && favoriteHandIds.has(h.handData.id)).length +
                  chats.filter(c => favoriteChatIds.has(c.id)).length,
     };
-  }, [hands, chats, getFavoriteHandIds, getFavoriteChatIds]);
+  }, [hands, chats, sessions, getFavoriteHandIds, getFavoriteChatIds]);
 
   if (isCheckingOnboarding) {
     return (
@@ -266,8 +337,8 @@ export default function HomeScreen() {
       <Text style={styles.emptyHintText}>
         Tap the card above to see what analysis looks like
       </Text>
-      <Text style={styles.emptySubtext}>
-        Your hands will appear here after analysis
+      <Text style={styles.featureExplainer}>
+        Hands are for analyzing specific poker situations - describe your cards, position, and action to get detailed analysis
       </Text>
     </View>
   );
@@ -279,7 +350,7 @@ export default function HomeScreen() {
       </View>
       <Text style={styles.emptyTitle}>No Conversations Yet</Text>
       <Text style={styles.emptySubtext}>
-        Start a chat with the poker assistant to get strategy advice
+        Ask general poker questions, discuss strategy, or get advice on your game
       </Text>
       <TouchableOpacity
         style={styles.startChatButton}
@@ -302,6 +373,27 @@ export default function HomeScreen() {
     </View>
   );
 
+  const renderSessionsEmptyState = () => (
+    <View style={styles.emptyStateContainer}>
+      <View style={styles.sessionsEmptyIcon}>
+        <Ionicons name="layers-outline" size={48} color={colors.accent.gold} />
+      </View>
+      <Text style={styles.emptyTitle}>No Sessions Yet</Text>
+      <Text style={styles.emptySubtext}>
+        Organize your hands into sessions to track your performance
+      </Text>
+      <TouchableOpacity
+        style={styles.createSessionButton}
+        onPress={() => setShowCreateSession(true)}
+      >
+        <Text style={styles.createSessionText}>Create Session</Text>
+      </TouchableOpacity>
+      <Text style={styles.hintText}>
+        Tip: Long-press any hand to add it to a session
+      </Text>
+    </View>
+  );
+
   const renderErrorState = () => (
     <View style={styles.emptyState}>
       <Text style={styles.emptyTitle}>Something went wrong</Text>
@@ -316,28 +408,7 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen
-        options={{
-          headerShown: true,
-          title: 'PokerGPT',
-          headerStyle: {
-            backgroundColor: colors.background.primary,
-          },
-          headerTintColor: colors.onboarding.gold,
-          headerTitleStyle: {
-            fontWeight: '700' as const,
-            fontSize: 20,
-          },
-          headerRight: () => (
-            <TouchableOpacity
-              style={styles.headerButton}
-              onPress={() => router.push('/settings')}
-            >
-              <Settings size={22} color={colors.text.muted} />
-            </TouchableOpacity>
-          ),
-        }}
-      />
+      <Stack.Screen options={{ headerShown: false }} />
 
       <KeyboardAvoidingView
         style={styles.keyboardAvoid}
@@ -349,6 +420,18 @@ export default function HomeScreen() {
           locations={[0, 0.5, 1]}
           style={styles.gradient}
         >
+          {/* Custom Header */}
+          <View style={styles.customHeader}>
+            <Image
+              source={require('@/assets/images/pokergpt_logo.png')}
+              style={styles.headerLogo}
+              resizeMode="contain"
+            />
+            <Text style={styles.headerTitle}>PokerGPT</Text>
+            <TouchableOpacity onPress={() => router.push('/settings')}>
+              <Settings size={22} color={colors.text.muted} />
+            </TouchableOpacity>
+          </View>
           {isLoading ? (
             <View style={styles.loadingContainer}>
               <LoadingIndicator variant={2} size="medium" text="Loading hands..." />
@@ -393,10 +476,11 @@ export default function HomeScreen() {
                           onPress={() => handleSelectHand(hand)}
                           isFavorite={isFavorite(handId, 'hand')}
                           onToggleFavorite={() => toggleFavorite(handId, 'hand')}
+                          onLongPress={() => handleLongPressHand(hand)}
                         />
                       </SwipeableRow>
                     );
-                  } else {
+                  } else if (item.type === 'chat') {
                     const chat = item.data;
                     return (
                       <SwipeableRow onDelete={() => deleteChat(chat.id)}>
@@ -413,6 +497,23 @@ export default function HomeScreen() {
                         />
                       </SwipeableRow>
                     );
+                  } else {
+                    // Session item
+                    const session = item.data;
+                    const sessionHands = getHandsForSession(session.id);
+                    return (
+                      <SwipeableRow onDelete={() => deleteSession(session.id)}>
+                        <SessionCard
+                          session={session}
+                          handCount={sessionHands.length}
+                          isExpanded={expandedSessionId === session.id}
+                          onPress={() => handleSelectSession(session)}
+                          onToggleExpand={() => setExpandedSessionId(
+                            expandedSessionId === session.id ? null : session.id
+                          )}
+                        />
+                      </SwipeableRow>
+                    );
                   }
                 }}
                 contentContainerStyle={[
@@ -424,7 +525,9 @@ export default function HomeScreen() {
                     ? renderFavoritesEmptyState
                     : activeFilter === 'chats'
                       ? renderChatsEmptyState
-                      : renderHandsEmptyState
+                      : activeFilter === 'sessions'
+                        ? renderSessionsEmptyState
+                        : renderHandsEmptyState
                 }
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
@@ -486,6 +589,79 @@ export default function HomeScreen() {
         maxCards={2}
         title="Select Your Hole Cards"
       />
+
+      {/* Session Modals */}
+      <CreateSessionModal
+        visible={showCreateSession}
+        onClose={() => setShowCreateSession(false)}
+        onConfirm={handleCreateSession}
+      />
+
+      <AddToSessionSheet
+        visible={showAddToSession}
+        onClose={() => {
+          setShowAddToSession(false);
+          setSelectedHandForSession(null);
+        }}
+        sessions={sessions}
+        currentSessionId={selectedHandForSession?.handData.sessionId}
+        onSelectSession={handleAddHandToSession}
+        onCreateNew={() => {
+          setShowAddToSession(false);
+          setShowCreateSession(true);
+        }}
+        onRemoveFromSession={selectedHandForSession?.handData.sessionId ? async () => {
+          if (selectedHandForSession?.handData.id && selectedHandForSession?.handData.sessionId) {
+            await removeHandsFromSession(
+              selectedHandForSession.handData.sessionId,
+              [selectedHandForSession.handData.id]
+            );
+          }
+          setShowAddToSession(false);
+          setSelectedHandForSession(null);
+        } : undefined}
+      />
+
+      <SessionDetailSheet
+        visible={showSessionDetail}
+        session={selectedSession}
+        hands={selectedSession ? getHandsForSession(selectedSession.id) : []}
+        onClose={() => {
+          setShowSessionDetail(false);
+          setSelectedSession(null);
+        }}
+        onUpdate={async (updates) => {
+          if (selectedSession) {
+            await updateSession(selectedSession.id, updates);
+          }
+        }}
+        onRemoveHand={async (handId) => {
+          if (selectedSession) {
+            await removeHandsFromSession(selectedSession.id, [handId]);
+          }
+        }}
+        onDelete={async () => {
+          if (selectedSession) {
+            await deleteSession(selectedSession.id);
+            setShowSessionDetail(false);
+            setSelectedSession(null);
+          }
+        }}
+      />
+
+      {/* Session Suggestions Banner */}
+      {suggestedSessions.length > 0 && (activeFilter === 'all' || activeFilter === 'sessions') && (
+        <View style={styles.suggestionsOverlay}>
+          {suggestedSessions.slice(0, 1).map(suggestion => (
+            <SessionSuggestionCard
+              key={suggestion.id}
+              suggestion={suggestion}
+              onAccept={() => handleCreateFromSuggestion(suggestion.id)}
+              onDismiss={() => dismissSuggestion(suggestion.id)}
+            />
+          ))}
+        </View>
+      )}
     </View>
   );
 }
@@ -501,6 +677,25 @@ const styles = StyleSheet.create({
   gradient: {
     flex: 1,
   } as ViewStyle,
+  customHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 60,
+    paddingBottom: 12,
+    backgroundColor: colors.background.primary,
+  } as ViewStyle,
+  headerLogo: {
+    width: 32,
+    height: 32,
+  } as ImageStyle,
+  headerTitle: {
+    flex: 1,
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.onboarding.gold,
+    marginLeft: 12,
+  } as TextStyle,
   loadingContainer: {
     flex: 1,
     alignItems: 'center',
@@ -568,10 +763,25 @@ const styles = StyleSheet.create({
     marginTop: 16,
     textAlign: 'center',
   } as TextStyle,
+  featureExplainer: {
+    fontSize: 13,
+    color: colors.text.muted,
+    marginTop: 16,
+    textAlign: 'center',
+    paddingHorizontal: 32,
+    lineHeight: 18,
+  } as TextStyle,
   emptySubtext: {
     fontSize: 13,
     color: colors.text.muted,
     marginTop: 4,
+    textAlign: 'center',
+  } as TextStyle,
+  hintText: {
+    fontSize: 13,
+    color: colors.text.muted,
+    fontStyle: 'italic',
+    marginTop: 20,
     textAlign: 'center',
   } as TextStyle,
   emptyTitle: {
@@ -662,5 +872,33 @@ const styles = StyleSheet.create({
     height: 5,
     backgroundColor: colors.background.tertiary,
     borderRadius: 3,
+  } as ViewStyle,
+  sessionsEmptyIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(232, 184, 74, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  } as ViewStyle,
+  createSessionButton: {
+    marginTop: 20,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    backgroundColor: colors.accent.gold,
+    borderRadius: 20,
+  } as ViewStyle,
+  createSessionText: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+    color: colors.text.dark,
+  } as TextStyle,
+  suggestionsOverlay: {
+    position: 'absolute',
+    top: 120,
+    left: 0,
+    right: 0,
+    zIndex: 10,
   } as ViewStyle,
 });

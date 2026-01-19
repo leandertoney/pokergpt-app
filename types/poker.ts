@@ -58,6 +58,10 @@ export type AnalysisResult = {
   // Outs tracking for math education
   outs?: number;
   outBreakdown?: string; // e.g., "9 flush + 6 straight - 3 overlap = 12 outs"
+  // Quick reasoning bullets for shareable card
+  reasoningBullets?: string[]; // 2-3 short phrases (max 8 words each)
+  // Situation summary for quick recall
+  situationSummary?: string; // 1-2 sentence summary starting with "You..."
   structuralAnalysis?: {
     gtoAction: string;
     potOdds?: string;

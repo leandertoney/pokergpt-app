@@ -156,11 +156,12 @@ export async function clearUserDisplayName(): Promise<void> {
 }
 
 // Session Tracking Storage
-import type { Session, ActiveSession, SessionPreferences } from '@/types/session';
+import type { Session, ActiveSession, SessionPreferences, SuggestedSession, CreateSessionPayload, UpdateSessionPayload } from '@/types/session';
 
 const SESSIONS_STORAGE_KEY = '@poker_sessions';
 const ACTIVE_SESSION_KEY = '@active_session';
 const SESSION_PREFERENCES_KEY = '@session_preferences';
+const SUGGESTED_SESSIONS_KEY = '@suggested_sessions';
 
 // Get all completed sessions
 export async function getSessionHistory(): Promise<Session[]> {
@@ -320,6 +321,231 @@ export async function deleteSession(sessionId: string): Promise<void> {
     await AsyncStorage.setItem(SESSIONS_STORAGE_KEY, JSON.stringify(filtered));
   } catch (error) {
     console.error('Error deleting session:', error);
+  }
+}
+
+// ============================================
+// Enhanced Session Management Functions
+// ============================================
+
+// Create a new session with metadata
+export async function createSessionWithMetadata(payload: CreateSessionPayload): Promise<Session> {
+  const now = Date.now();
+  const session: Session = {
+    id: `session-${now}`,
+    name: payload.name,
+    startTime: now,
+    stakes: payload.stakes,
+    customStakes: payload.customStakes,
+    buyIn: payload.buyIn,
+    location: payload.location,
+    tableType: payload.tableType,
+    notes: payload.notes,
+    handIds: payload.handIds || [],
+    chatIds: [],
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  try {
+    const sessions = await getSessionHistory();
+    sessions.unshift(session);
+    await AsyncStorage.setItem(SESSIONS_STORAGE_KEY, JSON.stringify(sessions));
+
+    // Link hands to this session
+    if (payload.handIds?.length) {
+      await linkHandsToSessionById(payload.handIds, session.id);
+    }
+
+    console.log('Session created:', session.id);
+    return session;
+  } catch (error) {
+    console.error('Error creating session:', error);
+    throw error;
+  }
+}
+
+// Update an existing session
+export async function updateSessionMetadata(
+  sessionId: string,
+  updates: UpdateSessionPayload
+): Promise<Session | null> {
+  try {
+    const sessions = await getSessionHistory();
+    const index = sessions.findIndex(s => s.id === sessionId);
+    if (index === -1) return null;
+
+    sessions[index] = {
+      ...sessions[index],
+      ...updates,
+      updatedAt: Date.now(),
+    };
+
+    await AsyncStorage.setItem(SESSIONS_STORAGE_KEY, JSON.stringify(sessions));
+    console.log('Session updated:', sessionId);
+    return sessions[index];
+  } catch (error) {
+    console.error('Error updating session:', error);
+    return null;
+  }
+}
+
+// Add hands to a session (with exclusivity check)
+export async function addHandsToSession(
+  sessionId: string,
+  handIds: string[]
+): Promise<{ success: boolean; conflicts: string[] }> {
+  try {
+    const sessions = await getSessionHistory();
+    const session = sessions.find(s => s.id === sessionId);
+    if (!session) return { success: false, conflicts: [] };
+
+    // Check for conflicts (hands already in other sessions)
+    const conflicts: string[] = [];
+    for (const handId of handIds) {
+      const existingSession = sessions.find(
+        s => s.id !== sessionId && s.handIds.includes(handId)
+      );
+      if (existingSession) {
+        conflicts.push(handId);
+      }
+    }
+
+    if (conflicts.length > 0) {
+      return { success: false, conflicts };
+    }
+
+    // Add hands to session
+    const newHandIds = [...new Set([...session.handIds, ...handIds])];
+    await updateSessionMetadata(sessionId, { handIds: newHandIds });
+
+    // Update hand records with sessionId
+    await linkHandsToSessionById(handIds, sessionId);
+
+    console.log('Hands added to session:', sessionId, handIds);
+    return { success: true, conflicts: [] };
+  } catch (error) {
+    console.error('Error adding hands to session:', error);
+    return { success: false, conflicts: [] };
+  }
+}
+
+// Remove hands from a session
+export async function removeHandsFromSession(
+  sessionId: string,
+  handIds: string[]
+): Promise<void> {
+  try {
+    const sessions = await getSessionHistory();
+    const session = sessions.find(s => s.id === sessionId);
+    if (!session) return;
+
+    const filteredHandIds = session.handIds.filter(id => !handIds.includes(id));
+    await updateSessionMetadata(sessionId, { handIds: filteredHandIds });
+
+    // Clear sessionId from hand records
+    await unlinkHandsFromSession(handIds);
+    console.log('Hands removed from session:', sessionId, handIds);
+  } catch (error) {
+    console.error('Error removing hands from session:', error);
+  }
+}
+
+// Get hands not assigned to any session
+export async function getOrphanedHands(): Promise<StoredHand[]> {
+  try {
+    const [allHands, sessions] = await Promise.all([
+      getHandHistory(),
+      getSessionHistory(),
+    ]);
+
+    const assignedHandIds = new Set(sessions.flatMap(s => s.handIds));
+
+    return allHands.filter(h => h.handData.id && !assignedHandIds.has(h.handData.id));
+  } catch (error) {
+    console.error('Error getting orphaned hands:', error);
+    return [];
+  }
+}
+
+// Link hands to session (update hand records with sessionId)
+async function linkHandsToSessionById(handIds: string[], sessionId: string): Promise<void> {
+  try {
+    const hands = await getHandHistory();
+    const updated = hands.map(h => {
+      if (h.handData.id && handIds.includes(h.handData.id)) {
+        return { ...h, handData: { ...h.handData, sessionId } };
+      }
+      return h;
+    });
+    await AsyncStorage.setItem(HANDS_STORAGE_KEY, JSON.stringify(updated));
+  } catch (error) {
+    console.error('Error linking hands to session:', error);
+  }
+}
+
+// Unlink hands from session (remove sessionId from hand records)
+async function unlinkHandsFromSession(handIds: string[]): Promise<void> {
+  try {
+    const hands = await getHandHistory();
+    const updated = hands.map(h => {
+      if (h.handData.id && handIds.includes(h.handData.id)) {
+        const { sessionId, ...restHandData } = h.handData;
+        return { ...h, handData: restHandData };
+      }
+      return h;
+    });
+    await AsyncStorage.setItem(HANDS_STORAGE_KEY, JSON.stringify(updated));
+  } catch (error) {
+    console.error('Error unlinking hands from session:', error);
+  }
+}
+
+// ============================================
+// Session Suggestion Functions
+// ============================================
+
+// Get all suggested sessions
+export async function getSuggestedSessions(): Promise<SuggestedSession[]> {
+  try {
+    const stored = await AsyncStorage.getItem(SUGGESTED_SESSIONS_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch (error) {
+    console.error('Error getting suggested sessions:', error);
+    return [];
+  }
+}
+
+// Save suggested sessions
+export async function saveSuggestedSessions(suggestions: SuggestedSession[]): Promise<void> {
+  try {
+    await AsyncStorage.setItem(SUGGESTED_SESSIONS_KEY, JSON.stringify(suggestions));
+  } catch (error) {
+    console.error('Error saving suggested sessions:', error);
+  }
+}
+
+// Dismiss a suggestion
+export async function dismissSuggestion(suggestionId: string): Promise<void> {
+  try {
+    const suggestions = await getSuggestedSessions();
+    const updated = suggestions.map(s =>
+      s.id === suggestionId ? { ...s, dismissed: true } : s
+    );
+    await saveSuggestedSessions(updated);
+    console.log('Suggestion dismissed:', suggestionId);
+  } catch (error) {
+    console.error('Error dismissing suggestion:', error);
+  }
+}
+
+// Clear all suggestions
+export async function clearSuggestedSessions(): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(SUGGESTED_SESSIONS_KEY);
+    console.log('All suggestions cleared');
+  } catch (error) {
+    console.error('Error clearing suggestions:', error);
   }
 }
 
@@ -540,8 +766,11 @@ export async function clearAllChats(): Promise<void> {
 // ============================================
 
 import type { FavoriteItem } from '@/types/favorites';
+import type { VoiceSettings } from '@/types/voice';
+import { DEFAULT_VOICE_SETTINGS } from '@/types/voice';
 
 const FAVORITES_STORAGE_KEY = '@poker_favorites';
+const VOICE_SETTINGS_KEY = '@voice_settings';
 
 // Get all favorites
 export async function getFavorites(): Promise<FavoriteItem[]> {
@@ -607,5 +836,42 @@ export async function clearAllFavorites(): Promise<void> {
     console.log('All favorites cleared');
   } catch (error) {
     console.error('Error clearing favorites:', error);
+  }
+}
+
+// ============================================
+// Voice Settings Storage
+// ============================================
+
+// Get voice settings
+export async function getVoiceSettings(): Promise<VoiceSettings> {
+  try {
+    const stored = await AsyncStorage.getItem(VOICE_SETTINGS_KEY);
+    return stored ? { ...DEFAULT_VOICE_SETTINGS, ...JSON.parse(stored) } : DEFAULT_VOICE_SETTINGS;
+  } catch (error) {
+    console.error('Error getting voice settings:', error);
+    return DEFAULT_VOICE_SETTINGS;
+  }
+}
+
+// Set voice settings (partial updates supported)
+export async function setVoiceSettings(updates: Partial<VoiceSettings>): Promise<void> {
+  try {
+    const current = await getVoiceSettings();
+    const updated = { ...current, ...updates };
+    await AsyncStorage.setItem(VOICE_SETTINGS_KEY, JSON.stringify(updated));
+    console.log('Voice settings saved');
+  } catch (error) {
+    console.error('Error setting voice settings:', error);
+  }
+}
+
+// Clear voice settings (reset to defaults)
+export async function clearVoiceSettings(): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(VOICE_SETTINGS_KEY);
+    console.log('Voice settings cleared');
+  } catch (error) {
+    console.error('Error clearing voice settings:', error);
   }
 }

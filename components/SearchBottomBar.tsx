@@ -25,7 +25,7 @@ export function SearchBottomBar({
   value,
   onChangeText,
   onSubmit,
-  placeholder = 'Search hands or tap Speak',
+  placeholder = 'Search or tap Speak',
   openaiApiKey = '',
 }: SearchBottomBarProps) {
   const insets = useSafeAreaInsets();
