@@ -80,6 +80,52 @@ export async function analyzeHand(narrative: string): Promise<Partial<AnalysisRe
   }
 }
 
+interface ConversationMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export async function conversationalChat(
+  messages: ConversationMessage[],
+  currentHandData: Partial<HandData>
+): Promise<{ response: string; handData: Partial<HandData> }> {
+  if (!isSupabaseConfigured()) {
+    console.warn("Supabase not configured. Using fallback response.");
+    return {
+      response: "Tell me more about the hand - what position were you in?",
+      handData: currentHandData,
+    };
+  }
+
+  try {
+    const response = await fetch(getEdgeFunctionUrl(), {
+      method: "POST",
+      headers: getHeaders(),
+      body: JSON.stringify({
+        action: "conversationalChat",
+        messages,
+        currentHandData,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return {
+      response: data.response || "Tell me more about the hand.",
+      handData: data.handData || currentHandData,
+    };
+  } catch (error) {
+    console.error("Error in conversational chat:", error);
+    return {
+      response: "Could you tell me a bit more about that spot?",
+      handData: currentHandData,
+    };
+  }
+}
+
 export async function generateText(
   prompt: string,
   systemPrompt?: string

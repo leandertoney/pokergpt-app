@@ -55,7 +55,8 @@ serve(async (req) => {
   }
 
   try {
-    const { action, prompt, systemPrompt, narrative } = await req.json();
+    const body = await req.json();
+    const { action, prompt, systemPrompt, narrative, messages: chatMessages, currentHandData } = body;
 
     if (action === "generateText") {
       const text = await callClaude(
@@ -118,6 +119,77 @@ Be thorough but only return valid JSON.`;
           }
         );
       }
+    }
+
+    if (action === "conversationalChat") {
+      const systemMessage = `You are a poker coach chatting with a friend about a hand they played. You're knowledgeable but casual - like that buddy at the table who happens to be a pro.
+
+## How to Respond
+
+**REACT FIRST, THEN ASK.** When they tell you something about the hand:
+1. Give your immediate take on the situation - what you're thinking, concerns, opportunities
+2. Then naturally ask what happened next
+
+**Examples of GOOD responses:**
+- User: "I bet $20 and three people called"
+  You: "Oof, three callers with pocket 7s? Your hand just got a lot worse - you're basically set mining now. But hey, $80 in the pot and you've got position? Not terrible. What'd the flop bring?"
+
+- User: "Flop is 8-4-2 all hearts, I have the 7 of hearts"
+  You: "Okay so second pair with a backdoor flush draw - that's actually decent equity. But monotone board with 3 others in? Someone's got a heart for sure. Did action come to you?"
+
+- User: "No, I have pocket sevens" (correcting you)
+  You: "My bad! So yeah, second pair not an overpair. Still got that backdoor flush draw working for you at least. What'd you do?"
+
+**Examples of BAD responses (don't do this):**
+- "What's the board texture?" (too clinical)
+- "How did you proceed on the flop?" (sounds like a form)
+- "You've flopped an overpair and a backdoor flush draw." (wrong read + no personality)
+
+## Your Personality
+- Casual but sharp - you know your stuff
+- React genuinely - "nice!", "oof", "interesting spot"
+- Point out concerns: "three callers killed your equity"
+- Show what YOU would be thinking: "I'd be worried about the flush completing"
+- Use poker slang naturally: "set mining", "backdoor draw", "monotone board"
+
+## Hand Data Tracking
+While chatting, keep track of what you've learned. In your response, include a JSON block with updated hand data.
+
+Current hand data: ${JSON.stringify(currentHandData || {})}
+
+After your conversational response, add:
+---HANDDATA---
+{json with updated fields: heroHand, heroPosition, villainPosition, heroStack, villainStack, potSize, streets, isComplete, missingFields}
+
+Set isComplete to true when you have enough info for a full analysis (hero's hand, position, key action on at least one street, and a decision point).`;
+
+      const formattedMessages: AnthropicMessage[] = chatMessages?.map((m: { role: string; content: string }) => ({
+        role: m.role as "user" | "assistant",
+        content: m.content,
+      })) || [];
+
+      const text = await callClaude(formattedMessages, systemMessage);
+
+      // Parse out the hand data from the response
+      const parts = text.split("---HANDDATA---");
+      const conversationalResponse = parts[0].trim();
+      let handData = currentHandData || {};
+
+      if (parts[1]) {
+        try {
+          const jsonStr = parts[1].trim();
+          handData = JSON.parse(jsonStr);
+        } catch (e) {
+          console.error("Failed to parse hand data:", e);
+        }
+      }
+
+      return new Response(
+        JSON.stringify({ response: conversationalResponse, handData }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
     }
 
     if (action === "analyzeHand") {

@@ -33,14 +33,23 @@ function formatRelativeTime(dateString?: string): string {
   return date.toLocaleDateString();
 }
 
-// Parse card string like "A♠" into { rank: "A", suit: "♠" }
+// Parse card string like "A♠" or "As" into { rank: "A", suit: "♠" }
 function parseCard(card: string): { rank: string; suit: string } {
-  const suits = ['♠', '♥', '♦', '♣'];
-  for (const suit of suits) {
+  // Handle Unicode symbols
+  const unicodeSuits = ['♠', '♥', '♦', '♣'];
+  for (const suit of unicodeSuits) {
     if (card.includes(suit)) {
       return { rank: card.replace(suit, ''), suit };
     }
   }
+
+  // Handle abbreviations (As, Kh, etc.)
+  const abbrevMap: Record<string, string> = { s: '♠', h: '♥', d: '♦', c: '♣' };
+  const lastChar = card.slice(-1).toLowerCase();
+  if (abbrevMap[lastChar]) {
+    return { rank: card.slice(0, -1), suit: abbrevMap[lastChar] };
+  }
+
   return { rank: card, suit: '' };
 }
 

@@ -2,31 +2,16 @@ import createContextHook from '@nkzw/create-context-hook';
 import { useState, useCallback, useMemo } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import type { ConversationMessage, HandData, AnalysisResult } from '@/types/poker';
-import { parseHandWithAI, analyzeHand as analyzeHandAI, generateText } from '@/services/supabaseAI';
+import { analyzeHand as analyzeHandAI, conversationalChat } from '@/services/supabaseAI';
 import { storeHand } from '@/services/supabaseStorage';
 
-function detectNarrativeStyle(text: string): 'standard' | 'mariano' {
-  const marianoIndicators = [
-    /let's go/i,
-    /boom/i,
-    /sick/i,
-    /insane/i,
-    /massive/i,
-    /ripped it in/i,
-    /no justice/i,
-    /looking for/i,
-    /gets there/i,
-  ];
-  const matches = marianoIndicators.filter(regex => regex.test(text));
-  return matches.length >= 2 ? 'mariano' : 'standard';
-}
 
 export const [PokerFlowProvider, usePokerFlow] = createContextHook(() => {
   const [messages, setMessages] = useState<ConversationMessage[]>([
     {
       id: '1',
       role: 'assistant',
-      content: 'Tell me about your hand.',
+      content: "What's up? Tell me about the hand.",
       timestamp: Date.now(),
     }
   ]);
@@ -34,71 +19,6 @@ export const [PokerFlowProvider, usePokerFlow] = createContextHook(() => {
   const [currentHandData, setCurrentHandData] = useState<Partial<HandData>>({});
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-  const parseHand = async (
-    conversationHistory: ConversationMessage[],
-    newMessage: string
-  ): Promise<Partial<HandData>> => {
-    const contextPrompt = `Previous conversation:
-${conversationHistory.map(m => `${m.role}: ${m.content}`).join('\n')}
-
-New message: ${newMessage}`;
-
-    try {
-      const parsed = await parseHandWithAI(contextPrompt);
-      return {
-        ...parsed,
-        narrativeStyle: detectNarrativeStyle(newMessage),
-        originalNarrative: newMessage,
-      };
-    } catch (error) {
-      console.error('Error parsing hand:', error);
-      return {
-        narrativeStyle: detectNarrativeStyle(newMessage),
-        missingFields: ['heroHand', 'heroPosition', 'villainPosition'],
-        isComplete: false,
-        originalNarrative: newMessage,
-      };
-    }
-  };
-
-  const generateClarifyingQuestion = async (
-    handData: Partial<HandData>,
-    _conversationHistory: ConversationMessage[]
-  ): Promise<string> => {
-    const missingFields = handData.missingFields || [];
-    const style = handData.narrativeStyle || 'standard';
-
-    // Fallback questions if AI fails
-    const fallbackQuestions: Record<string, string> = {
-      heroHand: "What cards did you have?",
-      heroPosition: "What position were you in?",
-      villainPosition: "Where was the villain sitting?",
-      heroStack: "How deep were you?",
-      villainStack: "How many BBs did villain have?",
-    };
-
-    const prompt = `You are a helpful poker assistant. The user is describing a poker hand but is missing some information.
-
-Current hand data:
-${JSON.stringify(handData, null, 2)}
-
-Missing fields: ${missingFields.join(', ')}
-
-Generate a natural, conversational question to get the most critical missing information.
-${style === 'mariano' ?
-      'Match their enthusiastic energy! Keep it SHORT, PUNCHY! Like "Yo what position were you in?" or "Sick! What cards you holding?"' :
-      'Be calm and professional.'}
-
-Ask about ONE thing at a time. Make it feel natural, not like a form.`;
-
-    try {
-      const question = await generateText(prompt);
-      return question || fallbackQuestions[missingFields[0]] || "Tell me more about what happened.";
-    } catch (error) {
-      console.error('Error generating question:', error);
-      return fallbackQuestions[missingFields[0]] || "Could you tell me a bit more about the hand?";
-    }
-  };
 
   const analyzeHandFull = async (handData: HandData): Promise<AnalysisResult> => {
     try {
@@ -140,9 +60,21 @@ Ask about ONE thing at a time. Make it feel natural, not like a form.`;
     }
   };
 
-  const parseMutation = useMutation({
-    mutationFn: async (userMessage: string) => {
-      return await parseHand(messages, userMessage);
+  const chatMutation = useMutation({
+    mutationFn: async ({ userContent, currentMessages, handData }: {
+      userContent: string;
+      currentMessages: ConversationMessage[];
+      handData: Partial<HandData>;
+    }) => {
+      // Format messages for the API (exclude handData/analysis metadata)
+      const formattedMessages = currentMessages.map(m => ({
+        role: m.role,
+        content: m.content,
+      }));
+      // Add the new user message
+      formattedMessages.push({ role: 'user' as const, content: userContent });
+
+      return await conversationalChat(formattedMessages, handData);
     },
   });
 
@@ -155,9 +87,9 @@ Ask about ONE thing at a time. Make it feel natural, not like a form.`;
     },
   });
 
-  const parseAsync = parseMutation.mutateAsync;
+  const chatAsync = chatMutation.mutateAsync;
   const analyzeAsync = analyzeMutation.mutateAsync;
-  const isParsePending = parseMutation.isPending;
+  const isChatPending = chatMutation.isPending;
 
   const sendMessage = useCallback(async (content: string) => {
     const userMessage: ConversationMessage = {
@@ -170,52 +102,64 @@ Ask about ONE thing at a time. Make it feel natural, not like a form.`;
     setMessages(prev => [...prev, userMessage]);
 
     try {
-      const parsed = await parseAsync(content);
+      // Use the new conversational chat approach
+      const { response, handData: updatedHandData } = await chatAsync({
+        userContent: content,
+        currentMessages: messages,
+        handData: {
+          ...currentHandData,
+          id: currentHandData.id || `hand_${Date.now()}`,
+          originalNarrative: currentHandData.originalNarrative
+            ? `${currentHandData.originalNarrative}\n${content}`
+            : content,
+        },
+      });
 
-      const updatedHandData = {
+      // Update hand data with what the AI extracted
+      const finalHandData = {
         ...currentHandData,
-        ...parsed,
+        ...updatedHandData,
         id: currentHandData.id || `hand_${Date.now()}`,
         originalNarrative: currentHandData.originalNarrative
           ? `${currentHandData.originalNarrative}\n${content}`
           : content,
       };
 
-      setCurrentHandData(updatedHandData);
+      setCurrentHandData(finalHandData);
 
-      if (parsed.isComplete && updatedHandData.id) {
+      // Add the assistant's conversational response
+      const assistantMessage: ConversationMessage = {
+        id: Date.now().toString(),
+        role: 'assistant',
+        content: response,
+        timestamp: Date.now(),
+        handData: finalHandData,
+      };
+
+      setMessages(prev => [...prev, assistantMessage]);
+
+      // If the hand is complete, trigger analysis
+      if (updatedHandData.isComplete && finalHandData.id) {
         setMessages(prev => [...prev, {
           id: Date.now().toString(),
           role: 'assistant',
-          content: 'Great! I have all the info I need. Analyzing your hand now...',
+          content: 'Alright, let me break this down for you...',
           timestamp: Date.now(),
         }]);
 
-        const analysis = await analyzeAsync(updatedHandData as HandData);
+        const analysis = await analyzeAsync(finalHandData as HandData);
 
         const analysisMessage: ConversationMessage = {
           id: Date.now().toString(),
           role: 'assistant',
-          content: `Analysis complete! ${analysis.recommendedAction}`,
+          content: `${analysis.recommendedAction}`,
           timestamp: Date.now(),
-          handData: updatedHandData as HandData,
+          handData: finalHandData as HandData,
           analysis,
         };
 
         setMessages(prev => [...prev, analysisMessage]);
         setIsAnalyzing(false);
-      } else {
-        const question = await generateClarifyingQuestion(updatedHandData, messages);
-
-        const assistantMessage: ConversationMessage = {
-          id: Date.now().toString(),
-          role: 'assistant',
-          content: question,
-          timestamp: Date.now(),
-          handData: updatedHandData,
-        };
-
-        setMessages(prev => [...prev, assistantMessage]);
       }
     } catch (error) {
       console.error('Error processing message:', error);
@@ -227,15 +171,15 @@ Ask about ONE thing at a time. Make it feel natural, not like a form.`;
       }]);
       setIsAnalyzing(false);
     }
-  }, [messages, currentHandData, parseAsync, analyzeAsync]);
+  }, [messages, currentHandData, chatAsync, analyzeAsync]);
 
   const startNewHand = useCallback(() => {
     const handId = `hand_${Date.now()}`;
-    setCurrentHandData({ id: handId, missingFields: [], isComplete: false, narrativeStyle: 'standard' });
+    setCurrentHandData({ id: handId, missingFields: [], isComplete: false });
     setMessages([{
       id: Date.now().toString(),
       role: 'assistant',
-      content: 'Tell me about your hand.',
+      content: "What's up? Tell me about the hand.",
       timestamp: Date.now(),
     }]);
     setIsAnalyzing(false);
@@ -246,7 +190,7 @@ Ask about ONE thing at a time. Make it feel natural, not like a form.`;
     sendMessage,
     startNewHand,
     isAnalyzing,
-    isParsing: isParsePending,
+    isParsing: isChatPending,
     currentHandData,
-  }), [messages, sendMessage, startNewHand, isAnalyzing, isParsePending, currentHandData]);
+  }), [messages, sendMessage, startNewHand, isAnalyzing, isChatPending, currentHandData]);
 });
