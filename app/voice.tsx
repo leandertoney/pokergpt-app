@@ -22,8 +22,11 @@ import * as Haptics from 'expo-haptics';
 import { useRealtimeVoice } from '@/hooks/useRealtimeVoice';
 import { colors } from '@/constants/colors';
 import { VoiceWaveform, PulsingIndicator } from '@/components/VoiceWaveform';
+import { UpgradeModal } from '@/components/UpgradeModal';
 import { storeHand } from '@/services/supabaseStorage';
+import { canSaveHand } from '@/services/storageService';
 import type { HandData, AnalysisResult } from '@/types/poker';
+import { MAX_FREE_HANDS } from '@/types/poker';
 
 const OPENAI_API_KEY = process.env.EXPO_PUBLIC_OPENAI_API_KEY || '';
 
@@ -120,6 +123,10 @@ export default function VoiceScreen() {
   const [textInput, setTextInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Free tier upgrade modal state
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [savedHandCount, setSavedHandCount] = useState(0);
 
   const hasApiKey = !!OPENAI_API_KEY;
 
@@ -225,6 +232,17 @@ export default function VoiceScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     try {
+      // Check if user can save (free tier limit)
+      const { allowed, currentCount } = await canSaveHand();
+      setSavedHandCount(currentCount);
+
+      if (!allowed) {
+        // User hit free tier limit - show upgrade modal
+        setIsSaving(false);
+        setShowUpgradeModal(true);
+        return;
+      }
+
       // Build transcript from messages
       const transcript = messages
         .map(m => `${m.role === 'user' ? 'User' : 'Coach'}: ${m.content}`)
@@ -258,6 +276,13 @@ export default function VoiceScreen() {
     await disconnect();
     router.back();
   }, [disconnect, router, messages]);
+
+  // Handle closing upgrade modal
+  const handleCloseUpgradeModal = useCallback(async () => {
+    setShowUpgradeModal(false);
+    await disconnect();
+    router.back();
+  }, [disconnect, router]);
 
   const getStatusText = () => {
     if (isTyping) return 'Type your question';
@@ -460,6 +485,14 @@ export default function VoiceScreen() {
           )}
         </View>
       </KeyboardAvoidingView>
+
+      {/* Upgrade Modal for free tier limit */}
+      <UpgradeModal
+        visible={showUpgradeModal}
+        onClose={handleCloseUpgradeModal}
+        currentCount={savedHandCount}
+        maxCount={MAX_FREE_HANDS}
+      />
     </LinearGradient>
   );
 }

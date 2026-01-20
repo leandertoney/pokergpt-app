@@ -4,6 +4,7 @@ import { useMutation } from '@tanstack/react-query';
 import type { ConversationMessage, HandData, AnalysisResult } from '@/types/poker';
 import { analyzeHand as analyzeHandAI, conversationalChat } from '@/services/supabaseAI';
 import { storeHand } from '@/services/supabaseStorage';
+import { canSaveHand } from '@/services/storageService';
 
 
 export const [PokerFlowProvider, usePokerFlow] = createContextHook(() => {
@@ -18,6 +19,15 @@ export const [PokerFlowProvider, usePokerFlow] = createContextHook(() => {
 
   const [currentHandData, setCurrentHandData] = useState<Partial<HandData>>({});
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+  // Free tier save limit tracking
+  const [saveBlocked, setSaveBlocked] = useState(false);
+  const [savedHandCount, setSavedHandCount] = useState(0);
+
+  // Reset save blocked state (call when user dismisses upgrade modal)
+  const clearSaveBlocked = useCallback(() => {
+    setSaveBlocked(false);
+  }, []);
 
 
   const analyzeHandFull = async (handData: HandData): Promise<AnalysisResult> => {
@@ -82,7 +92,19 @@ export const [PokerFlowProvider, usePokerFlow] = createContextHook(() => {
     mutationFn: async (handData: HandData) => {
       setIsAnalyzing(true);
       const analysis = await analyzeHandFull(handData);
+
+      // Check if user can save (free tier limit)
+      const { allowed, currentCount } = await canSaveHand();
+      setSavedHandCount(currentCount);
+
+      if (!allowed) {
+        // User hit free tier limit - analysis completes but save is blocked
+        setSaveBlocked(true);
+        return analysis; // Return analysis so user can still see it
+      }
+
       await storeHand(handData, analysis);
+      setSaveBlocked(false);
       return analysis;
     },
   });
@@ -192,5 +214,9 @@ export const [PokerFlowProvider, usePokerFlow] = createContextHook(() => {
     isAnalyzing,
     isParsing: isChatPending,
     currentHandData,
-  }), [messages, sendMessage, startNewHand, isAnalyzing, isChatPending, currentHandData]);
+    // Free tier save limit
+    saveBlocked,
+    savedHandCount,
+    clearSaveBlocked,
+  }), [messages, sendMessage, startNewHand, isAnalyzing, isChatPending, currentHandData, saveBlocked, savedHandCount, clearSaveBlocked]);
 });

@@ -10,17 +10,35 @@ import { ChatBubble } from '@/components/ChatBubble';
 import { InputBar } from '@/components/InputBar';
 import { VoiceInput } from '@/components/VoiceInput';
 import { LoadingIndicator } from '@/components/LoadingIndicator';
+import { UpgradeModal } from '@/components/UpgradeModal';
 import { colors } from '@/constants/colors';
+import { MAX_FREE_HANDS } from '@/types/poker';
 
 const OPENAI_API_KEY = process.env.EXPO_PUBLIC_OPENAI_API_KEY || '';
 
 export default function ChatScreen() {
-  const { messages, sendMessage, isAnalyzing, isParsing } = usePokerFlow();
+  const {
+    messages,
+    sendMessage,
+    isAnalyzing,
+    isParsing,
+    saveBlocked,
+    savedHandCount,
+    clearSaveBlocked,
+  } = usePokerFlow();
   const flatListRef = useRef<FlatList>(null);
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
   const [inputMode, setInputMode] = useState<'text' | 'voice'>('text');
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+  // Show upgrade modal when save is blocked
+  useEffect(() => {
+    if (saveBlocked) {
+      setShowUpgradeModal(true);
+    }
+  }, [saveBlocked]);
 
   // Voice input hook
   const {
@@ -48,10 +66,10 @@ export default function ChatScreen() {
     },
   });
 
-  // Check if analysis is complete - navigate back
+  // Check if analysis is complete - navigate back (unless save was blocked)
   useEffect(() => {
     const lastMessage = messages[messages.length - 1];
-    if (lastMessage?.analysis) {
+    if (lastMessage?.analysis && !saveBlocked) {
       // Stop voice if active
       if (voiceState !== 'idle') {
         stopVoice();
@@ -62,7 +80,15 @@ export default function ChatScreen() {
       }, 1500);
       return () => clearTimeout(timer);
     }
-  }, [messages, router, voiceState, stopVoice]);
+  }, [messages, router, voiceState, stopVoice, saveBlocked]);
+
+  // Handle closing upgrade modal
+  const handleCloseUpgradeModal = () => {
+    setShowUpgradeModal(false);
+    clearSaveBlocked();
+    // Navigate back after dismissing - user saw the analysis
+    router.back();
+  };
 
   useEffect(() => {
     if (messages.length > 0) {
@@ -155,6 +181,14 @@ export default function ChatScreen() {
           )}
         </View>
       </LinearGradient>
+
+      {/* Upgrade Modal for free tier limit */}
+      <UpgradeModal
+        visible={showUpgradeModal}
+        onClose={handleCloseUpgradeModal}
+        currentCount={savedHandCount}
+        maxCount={MAX_FREE_HANDS}
+      />
     </View>
   );
 }

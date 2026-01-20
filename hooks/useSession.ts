@@ -11,6 +11,7 @@ import {
   linkHandToSession as linkHandStorage,
   getSessionPreferences,
   getSessionHistory,
+  canUseSessions,
 } from '@/services/storageService';
 
 export interface UseSessionReturn {
@@ -23,7 +24,7 @@ export interface UseSessionReturn {
   sessionHistory: Session[];
 
   // Actions
-  startSession: () => Promise<void>;
+  startSession: () => Promise<boolean>; // Returns false if blocked (Pro feature)
   endSession: (result: number) => Promise<Session | null>;
   cancelSession: () => Promise<void>;
   updateSession: (updates: Partial<ActiveSession>) => Promise<void>;
@@ -79,15 +80,24 @@ export function useSession(): UseSessionReturn {
   // Format elapsed time for display
   const elapsedTime = formatElapsedTime(elapsedMs);
 
-  // Start a new session
-  const startSession = useCallback(async () => {
+  // Start a new session (Pro feature only)
+  const startSession = useCallback(async (): Promise<boolean> => {
     try {
+      // Check if user can use sessions (Pro feature)
+      const canUse = await canUseSessions();
+      if (!canUse) {
+        console.log('Sessions are a Pro feature');
+        return false; // Return false to indicate blocked
+      }
+
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       const session = await startSessionStorage();
       setActiveSession(session);
+      return true;
     } catch (error) {
       console.error('Error starting session:', error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      return false;
     }
   }, []);
 

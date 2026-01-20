@@ -176,6 +176,13 @@ function RootLayoutNav() {
         }}
       />
       <Stack.Screen
+        name="paywall"
+        options={{
+          headerShown: false,
+          presentation: 'modal',
+        }}
+      />
+      <Stack.Screen
         name="+not-found"
         options={{
           headerShown: true,

@@ -16,20 +16,18 @@ const CHATS_STORAGE_KEY = '@poker_chats';
 export async function storeHand(handData: HandData, analysis: AnalysisResult): Promise<void> {
   try {
     const hands = await getHandHistory();
-    const userTier = await getUserTier();
-    
+
     const newHand: StoredHand = {
       handData,
       analysis,
       timestamp: Date.now(),
     };
-    
+
     hands.unshift(newHand);
-    
-    if (userTier === 'free' && hands.length > MAX_FREE_HANDS) {
-      hands.splice(MAX_FREE_HANDS);
-    }
-    
+
+    // Note: Free tier limit is now enforced BEFORE calling storeHand via canSaveHand()
+    // No auto-pruning - if a hand gets here, it's allowed to be saved
+
     await AsyncStorage.setItem(HANDS_STORAGE_KEY, JSON.stringify(hands));
     console.log('Hand stored successfully');
   } catch (error) {
@@ -77,6 +75,26 @@ export async function setUserTier(tier: UserTier): Promise<void> {
   } catch (error) {
     console.error('Error setting user tier:', error);
   }
+}
+
+// Check if user can save a hand (free tier limit check)
+export async function canSaveHand(): Promise<{ allowed: boolean; currentCount: number }> {
+  const userTier = await getUserTier();
+  if (userTier === 'paid') {
+    return { allowed: true, currentCount: 0 };
+  }
+
+  const hands = await getHandHistory();
+  return {
+    allowed: hands.length < MAX_FREE_HANDS,
+    currentCount: hands.length,
+  };
+}
+
+// Check if user can use sessions (Pro-only feature)
+export async function canUseSessions(): Promise<boolean> {
+  const userTier = await getUserTier();
+  return userTier === 'paid';
 }
 
 export async function deleteHand(handId: string): Promise<void> {

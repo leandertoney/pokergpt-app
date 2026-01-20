@@ -1,5 +1,6 @@
 import { supabase, getVisitorId, getCurrentUserId, isSupabaseConfigured } from "@/lib/supabase";
 import type { HandData, AnalysisResult, UserIdentity, StoredHand } from "@/types/poker";
+import { MAX_FREE_HANDS } from "@/types/poker";
 import type { Session } from "@/types/session";
 import type { ChatConversation } from "@/types/chat";
 import type { FavoriteItem } from "@/types/favorites";
@@ -181,28 +182,8 @@ export async function storeHand(
       return;
     }
 
-    // Check free tier limit (5 hands)
-    if (user.tier === "free") {
-      const { count } = await supabase
-        .from("hands")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", user.id);
-
-      if (count && count >= 5) {
-        // Delete oldest hand to make room
-        const { data: oldest } = await supabase
-          .from("hands")
-          .select("id")
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: true })
-          .limit(1)
-          .single();
-
-        if (oldest) {
-          await supabase.from("hands").delete().eq("id", oldest.id);
-        }
-      }
-    }
+    // Note: Free tier limit is now enforced BEFORE calling storeHand via canSaveHand()
+    // No auto-pruning - if a hand gets here, it's allowed to be saved
 
     await supabase.from("hands").insert({
       user_id: user.id,

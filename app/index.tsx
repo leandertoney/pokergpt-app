@@ -26,6 +26,8 @@ import { useSessionManagement } from '@/hooks/useSessionManagement';
 import { useAuth } from '@/contexts/AuthContext';
 import { colors } from '@/constants/colors';
 import { generateText } from '@/services/supabaseAI';
+import { canUseSessions } from '@/services/storageService';
+import { UpgradeModal } from '@/components/UpgradeModal';
 import type { HandData, AnalysisResult, StoredHand } from '@/types/poker';
 import type { ChatConversation } from '@/types/chat';
 import type { Session, SuggestedSession, CreateSessionPayload } from '@/types/session';
@@ -126,6 +128,10 @@ export default function HomeScreen() {
   const [isAISearching, setIsAISearching] = useState(false);
   const [aiSearchResults, setAISearchResults] = useState<Set<string> | null>(null);
 
+  // Free tier - session access
+  const [canAccessSessions, setCanAccessSessions] = useState(false);
+  const [showSessionUpgradeModal, setShowSessionUpgradeModal] = useState(false);
+
   // Unified AI search across all content types
   const performAISearch = useCallback(async () => {
     if (!searchQuery.trim()) {
@@ -210,6 +216,15 @@ Only return the JSON array, nothing else.`;
     checkOnboarding();
   }, [isAuthenticated]);
 
+  // Check if user can access sessions (Pro feature)
+  useEffect(() => {
+    async function checkSessionAccess() {
+      const canUse = await canUseSessions();
+      setCanAccessSessions(canUse);
+    }
+    checkSessionAccess();
+  }, []);
+
   // Handle hand selection
   const handleSelectHand = useCallback((hand: StoredHandEntryWithName) => {
     setSelectedHand(hand);
@@ -276,9 +291,14 @@ Only return the JSON array, nothing else.`;
 
   // Handle long press on hand (to add to session)
   const handleLongPressHand = useCallback((hand: StoredHandEntryWithName) => {
+    if (!canAccessSessions) {
+      // Free users can't use sessions - show upgrade modal
+      setShowSessionUpgradeModal(true);
+      return;
+    }
     setSelectedHandForSession(hand);
     setShowAddToSession(true);
-  }, []);
+  }, [canAccessSessions]);
 
   // Handle session selection
   const handleSelectSession = useCallback((session: Session) => {
@@ -517,19 +537,36 @@ Only return the JSON array, nothing else.`;
       <View style={styles.sessionsEmptyIcon}>
         <Ionicons name="layers-outline" size={48} color={colors.accent.gold} />
       </View>
-      <Text style={styles.emptyTitle}>No Sessions Yet</Text>
-      <Text style={styles.emptySubtext}>
-        Organize your hands into sessions to track your performance
-      </Text>
-      <TouchableOpacity
-        style={styles.createSessionButton}
-        onPress={() => setShowCreateSession(true)}
-      >
-        <Text style={styles.createSessionText}>Create Session</Text>
-      </TouchableOpacity>
-      <Text style={styles.hintText}>
-        Tip: Long-press any hand to add it to a session
-      </Text>
+      {canAccessSessions ? (
+        <>
+          <Text style={styles.emptyTitle}>No Sessions Yet</Text>
+          <Text style={styles.emptySubtext}>
+            Organize your hands into sessions to track your performance
+          </Text>
+          <TouchableOpacity
+            style={styles.createSessionButton}
+            onPress={() => setShowCreateSession(true)}
+          >
+            <Text style={styles.createSessionText}>Create Session</Text>
+          </TouchableOpacity>
+          <Text style={styles.hintText}>
+            Tip: Long-press any hand to add it to a session
+          </Text>
+        </>
+      ) : (
+        <>
+          <Text style={styles.emptyTitle}>Sessions are a Pro Feature</Text>
+          <Text style={styles.emptySubtext}>
+            Upgrade to organize hands into sessions and track profit/loss
+          </Text>
+          <TouchableOpacity
+            style={styles.createSessionButton}
+            onPress={() => setShowSessionUpgradeModal(true)}
+          >
+            <Text style={styles.createSessionText}>Upgrade to Pro</Text>
+          </TouchableOpacity>
+        </>
+      )}
     </View>
   );
 
@@ -794,8 +831,15 @@ Only return the JSON array, nothing else.`;
         }}
       />
 
-      {/* Session Suggestions Banner */}
-      {suggestedSessions.length > 0 && (activeFilter === 'all' || activeFilter === 'sessions') && (
+      {/* Upgrade Modal for Sessions (Pro feature) */}
+      <UpgradeModal
+        visible={showSessionUpgradeModal}
+        onClose={() => setShowSessionUpgradeModal(false)}
+        reason="sessions"
+      />
+
+      {/* Session Suggestions Banner - only for Pro users */}
+      {canAccessSessions && suggestedSessions.length > 0 && (activeFilter === 'all' || activeFilter === 'sessions') && (
         <View style={styles.suggestionsOverlay}>
           {suggestedSessions.slice(0, 1).map(suggestion => (
             <SessionSuggestionCard

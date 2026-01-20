@@ -93,7 +93,7 @@ export type StoredHand = {
 
 export type UserTier = 'free' | 'paid';
 
-export const MAX_FREE_HANDS = 5;
+export const MAX_FREE_HANDS = 3;
 
 // Identity-Anchored Conversion Flow™ Types
 export type PlayerArchetype =
