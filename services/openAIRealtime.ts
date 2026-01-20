@@ -5,6 +5,8 @@
  * Uses WebSocket connection to OpenAI's Realtime API for bidirectional audio streaming.
  */
 
+import { VOICE_COACH_PROMPT } from '@/constants/prompts';
+
 const OPENAI_REALTIME_URL = 'wss://api.openai.com/v1/realtime';
 
 export type RealtimeEvent =
@@ -96,35 +98,13 @@ export class OpenAIRealtimeService {
 
     console.log('[OpenAIRealtime] Configuring session...');
 
-    // Configure the session for poker hand analysis - concise coaching style
+    // Configure the session for poker hand analysis - opinionated buddy style
+    // Prompt is imported from @/constants/prompts.ts (single source of truth)
     const sessionConfig = {
       type: 'session.update',
       session: {
         modalities: ['text', 'audio'],
-        instructions: `You are a poker coach helping users review hands they've already played. Keep responses SHORT - 1-2 sentences max.
-
-CRITICAL: Listen carefully. NEVER ask about something the user already told you.
-
-Poker terminology you MUST understand:
-- "Folded to me" = no one called or raised before them
-- "Limped" or "limpers" = called the big blind
-- "3-bet" = re-raised
-- "4-bet" = re-raised the 3-bet
-- "In position" = acting last
-- "Out of position" = acting first
-- "Straddle" = blind raise, usually 2x BB
-- "It checked around" = no one bet
-
-Your job: Ask ONE clarifying question at a time for MISSING details only:
-- Position (if not mentioned)
-- Stack sizes or effective stacks
-- What action they took or are facing
-- Board texture (if postflop)
-
-When you have enough info, give a clear verdict on whether they played it right.
-Don't lecture. Don't explain theory. Just help them think through it.
-
-Start by asking: "What hand are we looking at?"`,
+        instructions: VOICE_COACH_PROMPT,
         voice: 'echo',
         input_audio_format: 'pcm16',
         output_audio_format: 'pcm16',
