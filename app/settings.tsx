@@ -300,9 +300,9 @@ export default function SettingsScreen() {
             />
             <SettingsItem
               icon={<Bell size={22} color={colors.accent.gold} />}
-              title="Notifications"
-              subtitle="Manage alerts"
-              onPress={openNotificationSettings}
+              title="Daily Reminders"
+              subtitle="Set review reminder time"
+              onPress={() => router.push('/notification-settings')}
             />
           </SettingsSection>
 

@@ -12,6 +12,10 @@ import {
   completeReview,
   getAccuracyPercentage,
 } from '@/services/dailyReviewService';
+import {
+  rescheduleAfterCompletion,
+  scheduleStreakCelebration,
+} from '@/services/notificationService';
 
 export type ReviewStep = 'card' | 'spot' | 'reveal' | 'streak';
 
@@ -78,6 +82,12 @@ export function useDailyReview() {
       setState(newState);
       setHasReviewed(true);
       setStep('streak');
+
+      // Reschedule notification for tomorrow
+      await rescheduleAfterCompletion();
+
+      // Trigger streak celebration if milestone reached
+      await scheduleStreakCelebration(newState.currentStreak);
     } catch (error) {
       console.error('Error completing review:', error);
     }

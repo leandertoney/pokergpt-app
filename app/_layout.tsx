@@ -9,6 +9,11 @@ import { PokerFlowProvider } from "@/hooks/usePokerFlow";
 import { SplashFlow } from "@/components/SplashFlow";
 import { colors } from "@/constants/colors";
 import { initializeRevenueCat } from "@/services/revenueCat";
+import {
+  setupNotificationResponseListener,
+  getInitialNotification,
+  clearBadge,
+} from "@/services/notificationService";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -40,6 +45,25 @@ function useProtectedRoute() {
 
 function RootLayoutNav() {
   useProtectedRoute();
+  const router = useRouter();
+
+  // Set up notification handlers
+  useEffect(() => {
+    // Handle notification taps
+    const unsubscribe = setupNotificationResponseListener();
+
+    // Check if app was opened via notification
+    getInitialNotification().then((data) => {
+      if (data?.screen) {
+        router.push(data.screen as any);
+      }
+    });
+
+    // Clear badge when app opens
+    clearBadge();
+
+    return unsubscribe;
+  }, [router]);
 
   return (
     <Stack
@@ -140,6 +164,14 @@ function RootLayoutNav() {
         options={{
           headerShown: true,
           title: "Daily Review",
+          presentation: 'modal',
+        }}
+      />
+      <Stack.Screen
+        name="notification-settings"
+        options={{
+          headerShown: true,
+          title: "Daily Reminders",
           presentation: 'modal',
         }}
       />
