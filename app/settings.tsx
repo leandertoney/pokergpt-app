@@ -40,10 +40,10 @@ import {
   type SubscriptionStatus,
 } from '@/services/revenueCat';
 
-// URLs - Replace with your actual URLs
-const HELP_URL = 'https://pokergpt.app/help';
-const PRIVACY_URL = 'https://pokergpt.app/privacy';
-const TERMS_URL = 'https://pokergpt.app/terms';
+// URLs - Hosted on agency site
+const HELP_URL = 'https://universoleappstudios.com/pokergpt/help';
+const PRIVACY_URL = 'https://universoleappstudios.com/pokergpt/privacy';
+const TERMS_URL = 'https://universoleappstudios.com/pokergpt/terms';
 
 interface SettingsItemProps {
   icon: React.ReactNode;
