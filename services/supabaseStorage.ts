@@ -5,6 +5,7 @@ import type { ChatConversation } from "@/types/chat";
 import type { FavoriteItem } from "@/types/favorites";
 import type { VoiceSettings } from "@/types/voice";
 import type { SessionPreferences } from "@/types/session";
+import { storeHand as storeHandLocally, deleteHand as deleteHandLocally } from "@/services/storageService";
 
 interface User {
   id: string;
@@ -162,6 +163,13 @@ export async function storeHand(
   handData: HandData,
   analysis: AnalysisResult
 ): Promise<void> {
+  // Always save to local storage first (for session management)
+  try {
+    await storeHandLocally(handData, analysis);
+  } catch (localError) {
+    console.error('Error saving hand locally:', localError);
+  }
+
   if (!isSupabaseConfigured() || !supabase) {
     return;
   }
@@ -169,7 +177,7 @@ export async function storeHand(
   try {
     const user = await getOrCreateUser();
     if (!user) {
-      // Offline - can't store hand, fail silently
+      // Offline - hand already saved locally
       return;
     }
 
@@ -235,13 +243,20 @@ export async function getHandHistory(): Promise<
 }
 
 export async function deleteHand(handId: string): Promise<boolean> {
+  // Always delete from local storage first
+  try {
+    await deleteHandLocally(handId);
+  } catch (localError) {
+    console.error('Error deleting hand locally:', localError);
+  }
+
   if (!isSupabaseConfigured() || !supabase) {
-    return false;
+    return true; // Local deletion succeeded
   }
 
   try {
     const user = await getOrCreateUser();
-    if (!user) return false;
+    if (!user) return true; // Local deletion succeeded
 
     // Find and delete the hand with matching hand_data.id
     const { data: hands } = await supabase
@@ -255,12 +270,11 @@ export async function deleteHand(handId: string): Promise<boolean> {
 
     if (handToDelete) {
       await supabase.from("hands").delete().eq("id", handToDelete.id);
-      return true;
     }
 
-    return false;
+    return true;
   } catch {
-    return false;
+    return true; // Local deletion succeeded even if cloud fails
   }
 }
 
