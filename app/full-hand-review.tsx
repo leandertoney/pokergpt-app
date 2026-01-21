@@ -273,10 +273,10 @@ function DecisionScreen({
           <ActionButton label="Call" onPress={() => onAnswer('call')} />
         )}
         {decision.options.includes('bet') && (
-          <ActionButton label="Bet" onPress={() => onAnswer('bet')} variant="primary" />
+          <ActionButton label="Bet" onPress={() => onAnswer('bet')} />
         )}
         {decision.options.includes('raise') && (
-          <ActionButton label="Raise" onPress={() => onAnswer('raise')} variant="primary" />
+          <ActionButton label="Raise" onPress={() => onAnswer('raise')} />
         )}
       </View>
     </ScrollView>

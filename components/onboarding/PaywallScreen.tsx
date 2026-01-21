@@ -5,17 +5,19 @@ import {
   StyleSheet,
   Animated,
   TouchableOpacity,
-  ScrollView,
   ActivityIndicator,
   Alert,
   Linking,
+  Image,
+  Dimensions,
   type ViewStyle,
   type TextStyle,
+  type ImageStyle,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Check, X, Mic, Brain, Clock, Target, MessageCircle, Sparkles } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { colors } from '@/constants/colors';
-import { AnimatedLogo } from '@/components/AnimatedLogo';
 import {
   getOfferings,
   purchasePackage,
@@ -51,6 +53,10 @@ const FEATURES: FeatureItem[] = [
   { icon: Target, text: 'Daily review quiz + streaks', profit: true },
   { icon: Sparkles, text: 'Full hand training scenarios', profit: true },
 ];
+
+// Hero image URL
+const HERO_IMAGE_URL = 'https://bollujxjsgahswigmyvq.supabase.co/storage/v1/object/public/assets/onboarding/raking_chips.png';
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export function PaywallScreen({ playStyle, goal, userName, onPurchase, onSkip }: PaywallScreenProps) {
   const [selectedPlan, setSelectedPlan] = useState<'weekly' | 'yearly'>('yearly');
@@ -200,6 +206,35 @@ export function PaywallScreen({ playStyle, goal, userName, onPurchase, onSkip }:
 
   return (
     <View style={styles.container}>
+      {/* Hero Image - Absolute positioned to fill top */}
+      <Animated.View
+        style={[
+          styles.heroContainer,
+          {
+            opacity: headerAnim,
+            transform: [
+              {
+                scale: headerAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [1.1, 1],
+                }),
+              },
+            ],
+          },
+        ]}
+      >
+        <Image
+          source={{ uri: HERO_IMAGE_URL }}
+          style={styles.heroImage}
+          resizeMode="cover"
+        />
+        <LinearGradient
+          colors={['transparent', 'rgba(26, 26, 26, 0.6)', colors.background.primary]}
+          locations={[0, 0.5, 1]}
+          style={styles.heroGradient}
+        />
+      </Animated.View>
+
       {/* X Button - Top Right */}
       <TouchableOpacity
         style={styles.closeButton}
@@ -210,11 +245,7 @@ export function PaywallScreen({ playStyle, goal, userName, onPurchase, onSkip }:
         <X size={24} color="rgba(255,255,255,0.5)" />
       </TouchableOpacity>
 
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
+      <View style={styles.content}>
         {/* Header with Logo */}
         <Animated.View
           style={[
@@ -232,13 +263,8 @@ export function PaywallScreen({ playStyle, goal, userName, onPurchase, onSkip }:
             },
           ]}
         >
-          <View style={styles.headerRow}>
-            <AnimatedLogo variant={1} size="small" loop />
-            <View style={styles.headerText}>
-              <Text style={styles.headline}>Get PokerGPT Pro</Text>
-              <Text style={styles.subtitle}>Unlock your edge at the table</Text>
-            </View>
-          </View>
+          <Text style={styles.headline}>Get PokerGPT Pro</Text>
+          <Text style={styles.subtitle}>Unlock your edge at the table</Text>
         </Animated.View>
 
         {/* Features Card */}
@@ -409,8 +435,7 @@ export function PaywallScreen({ playStyle, goal, userName, onPurchase, onSkip }:
           </TouchableOpacity>
         </Animated.View>
 
-        <View style={styles.bottomSpacer} />
-      </ScrollView>
+      </View>
     </View>
   );
 }
@@ -418,6 +443,33 @@ export function PaywallScreen({ playStyle, goal, userName, onPurchase, onSkip }:
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  } as ViewStyle,
+  content: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 80,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingBottom: 20,
+  } as ViewStyle,
+  heroContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '45%',
+    overflow: 'hidden',
+  } as ViewStyle,
+  heroImage: {
+    width: '100%',
+    height: '100%',
+  } as ImageStyle,
+  heroGradient: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '70%',
   } as ViewStyle,
   closeButton: {
     position: 'absolute',
@@ -431,54 +483,41 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   } as ViewStyle,
-  scrollView: {
-    flex: 1,
-  } as ViewStyle,
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 50,
-    alignItems: 'center',
-  } as ViewStyle,
   header: {
     width: '100%',
-    marginBottom: 16,
-  } as ViewStyle,
-  headerRow: {
-    flexDirection: 'row',
+    marginBottom: 8,
     alignItems: 'center',
-    gap: 16,
-  } as ViewStyle,
-  headerText: {
-    flex: 1,
   } as ViewStyle,
   headline: {
     fontSize: 24,
     fontWeight: '700',
     color: '#fff',
     marginBottom: 4,
+    textAlign: 'center',
   } as TextStyle,
   subtitle: {
     fontSize: 14,
     color: 'rgba(255,255,255,0.6)',
+    textAlign: 'center',
   } as TextStyle,
   featuresCard: {
     width: '100%',
     backgroundColor: 'rgba(255,255,255,0.04)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 10,
   } as ViewStyle,
   featuresTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
     color: '#fff',
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
   } as TextStyle,
   featuresContainer: {
-    gap: 8,
+    gap: 6,
   } as ViewStyle,
   featureRow: {
     flexDirection: 'row',
@@ -516,16 +555,16 @@ const styles = StyleSheet.create({
   pricingContainer: {
     flexDirection: 'row',
     width: '100%',
-    gap: 10,
-    marginBottom: 16,
+    gap: 8,
+    marginBottom: 10,
   } as ViewStyle,
   pricingCard: {
     flex: 1,
     backgroundColor: 'rgba(255,255,255,0.06)',
     borderWidth: 2,
     borderColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 14,
-    padding: 12,
+    borderRadius: 12,
+    padding: 10,
     alignItems: 'center',
     position: 'relative',
   } as ViewStyle,
@@ -576,13 +615,13 @@ const styles = StyleSheet.create({
   } as ViewStyle,
   ctaContainer: {
     width: '100%',
-    marginBottom: 12,
+    marginBottom: 8,
   } as ViewStyle,
   ctaButton: {
     width: '100%',
     backgroundColor: colors.onboarding.gold,
-    borderRadius: 14,
-    paddingVertical: 16,
+    borderRadius: 12,
+    paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: colors.onboarding.gold,
@@ -614,9 +653,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: 'rgba(255,255,255,0.3)',
   } as TextStyle,
-  bottomSpacer: {
-    height: 20,
-  } as ViewStyle,
 });
 
 export default PaywallScreen;

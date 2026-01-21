@@ -12,6 +12,7 @@ import { TrendingUp, Target, Calculator, Check } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { colors } from '@/constants/colors';
 import { getOnboardingDemoHand } from '@/services/dailyReviewService';
+import { AnimatedLogo } from '@/components/AnimatedLogo';
 
 type DailyReviewDemoScreenProps = {
   onNext: () => void;
@@ -385,6 +386,11 @@ export function DailyReviewDemoScreen({ onNext }: DailyReviewDemoScreenProps) {
 
     return (
       <View style={styles.container}>
+        {/* Logo */}
+        <View style={styles.logoContainer}>
+          <AnimatedLogo variant={1} size="small" loop />
+        </View>
+
         <View style={styles.answerContent}>
           {/* Result Header */}
           <View style={styles.resultHeader}>
@@ -478,6 +484,11 @@ export function DailyReviewDemoScreen({ onNext }: DailyReviewDemoScreenProps) {
   return (
     <View style={styles.container}>
       <Animated.View style={[styles.revealContent, { opacity: revealFadeAnim }]}>
+        {/* Logo */}
+        <View style={styles.logoContainer}>
+          <AnimatedLogo variant={1} size="small" loop />
+        </View>
+
         {/* Headline */}
         <Text style={styles.revealSubheadline}>Nice work! But...</Text>
         <Text style={styles.revealHeadline}>That was just the warm-up</Text>
@@ -616,6 +627,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 24,
+  } as ViewStyle,
+  logoContainer: {
+    marginBottom: 16,
   } as ViewStyle,
   content: {
     alignItems: 'center',

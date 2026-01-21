@@ -4,13 +4,19 @@ import {
   Text,
   StyleSheet,
   Animated,
+  TouchableOpacity,
+  Image,
   type ViewStyle,
   type TextStyle,
+  type ImageStyle,
 } from 'react-native';
-import { ChevronLeft, Target, Calculator, Eye } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Target, Calculator, Eye } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { AnimatedLogo } from '@/components/AnimatedLogo';
 import { colors } from '@/constants/colors';
+
+const HERO_IMAGE_URL = 'https://bollujxjsgahswigmyvq.supabase.co/storage/v1/object/public/assets/onboarding/studying_poker.png';
 
 type LearningProgressScreenProps = {
   onNext: () => void;
@@ -64,22 +70,13 @@ export function LearningProgressScreen({ onNext }: LearningProgressScreenProps) 
       }).start();
     }, 1200);
 
-    // Swipe hint with pulsing animation
+    // Show continue button (solid, no animation)
     setTimeout(() => {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(buttonAnim, {
-            toValue: 1,
-            duration: 1000,
-            useNativeDriver: true,
-          }),
-          Animated.timing(buttonAnim, {
-            toValue: 0.4,
-            duration: 1000,
-            useNativeDriver: true,
-          }),
-        ])
-      ).start();
+      Animated.timing(buttonAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
     }, 1400);
   }, []);
 
@@ -111,99 +108,133 @@ export function LearningProgressScreen({ onNext }: LearningProgressScreenProps) 
     animate();
   };
 
+  const handleContinue = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onNext();
+  };
+
   return (
     <View style={styles.container}>
-      {/* Headline */}
-      <Animated.View
-        style={{
-          opacity: headlineAnim,
-          transform: [
-            {
-              translateY: headlineAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [30, 0],
-              }),
-            },
-          ],
-        }}
-      >
-        <View style={styles.logoContainer}>
-          <AnimatedLogo variant={1} size="small" loop />
-        </View>
-        <Text style={styles.headline}>Level up your game</Text>
-        <Text style={styles.subheadline}>Track what you're learning</Text>
-      </Animated.View>
-
-      {/* Skills List */}
-      <View style={styles.skillsContainer}>
-        {SKILLS.map((skill, index) => {
-          const IconComponent = skill.icon;
-          return (
-            <Animated.View
-              key={skill.name}
-              style={[
-                styles.skillRow,
-                {
-                  opacity: skillAnims[index],
-                  transform: [
-                    {
-                      translateX: skillAnims[index].interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [-30, 0],
-                      }),
-                    },
-                  ],
-                },
-              ]}
-            >
-              <View style={styles.skillHeader}>
-                <View style={[styles.skillIcon, { backgroundColor: `${skill.color}20` }]}>
-                  <IconComponent size={16} color={skill.color} />
-                </View>
-                <Text style={styles.skillName}>{skill.name}</Text>
-                <Text style={[styles.skillPercent, { color: skill.color }]}>
-                  {skillProgress[index]}%
-                </Text>
-              </View>
-              <View style={styles.progressBar}>
-                <View
-                  style={[
-                    styles.progressFill,
-                    {
-                      width: `${skillProgress[index]}%`,
-                      backgroundColor: skill.color,
-                    },
-                  ]}
-                />
-              </View>
-            </Animated.View>
-          );
-        })}
+      {/* Hero Image at Top */}
+      <View style={styles.heroContainer}>
+        <Image
+          source={{ uri: HERO_IMAGE_URL }}
+          style={styles.heroImage}
+          resizeMode="cover"
+        />
+        <LinearGradient
+          colors={['transparent', colors.background.primary]}
+          style={styles.heroGradient}
+        />
       </View>
 
-      {/* Footer */}
-      <Animated.Text
-        style={[
-          styles.footerText,
-          {
-            opacity: footerAnim,
-          },
-        ]}
-      >
-        You're improving every day.
-      </Animated.Text>
+      {/* Content Container */}
+      <View style={styles.content}>
+        {/* Headline */}
+        <Animated.View
+          style={{
+            opacity: headlineAnim,
+            transform: [
+              {
+                translateY: headlineAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [30, 0],
+                }),
+              },
+            ],
+          }}
+        >
+          <View style={styles.logoContainer}>
+            <AnimatedLogo variant={1} size="small" loop />
+          </View>
+          <Text style={styles.headline}>Level up your game</Text>
+          <Text style={styles.subheadline}>Track what you're learning</Text>
+        </Animated.View>
 
-      {/* Swipe Hint */}
+        {/* Skills List */}
+        <View style={styles.skillsContainer}>
+          {SKILLS.map((skill, index) => {
+            const IconComponent = skill.icon;
+            return (
+              <Animated.View
+                key={skill.name}
+                style={[
+                  styles.skillRow,
+                  {
+                    opacity: skillAnims[index],
+                    transform: [
+                      {
+                        translateX: skillAnims[index].interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [-30, 0],
+                        }),
+                      },
+                    ],
+                  },
+                ]}
+              >
+                <View style={styles.skillHeader}>
+                  <View style={[styles.skillIcon, { backgroundColor: `${skill.color}20` }]}>
+                    <IconComponent size={16} color={skill.color} />
+                  </View>
+                  <Text style={styles.skillName}>{skill.name}</Text>
+                  <Text style={[styles.skillPercent, { color: skill.color }]}>
+                    {skillProgress[index]}%
+                  </Text>
+                </View>
+                <View style={styles.progressBar}>
+                  <View
+                    style={[
+                      styles.progressFill,
+                      {
+                        width: `${skillProgress[index]}%`,
+                        backgroundColor: skill.color,
+                      },
+                    ]}
+                  />
+                </View>
+              </Animated.View>
+            );
+          })}
+        </View>
+
+        {/* Footer */}
+        <Animated.Text
+          style={[
+            styles.footerText,
+            {
+              opacity: footerAnim,
+            },
+          ]}
+        >
+          You're improving every day.
+        </Animated.Text>
+      </View>
+
+      {/* Continue Button */}
       <Animated.View
         style={[
-          styles.swipeHint,
+          styles.buttonContainer,
           {
             opacity: buttonAnim,
+            transform: [
+              {
+                translateY: buttonAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [20, 0],
+                }),
+              },
+            ],
           },
         ]}
       >
-        <ChevronLeft size={24} color="rgba(255,255,255,0.5)" />
-        <Text style={styles.swipeText}>Swipe to continue</Text>
+        <TouchableOpacity
+          style={styles.continueButton}
+          onPress={handleContinue}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.continueButtonText}>Continue</Text>
+        </TouchableOpacity>
       </Animated.View>
     </View>
   );
@@ -212,9 +243,32 @@ export function LearningProgressScreen({ onNext }: LearningProgressScreenProps) 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  } as ViewStyle,
+  heroContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '45%',
+    overflow: 'hidden',
+  } as ViewStyle,
+  heroImage: {
+    width: '100%',
+    height: '100%',
+  } as ImageStyle,
+  heroGradient: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '70%',
+  } as ViewStyle,
+  content: {
+    flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
     paddingHorizontal: 24,
+    paddingBottom: 140,
   } as ViewStyle,
   logoContainer: {
     alignItems: 'center',
@@ -282,17 +336,22 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 32,
   } as TextStyle,
-  swipeHint: {
+  buttonContainer: {
     position: 'absolute',
     bottom: 50,
-    alignItems: 'center',
-    alignSelf: 'center',
-    gap: 4,
+    left: 24,
+    right: 24,
   } as ViewStyle,
-  swipeText: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.5)',
-    fontWeight: '500',
+  continueButton: {
+    backgroundColor: colors.onboarding.gold,
+    paddingVertical: 16,
+    borderRadius: 30,
+    alignItems: 'center',
+  } as ViewStyle,
+  continueButtonText: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#000',
   } as TextStyle,
 });
 

@@ -4,38 +4,36 @@ import {
   Text,
   StyleSheet,
   Animated,
+  TouchableOpacity,
+  Image,
   type ViewStyle,
   type TextStyle,
+  type ImageStyle,
 } from 'react-native';
-import { Star, ChevronLeft } from 'lucide-react-native';
-import { AnimatedLogo } from '@/components/AnimatedLogo';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Star } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
 import { colors } from '@/constants/colors';
+
+const HERO_IMAGE_URL = 'https://bollujxjsgahswigmyvq.supabase.co/storage/v1/object/public/assets/onboarding/pocket_aces.png';
 
 type HeroScreenProps = {
   onNext: () => void;
 };
 
 export function HeroScreen({ onNext }: HeroScreenProps) {
-  const logoAnim = useRef(new Animated.Value(0)).current;
   const badgeAnim = useRef(new Animated.Value(0)).current;
   const winAnim = useRef(new Animated.Value(0)).current;
   const moreAnim = useRef(new Animated.Value(0)).current;
   const tiltAnim = useRef(new Animated.Value(0)).current;
   const lessAnim = useRef(new Animated.Value(0)).current;
   const subtextAnim = useRef(new Animated.Value(0)).current;
-  const swipeHintAnim = useRef(new Animated.Value(0)).current;
+  const buttonAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     // Staggered word-by-word animations
     Animated.sequence([
-      // Logo fades in first
-      Animated.spring(logoAnim, {
-        toValue: 1,
-        tension: 50,
-        friction: 8,
-        useNativeDriver: true,
-      }),
-      // Badge fades in
+      // Badge fades in first
       Animated.spring(badgeAnim, {
         toValue: 1,
         tension: 50,
@@ -77,182 +75,185 @@ export function HeroScreen({ onNext }: HeroScreenProps) {
         duration: 400,
         useNativeDriver: true,
       }),
+      // Button fades in
+      Animated.spring(buttonAnim, {
+        toValue: 1,
+        tension: 50,
+        friction: 8,
+        useNativeDriver: true,
+      }),
     ]).start();
-
-    // Swipe hint animation (pulsing)
-    setTimeout(() => {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(swipeHintAnim, {
-            toValue: 1,
-            duration: 1000,
-            useNativeDriver: true,
-          }),
-          Animated.timing(swipeHintAnim, {
-            toValue: 0.4,
-            duration: 1000,
-            useNativeDriver: true,
-          }),
-        ])
-      ).start();
-    }, 2500);
   }, []);
+
+  const handleContinue = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onNext();
+  };
 
   return (
     <View style={styles.container}>
-      {/* Animated Logo */}
-      <Animated.View
-        style={[
-          styles.logoContainer,
-          {
-            opacity: logoAnim,
-            transform: [
-              {
-                scale: logoAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0.8, 1],
-                }),
-              },
-            ],
-          },
-        ]}
-      >
-        <AnimatedLogo variant={1} size="large" loop />
-      </Animated.View>
-
-      {/* App Store Badge */}
-      <Animated.View
-        style={[
-          styles.badge,
-          {
-            opacity: badgeAnim,
-            transform: [
-              {
-                scale: badgeAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0.8, 1],
-                }),
-              },
-            ],
-          },
-        ]}
-      >
-        <Star size={14} color={colors.onboarding.gold} fill={colors.onboarding.gold} />
-        <Text style={styles.badgeText}>Loved by poker players</Text>
-      </Animated.View>
-
-      {/* Main Headline - Word by Word */}
-      <View style={styles.headlineContainer}>
-        {/* Win MORE line */}
-        <View style={styles.headlineLine}>
-          <Animated.Text
-            style={[
-              styles.headline,
-              {
-                opacity: winAnim,
-                transform: [
-                  {
-                    translateY: winAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [40, 0],
-                    }),
-                  },
-                ],
-              },
-            ]}
-          >
-            Win{' '}
-          </Animated.Text>
-          <Animated.Text
-            style={[
-              styles.emphasisMore,
-              {
-                opacity: moreAnim,
-                transform: [
-                  {
-                    scale: moreAnim.interpolate({
-                      inputRange: [0, 0.5, 1],
-                      outputRange: [0.3, 1.15, 1],
-                    }),
-                  },
-                  {
-                    translateY: moreAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [20, 0],
-                    }),
-                  },
-                ],
-              },
-            ]}
-          >
-            MORE.
-          </Animated.Text>
-        </View>
-
-        {/* Tilt LESS line */}
-        <View style={styles.headlineLine}>
-          <Animated.Text
-            style={[
-              styles.headline,
-              {
-                opacity: tiltAnim,
-                transform: [
-                  {
-                    translateY: tiltAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [40, 0],
-                    }),
-                  },
-                ],
-              },
-            ]}
-          >
-            Tilt{' '}
-          </Animated.Text>
-          <Animated.Text
-            style={[
-              styles.emphasisLess,
-              {
-                opacity: lessAnim,
-                transform: [
-                  {
-                    translateY: lessAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [15, 0],
-                    }),
-                  },
-                ],
-              },
-            ]}
-          >
-            LESS.
-          </Animated.Text>
-        </View>
+      {/* Hero Image at Top */}
+      <View style={styles.heroContainer}>
+        <Image
+          source={{ uri: HERO_IMAGE_URL }}
+          style={styles.heroImage}
+          resizeMode="cover"
+        />
+        <LinearGradient
+          colors={['transparent', colors.background.primary]}
+          style={styles.heroGradient}
+        />
       </View>
 
-      {/* Supporting Text */}
-      <Animated.Text
-        style={[
-          styles.subtext,
-          {
-            opacity: subtextAnim,
-          },
-        ]}
-      >
-        Real-time poker AI that thinks{'\n'}with you at the table.
-      </Animated.Text>
+      {/* Content Container */}
+      <View style={styles.content}>
+        {/* App Store Badge */}
+        <Animated.View
+          style={[
+            styles.badge,
+            {
+              opacity: badgeAnim,
+              transform: [
+                {
+                  scale: badgeAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.8, 1],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
+          <Star size={14} color={colors.onboarding.gold} fill={colors.onboarding.gold} />
+          <Text style={styles.badgeText}>Loved by poker players</Text>
+        </Animated.View>
 
-      {/* Swipe Hint */}
+        {/* Main Headline - Word by Word */}
+        <View style={styles.headlineContainer}>
+          {/* Win MORE line */}
+          <View style={styles.headlineLine}>
+            <Animated.Text
+              style={[
+                styles.headline,
+                {
+                  opacity: winAnim,
+                  transform: [
+                    {
+                      translateY: winAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [40, 0],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            >
+              Win{' '}
+            </Animated.Text>
+            <Animated.Text
+              style={[
+                styles.emphasisMore,
+                {
+                  opacity: moreAnim,
+                  transform: [
+                    {
+                      scale: moreAnim.interpolate({
+                        inputRange: [0, 0.5, 1],
+                        outputRange: [0.3, 1.15, 1],
+                      }),
+                    },
+                    {
+                      translateY: moreAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [20, 0],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            >
+              MORE.
+            </Animated.Text>
+          </View>
+
+          {/* Tilt LESS line */}
+          <View style={styles.headlineLine}>
+            <Animated.Text
+              style={[
+                styles.headline,
+                {
+                  opacity: tiltAnim,
+                  transform: [
+                    {
+                      translateY: tiltAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [40, 0],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            >
+              Tilt{' '}
+            </Animated.Text>
+            <Animated.Text
+              style={[
+                styles.emphasisLess,
+                {
+                  opacity: lessAnim,
+                  transform: [
+                    {
+                      translateY: lessAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [15, 0],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            >
+              LESS.
+            </Animated.Text>
+          </View>
+        </View>
+
+        {/* Supporting Text */}
+        <Animated.Text
+          style={[
+            styles.subtext,
+            {
+              opacity: subtextAnim,
+            },
+          ]}
+        >
+          Real-time poker AI that thinks{'\n'}with you at the table.
+        </Animated.Text>
+      </View>
+
+      {/* Continue Button */}
       <Animated.View
         style={[
-          styles.swipeHint,
+          styles.buttonContainer,
           {
-            opacity: swipeHintAnim,
+            opacity: buttonAnim,
+            transform: [
+              {
+                translateY: buttonAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [20, 0],
+                }),
+              },
+            ],
           },
         ]}
       >
-        <ChevronLeft size={24} color="rgba(255,255,255,0.5)" />
-        <Text style={styles.swipeText}>Swipe to continue</Text>
+        <TouchableOpacity
+          style={styles.continueButton}
+          onPress={handleContinue}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.continueButtonText}>Continue</Text>
+        </TouchableOpacity>
       </Animated.View>
     </View>
   );
@@ -261,9 +262,32 @@ export function HeroScreen({ onNext }: HeroScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  } as ViewStyle,
+  heroContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '45%',
+    overflow: 'hidden',
+  } as ViewStyle,
+  heroImage: {
+    width: '100%',
+    height: '100%',
+  } as ImageStyle,
+  heroGradient: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '70%',
+  } as ViewStyle,
+  content: {
+    flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
     paddingHorizontal: 32,
+    paddingBottom: 140,
   } as ViewStyle,
   badge: {
     flexDirection: 'row',
@@ -309,9 +333,6 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.4)', // Faded/muted - visually "less"
     letterSpacing: 6, // More spaced out for "reduction" feel
   } as TextStyle,
-  logoContainer: {
-    marginBottom: 24,
-  } as ViewStyle,
   subtext: {
     fontSize: 17,
     color: 'rgba(255,255,255,0.6)',
@@ -319,16 +340,22 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     marginTop: 24,
   } as TextStyle,
-  swipeHint: {
+  buttonContainer: {
     position: 'absolute',
-    bottom: 60,
-    alignItems: 'center',
-    gap: 4,
+    bottom: 50,
+    left: 24,
+    right: 24,
   } as ViewStyle,
-  swipeText: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.5)',
-    fontWeight: '500',
+  continueButton: {
+    backgroundColor: colors.onboarding.gold,
+    paddingVertical: 16,
+    borderRadius: 30,
+    alignItems: 'center',
+  } as ViewStyle,
+  continueButtonText: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#000',
   } as TextStyle,
 });
 

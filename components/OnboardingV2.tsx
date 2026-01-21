@@ -1,14 +1,10 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import {
   View,
   StyleSheet,
   Animated,
-  PanResponder,
-  Dimensions,
-  TouchableOpacity,
   type ViewStyle,
 } from 'react-native';
-import { ChevronLeft } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
@@ -29,15 +25,13 @@ import { ChatDemoScreen } from './onboarding/ChatDemoScreen';
 import { GoalSettingScreen } from './onboarding/GoalSettingScreen';
 import { PaywallScreen } from './onboarding/PaywallScreen';
 import { SkillLevelScreen } from './onboarding/SkillLevelScreen';
+import { AnalysisResultScreen } from './onboarding/AnalysisResultScreen';
 
 import { setUserTier, setUserIdentity, setUserDisplayName, setPaywallState, setGoalConfirmation } from '@/services/storageService';
 import { updateUserIdentity as syncUserIdentityToSupabase, getOrCreateUser } from '@/services/supabaseStorage';
 import { checkSubscriptionStatus } from '@/services/revenueCat';
 import { colors } from '@/constants/colors';
 import type { UserIdentity, ExperienceLevel } from '@/types/poker';
-
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-const SWIPE_THRESHOLD = 50; // Minimum distance for swipe
 
 const ONBOARDING_COMPLETE_KEY = '@onboarding_complete';
 
@@ -48,6 +42,7 @@ type OnboardingStep =
   | 'chatDemo'
   | 'profitDemo'
   | 'liveDemo'
+  | 'analysisResult'
   | 'sessionDemo'
   | 'dailyReviewDemo'
   | 'skillLevel'
@@ -79,6 +74,7 @@ const SWIPE_FLOW: OnboardingStep[] = [
 const ALL_STEPS: OnboardingStep[] = [
   'chatDemo',
   'liveDemo',
+  'analysisResult',
   'sessionDemo',
   'dailyReviewDemo',
   'skillLevel',
@@ -99,29 +95,11 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
   const [goal, setGoal] = useState<string>('profit');
   const [userName, setUserName] = useState<string | null>(null);
   const [experienceLevel, setExperienceLevel] = useState<ExperienceLevel>('intermediate');
-  const [canSwipe, setCanSwipe] = useState(true);
 
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const slideAnim = useRef(new Animated.Value(0)).current;
-  const swipeAnim = useRef(new Animated.Value(0)).current;
-  const progressAnim = useRef(new Animated.Value(0)).current;
-
-  // Calculate and animate progress when step changes
-  useEffect(() => {
-    const stepIndex = ALL_STEPS.indexOf(step);
-    if (stepIndex >= 0) {
-      const progress = (stepIndex + 1) / ALL_STEPS.length;
-      Animated.spring(progressAnim, {
-        toValue: progress,
-        tension: 50,
-        friction: 10,
-        useNativeDriver: false,
-      }).start();
-    }
-  }, [step, progressAnim]);
 
   const transitionTo = useCallback((nextStep: OnboardingStep) => {
-    setCanSwipe(false);
     setStepHistory(prev => [...prev, nextStep]);
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -149,108 +127,9 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
           friction: 8,
           useNativeDriver: true,
         }),
-      ]).start(() => {
-        setCanSwipe(true);
-      });
+      ]).start();
     });
   }, [fadeAnim, slideAnim]);
-
-  const transitionBack = useCallback(() => {
-    if (stepHistory.length <= 1) return;
-
-    setCanSwipe(false);
-    const previousStep = stepHistory[stepHistory.length - 2];
-
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 150,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 40,
-        duration: 150,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      setStep(previousStep);
-      setStepHistory(prev => prev.slice(0, -1));
-      slideAnim.setValue(-40);
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 250,
-          useNativeDriver: true,
-        }),
-        Animated.spring(slideAnim, {
-          toValue: 0,
-          tension: 50,
-          friction: 8,
-          useNativeDriver: true,
-        }),
-      ]).start(() => {
-        setCanSwipe(true);
-      });
-    });
-  }, [stepHistory, fadeAnim, slideAnim]);
-
-  // Swipe left to advance to next screen
-  const handleSwipeLeft = useCallback(() => {
-    if (!canSwipe) return;
-
-    const currentIndex = SWIPE_FLOW.indexOf(step);
-    if (currentIndex >= 0 && currentIndex < SWIPE_FLOW.length - 1) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      transitionTo(SWIPE_FLOW[currentIndex + 1]);
-    } else if (step === 'comparison') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      transitionTo('identity');
-    }
-  }, [step, canSwipe, transitionTo]);
-
-  // Keep a ref to the latest swipe handler to avoid stale closures
-  const handleSwipeRef = useRef(handleSwipeLeft);
-  useEffect(() => {
-    handleSwipeRef.current = handleSwipeLeft;
-  }, [handleSwipeLeft]);
-
-  // Keep a ref to the latest back handler to avoid stale closures
-  const handleBackRef = useRef(transitionBack);
-  useEffect(() => {
-    handleBackRef.current = transitionBack;
-  }, [transitionBack]);
-
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => false,
-      onMoveShouldSetPanResponder: (_, gestureState) => {
-        // Only capture horizontal swipes
-        return Math.abs(gestureState.dx) > 10 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
-      },
-      onPanResponderMove: (_, gestureState) => {
-        // Allow both left and right swipe animation
-        swipeAnim.setValue(gestureState.dx * 0.3);
-      },
-      onPanResponderRelease: (_, gestureState) => {
-        if (gestureState.dx < -SWIPE_THRESHOLD && gestureState.vx < 0) {
-          // Swipe left detected - go forward
-          handleSwipeRef.current();
-        } else if (gestureState.dx > SWIPE_THRESHOLD && gestureState.vx > 0) {
-          // Swipe right detected - go back
-          handleBackRef.current();
-        }
-        // Reset swipe animation
-        Animated.spring(swipeAnim, {
-          toValue: 0,
-          tension: 40,
-          friction: 8,
-          useNativeDriver: true,
-        }).start();
-      },
-    })
-  ).current;
 
   const handleIdentityComplete = (selectedPlayStyle: string, selectedGoal: string) => {
     setPlayStyle(selectedPlayStyle);
@@ -368,7 +247,10 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
         return <ProfitDemoScreen onNext={() => transitionTo('comparison')} />;
 
       case 'liveDemo':
-        return <LiveDemoScreen onNext={() => transitionTo('sessionDemo')} />;
+        return <LiveDemoScreen onNext={() => transitionTo('analysisResult')} />;
+
+      case 'analysisResult':
+        return <AnalysisResultScreen onNext={() => transitionTo('sessionDemo')} />;
 
       case 'sessionDemo':
         return <SessionDemoScreen onNext={() => transitionTo('dailyReviewDemo')} />;
@@ -422,9 +304,6 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
     }
   };
 
-  // Check if current step is swipeable
-  const isSwipeableStep = SWIPE_FLOW.includes(step);
-
   // Show progress bar for all steps except splash and hero
   const showProgress = step !== 'splash' && step !== 'hero';
 
@@ -435,32 +314,25 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
         locations={[0, 0.3, 0.7, 1]}
         style={styles.gradient}
       >
-        {/* Back Button */}
-        {step !== 'splash' && step !== 'hero' && stepHistory.length > 1 && (
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={transitionBack}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <ChevronLeft size={24} color="rgba(255,255,255,0.7)" />
-          </TouchableOpacity>
-        )}
-
-        {/* Progress Bar */}
+        {/* Progress Bar - shows all steps with completed ones filled */}
         {showProgress && (
           <View style={styles.progressContainer}>
-            <View style={styles.progressTrack}>
-              <Animated.View
-                style={[
-                  styles.progressFill,
-                  {
-                    width: progressAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: ['0%', '100%'],
-                    }),
-                  },
-                ]}
-              />
+            <View style={styles.segmentRow}>
+              {ALL_STEPS.map((s, index) => {
+                const currentIndex = ALL_STEPS.indexOf(step);
+                const isCompleted = index < currentIndex;
+                const isCurrent = index === currentIndex;
+                return (
+                  <View
+                    key={s}
+                    style={[
+                      styles.progressSegment,
+                      isCompleted && styles.progressSegmentCompleted,
+                      isCurrent && styles.progressSegmentCurrent,
+                    ]}
+                  />
+                );
+              })}
             </View>
           </View>
         )}
@@ -470,13 +342,9 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
             styles.content,
             {
               opacity: fadeAnim,
-              transform: [
-                { translateX: slideAnim },
-                { translateX: swipeAnim },
-              ],
+              transform: [{ translateX: slideAnim }],
             },
           ]}
-          {...(isSwipeableStep ? panResponder.panHandlers : {})}
         >
           {renderStep()}
         </Animated.View>
@@ -543,33 +411,27 @@ const styles = StyleSheet.create({
   gradient: {
     flex: 1,
   } as ViewStyle,
-  backButton: {
-    position: 'absolute',
-    top: 54,
-    left: 16,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 10,
-  } as ViewStyle,
   progressContainer: {
-    paddingHorizontal: 60,
+    paddingHorizontal: 24,
     paddingTop: 60,
     paddingBottom: 8,
   } as ViewStyle,
-  progressTrack: {
-    height: 3,
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
-    borderRadius: 2,
-    overflow: 'hidden',
+  segmentRow: {
+    flexDirection: 'row',
+    gap: 6,
   } as ViewStyle,
-  progressFill: {
-    height: '100%',
-    backgroundColor: colors.accent.gold,
+  progressSegment: {
+    flex: 1,
+    height: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
     borderRadius: 2,
+    minWidth: 20,
+  } as ViewStyle,
+  progressSegmentCompleted: {
+    backgroundColor: colors.accent.gold,
+  } as ViewStyle,
+  progressSegmentCurrent: {
+    backgroundColor: colors.accent.gold,
   } as ViewStyle,
   content: {
     flex: 1,

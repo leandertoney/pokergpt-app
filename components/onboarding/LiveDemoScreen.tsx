@@ -8,9 +8,9 @@ import {
   type ViewStyle,
   type TextStyle,
 } from 'react-native';
-import { Check, ChevronLeft, TrendingUp, Target, Calculator } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { VoiceOrb, type VoiceOrbState } from '@/components/VoiceOrb';
+import { AnimatedLogo } from '@/components/AnimatedLogo';
 import { colors } from '@/constants/colors';
 
 // Card display component - centered rank + suit design
@@ -32,15 +32,6 @@ type LiveDemoScreenProps = {
   onNext: () => void;
 };
 
-const DEMO_RESULT = {
-  action: 'CALL',
-  confidence: 73,
-  equity: 54,
-  ev: 42,
-  potOdds: '2.7:1',
-  reasoning: "Strong implied odds with position. Villain's range is capped here.",
-};
-
 // Demo transcription text that appears word by word
 const TRANSCRIPTION_TEXT = '"I had ace king suited... villain 3-bet to 45... pot was 120..."';
 
@@ -48,8 +39,6 @@ export function LiveDemoScreen({ onNext }: LiveDemoScreenProps) {
   const [orbState, setOrbState] = useState<VoiceOrbState>('idle');
   const [showCards, setShowCards] = useState(false);
   const [showBoard, setShowBoard] = useState(false);
-  const [showResult, setShowResult] = useState(false);
-  const [confidenceWidth, setConfidenceWidth] = useState(0);
   const [animationComplete, setAnimationComplete] = useState(false);
   const [displayedText, setDisplayedText] = useState('');
 
@@ -58,7 +47,6 @@ export function LiveDemoScreen({ onNext }: LiveDemoScreenProps) {
   const handAnim = useRef(new Animated.Value(0)).current;
   const boardAnim = useRef(new Animated.Value(0)).current;
   const actionAnim = useRef(new Animated.Value(0)).current;
-  const resultAnim = useRef(new Animated.Value(0)).current;
   const buttonAnim = useRef(new Animated.Value(0)).current;
 
   // Animate transcription text word by word
@@ -124,61 +112,23 @@ export function LiveDemoScreen({ onNext }: LiveDemoScreenProps) {
         useNativeDriver: true,
       }).start();
 
-      // Phase 6: Processing
+      // Phase 6: Processing visual
       await delay(400);
       setOrbState('processing');
-
-      // Phase 7: Show result
-      await delay(1000);
-      setOrbState('speaking');
-      setShowResult(true);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-      Animated.spring(resultAnim, {
-        toValue: 1,
-        tension: 50,
-        friction: 8,
-        useNativeDriver: true,
-      }).start();
-
-      // Animate confidence bar
-      await delay(200);
-      animateConfidence();
-
-      // Phase 8: Show swipe hint with pulsing animation
+      // Phase 7: Show continue button (solid, no animation)
       await delay(800);
       setAnimationComplete(true);
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(buttonAnim, {
-            toValue: 1,
-            duration: 1000,
-            useNativeDriver: true,
-          }),
-          Animated.timing(buttonAnim, {
-            toValue: 0.4,
-            duration: 1000,
-            useNativeDriver: true,
-          }),
-        ])
-      ).start();
+      Animated.timing(buttonAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
     };
 
     sequence();
   }, []);
-
-  const animateConfidence = () => {
-    let current = 0;
-    const target = DEMO_RESULT.confidence;
-    const interval = setInterval(() => {
-      current += 2;
-      if (current >= target) {
-        current = target;
-        clearInterval(interval);
-      }
-      setConfidenceWidth(current);
-    }, 10);
-  };
 
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -195,6 +145,26 @@ export function LiveDemoScreen({ onNext }: LiveDemoScreenProps) {
       activeOpacity={1}
       onPress={handlePress}
     >
+      {/* Logo */}
+      <Animated.View
+        style={[
+          styles.logoContainer,
+          {
+            opacity: titleAnim,
+            transform: [
+              {
+                scale: titleAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0.8, 1],
+                }),
+              },
+            ],
+          },
+        ]}
+      >
+        <AnimatedLogo variant={1} size="small" loop />
+      </Animated.View>
+
       {/* Title */}
       <Animated.Text
         style={[
@@ -213,6 +183,17 @@ export function LiveDemoScreen({ onNext }: LiveDemoScreenProps) {
         ]}
       >
         Just speak your hand
+      </Animated.Text>
+
+      <Animated.Text
+        style={[
+          styles.subtitle,
+          {
+            opacity: titleAnim,
+          },
+        ]}
+      >
+        Natural voice input for quick analysis
       </Animated.Text>
 
       {/* Voice Orb - Now at top to show this is voice-first */}
@@ -299,80 +280,31 @@ export function LiveDemoScreen({ onNext }: LiveDemoScreenProps) {
         </Animated.View>
       </Animated.View>
 
-      {/* Result Card */}
-      {showResult && (
-        <Animated.View
-          style={[
-            styles.resultCard,
-            {
-              opacity: resultAnim,
-              transform: [
-                {
-                  translateY: resultAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [50, 0],
-                  }),
-                },
-              ],
-            },
-          ]}
-        >
-          {/* Action Header */}
-          <View style={styles.resultHeader}>
-            <View style={styles.checkCircle}>
-              <Check size={16} color="#000" />
-            </View>
-            <Text style={styles.resultAction}>{DEMO_RESULT.action}</Text>
-          </View>
-
-          {/* Stats Row */}
-          <View style={styles.statsRow}>
-            <View style={styles.statItem}>
-              <Target size={14} color={colors.onboarding.data} />
-              <Text style={styles.statLabel}>Equity</Text>
-              <Text style={styles.statValue}>{DEMO_RESULT.equity}%</Text>
-            </View>
-            <View style={styles.statItem}>
-              <TrendingUp size={14} color={colors.onboarding.profit} />
-              <Text style={styles.statLabel}>EV</Text>
-              <Text style={[styles.statValue, styles.evValue]}>+${DEMO_RESULT.ev}</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Calculator size={14} color={colors.onboarding.data} />
-              <Text style={styles.statLabel}>Pot Odds</Text>
-              <Text style={styles.statValue}>{DEMO_RESULT.potOdds}</Text>
-            </View>
-          </View>
-
-          {/* Confidence bar */}
-          <View style={styles.confidenceContainer}>
-            <View style={styles.confidenceBar}>
-              <View
-                style={[
-                  styles.confidenceFill,
-                  { width: `${confidenceWidth}%` },
-                ]}
-              />
-            </View>
-            <Text style={styles.confidenceText}>{confidenceWidth}%</Text>
-          </View>
-
-          {/* Reasoning */}
-          <Text style={styles.resultReasoning}>{DEMO_RESULT.reasoning}</Text>
-        </Animated.View>
-      )}
-
-      {/* Swipe Hint */}
+      {/* Continue Button */}
       <Animated.View
         style={[
-          styles.swipeHint,
+          styles.buttonContainer,
           {
             opacity: buttonAnim,
+            transform: [
+              {
+                translateY: buttonAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [20, 0],
+                }),
+              },
+            ],
           },
         ]}
       >
-        <ChevronLeft size={24} color="rgba(255,255,255,0.5)" />
-        <Text style={styles.swipeText}>Swipe to continue</Text>
+        <TouchableOpacity
+          style={styles.continueButton}
+          onPress={handlePress}
+          activeOpacity={0.85}
+          disabled={!animationComplete}
+        >
+          <Text style={styles.continueButtonText}>Continue</Text>
+        </TouchableOpacity>
       </Animated.View>
     </TouchableOpacity>
   );
@@ -385,23 +317,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 24,
   } as ViewStyle,
+  logoContainer: {
+    marginBottom: 12,
+  } as ViewStyle,
   title: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: '700',
     color: '#fff',
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
+  } as TextStyle,
+  subtitle: {
+    fontSize: 15,
+    color: 'rgba(255,255,255,0.6)',
+    textAlign: 'center',
+    marginBottom: 16,
   } as TextStyle,
   handCard: {
     backgroundColor: 'rgba(255,255,255,0.06)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
     borderRadius: 16,
-    padding: 12,
+    padding: 16,
     width: '100%',
   } as ViewStyle,
   handSection: {
-    marginBottom: 12,
+    marginBottom: 16,
   } as ViewStyle,
   sectionLabel: {
     fontSize: 12,
@@ -419,7 +360,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 8,
+    paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.1)',
   } as ViewStyle,
@@ -434,14 +375,14 @@ const styles = StyleSheet.create({
     color: colors.onboarding.gold,
   } as TextStyle,
   orbContainer: {
-    marginVertical: 8,
+    marginVertical: 12,
   } as ViewStyle,
   transcriptContainer: {
     backgroundColor: 'rgba(255,255,255,0.06)',
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    marginBottom: 12,
+    marginBottom: 16,
     width: '100%',
     minHeight: 44,
   } as ViewStyle,
@@ -452,99 +393,22 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 22,
   } as TextStyle,
-  resultCard: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 16,
-    padding: 12,
-    marginTop: 10,
-    width: '100%',
-  } as ViewStyle,
-  resultHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 10,
-  } as ViewStyle,
-  checkCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: colors.onboarding.gold,
-    alignItems: 'center',
-    justifyContent: 'center',
-  } as ViewStyle,
-  resultAction: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#fff',
-  } as TextStyle,
-  statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-    paddingHorizontal: 4,
-  } as ViewStyle,
-  statItem: {
-    alignItems: 'center',
-    gap: 4,
-  } as ViewStyle,
-  statLabel: {
-    fontSize: 11,
-    fontWeight: '500',
-    color: 'rgba(255,255,255,0.5)',
-    textTransform: 'uppercase',
-  } as TextStyle,
-  statValue: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#fff',
-  } as TextStyle,
-  evValue: {
-    color: colors.onboarding.profit,
-  } as TextStyle,
-  confidenceContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 8,
-  } as ViewStyle,
-  confidenceBar: {
-    flex: 1,
-    height: 8,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 4,
-    overflow: 'hidden',
-  } as ViewStyle,
-  confidenceFill: {
-    height: '100%',
-    backgroundColor: colors.onboarding.gold,
-    borderRadius: 4,
-  } as ViewStyle,
-  confidenceText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.onboarding.gold,
-    width: 45,
-  } as TextStyle,
-  resultReasoning: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.6)',
-    lineHeight: 18,
-    fontStyle: 'italic',
-  } as TextStyle,
-  swipeHint: {
+  buttonContainer: {
     position: 'absolute',
-    bottom: 40,
-    alignItems: 'center',
-    alignSelf: 'center',
-    gap: 4,
+    bottom: 50,
+    left: 24,
+    right: 24,
   } as ViewStyle,
-  swipeText: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.5)',
-    fontWeight: '500',
+  continueButton: {
+    backgroundColor: colors.onboarding.gold,
+    paddingVertical: 16,
+    borderRadius: 30,
+    alignItems: 'center',
+  } as ViewStyle,
+  continueButtonText: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#000',
   } as TextStyle,
 });
 

@@ -11,10 +11,11 @@ import {
   type TextStyle,
   type ImageStyle,
 } from 'react-native';
-import { ChevronLeft } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { colors } from '@/constants/colors';
-import { AnimatedLogo } from '@/components/AnimatedLogo';
+
+const HERO_IMAGE_URL = 'https://bollujxjsgahswigmyvq.supabase.co/storage/v1/object/public/assets/onboarding/talking_to_phone.png';
 
 type ChatDemoScreenProps = {
   onNext: () => void;
@@ -46,6 +47,7 @@ export function ChatDemoScreen({ onNext }: ChatDemoScreenProps) {
   const scrollViewRef = useRef<ScrollView>(null);
   const titleAnim = useRef(new Animated.Value(0)).current;
   const buttonAnim = useRef(new Animated.Value(0)).current;
+  const contentSlideAnim = useRef(new Animated.Value(0)).current;
   const messageAnims = useRef(DEMO_MESSAGES.map(() => new Animated.Value(0))).current;
 
   // Animated typing dots
@@ -120,23 +122,23 @@ export function ChatDemoScreen({ onNext }: ChatDemoScreenProps) {
         await delay(message.role === 'user' ? 350 : 500);
       }
 
-      // Phase 3: Swipe hint
+      // Phase 3: Slide content up and show continue button
       await delay(400);
       setAnimationComplete(true);
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(buttonAnim, {
-            toValue: 1,
-            duration: 1000,
-            useNativeDriver: true,
-          }),
-          Animated.timing(buttonAnim, {
-            toValue: 0.4,
-            duration: 1000,
-            useNativeDriver: true,
-          }),
-        ])
-      ).start();
+      Animated.parallel([
+        // Slide content up
+        Animated.timing(contentSlideAnim, {
+          toValue: 1,
+          duration: 400,
+          useNativeDriver: true,
+        }),
+        // Fade in button
+        Animated.timing(buttonAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
     };
 
     sequence();
@@ -224,86 +226,111 @@ export function ChatDemoScreen({ onNext }: ChatDemoScreenProps) {
   );
 
   return (
-    <TouchableOpacity
-      style={styles.container}
-      activeOpacity={1}
-      onPress={handlePress}
-    >
-      {/* Logo */}
-      <Animated.View
-        style={[
-          styles.logoContainer,
-          {
-            opacity: titleAnim,
-            transform: [
-              {
-                scale: titleAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0.8, 1],
-                }),
-              },
-            ],
-          },
-        ]}
+    <View style={styles.container}>
+      {/* Hero Image at Top */}
+      <View style={styles.heroContainer}>
+        <Image
+          source={{ uri: HERO_IMAGE_URL }}
+          style={styles.heroImage}
+          resizeMode="cover"
+        />
+        <LinearGradient
+          colors={['transparent', colors.background.primary]}
+          style={styles.heroGradient}
+        />
+      </View>
+
+      <TouchableOpacity
+        style={styles.touchableContent}
+        activeOpacity={1}
+        onPress={handlePress}
       >
-        <AnimatedLogo variant={1} size="small" loop />
+        {/* Content wrapper that slides up when animation completes */}
+        <Animated.View
+          style={[
+            styles.contentWrapper,
+            {
+              transform: [
+                {
+                  translateY: contentSlideAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0, -40],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
+          {/* Title */}
+        <Animated.Text
+          style={[
+            styles.title,
+            {
+              opacity: titleAnim,
+              transform: [
+                {
+                  translateY: titleAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [-20, 0],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
+          Your pocket coach
+        </Animated.Text>
+
+        <Animated.Text
+          style={[
+            styles.subtitle,
+            {
+              opacity: titleAnim,
+            },
+          ]}
+        >
+          Ask any question, get expert analysis
+        </Animated.Text>
+
+        {/* Chat Messages - no container border */}
+        <ScrollView
+          ref={scrollViewRef}
+          style={styles.messagesContainer}
+          contentContainerStyle={styles.messagesContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {DEMO_MESSAGES.slice(0, visibleMessages).map((message, index) =>
+            renderMessage(message, index)
+          )}
+          {showTyping && renderTypingIndicator()}
+        </ScrollView>
       </Animated.View>
 
-      {/* Title */}
-      <Animated.Text
+      {/* Continue Button */}
+      <Animated.View
         style={[
-          styles.title,
+          styles.buttonContainer,
           {
-            opacity: titleAnim,
+            opacity: buttonAnim,
             transform: [
               {
-                translateY: titleAnim.interpolate({
+                translateY: buttonAnim.interpolate({
                   inputRange: [0, 1],
-                  outputRange: [-20, 0],
+                  outputRange: [20, 0],
                 }),
               },
             ],
           },
         ]}
       >
-        Your pocket coach
-      </Animated.Text>
-
-      <Animated.Text
-        style={[
-          styles.subtitle,
-          {
-            opacity: titleAnim,
-          },
-        ]}
-      >
-        Ask any question, get expert analysis
-      </Animated.Text>
-
-      {/* Chat Messages - no container border */}
-      <ScrollView
-        ref={scrollViewRef}
-        style={styles.messagesContainer}
-        contentContainerStyle={styles.messagesContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {DEMO_MESSAGES.slice(0, visibleMessages).map((message, index) =>
-          renderMessage(message, index)
-        )}
-        {showTyping && renderTypingIndicator()}
-      </ScrollView>
-
-      {/* Swipe Hint */}
-      <Animated.View
-        style={[
-          styles.swipeHint,
-          {
-            opacity: buttonAnim,
-          },
-        ]}
-      >
-        <ChevronLeft size={24} color="rgba(255,255,255,0.5)" />
-        <Text style={styles.swipeText}>Swipe to continue</Text>
+        <TouchableOpacity
+          style={styles.continueButton}
+          onPress={handlePress}
+          activeOpacity={0.85}
+          disabled={!animationComplete}
+        >
+          <Text style={styles.continueButtonText}>Continue</Text>
+        </TouchableOpacity>
       </Animated.View>
     </TouchableOpacity>
   );
@@ -315,6 +342,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 24,
     paddingTop: 50,
+  } as ViewStyle,
+  contentWrapper: {
+    flex: 1,
+    width: '100%',
+    alignItems: 'center',
   } as ViewStyle,
   logoContainer: {
     marginBottom: 16,
@@ -399,17 +431,22 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: colors.text.muted,
   } as ViewStyle,
-  swipeHint: {
+  buttonContainer: {
     position: 'absolute',
     bottom: 50,
-    alignItems: 'center',
-    alignSelf: 'center',
-    gap: 4,
+    left: 24,
+    right: 24,
   } as ViewStyle,
-  swipeText: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.5)',
-    fontWeight: '500',
+  continueButton: {
+    backgroundColor: colors.onboarding.gold,
+    paddingVertical: 16,
+    borderRadius: 30,
+    alignItems: 'center',
+  } as ViewStyle,
+  continueButtonText: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#000',
   } as TextStyle,
 });
 

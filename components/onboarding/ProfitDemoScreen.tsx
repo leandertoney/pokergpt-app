@@ -5,10 +5,11 @@ import {
   StyleSheet,
   Animated,
   Dimensions,
+  TouchableOpacity,
   type ViewStyle,
   type TextStyle,
 } from 'react-native';
-import { ChevronLeft, TrendingUp, DollarSign } from 'lucide-react-native';
+import { TrendingUp, DollarSign } from 'lucide-react-native';
 import Svg, { Path, Circle, Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 import { AnimatedLogo } from '@/components/AnimatedLogo';
@@ -64,22 +65,13 @@ export function ProfitDemoScreen({ onNext }: ProfitDemoScreenProps) {
       animateGraph();
     }, 600);
 
-    // Show swipe hint with pulsing animation
+    // Show continue button (solid, no animation)
     setTimeout(() => {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(buttonAnim, {
-            toValue: 1,
-            duration: 1000,
-            useNativeDriver: true,
-          }),
-          Animated.timing(buttonAnim, {
-            toValue: 0.4,
-            duration: 1000,
-            useNativeDriver: true,
-          }),
-        ])
-      ).start();
+      Animated.timing(buttonAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
     }, 2000);
   }, []);
 
@@ -155,6 +147,11 @@ export function ProfitDemoScreen({ onNext }: ProfitDemoScreenProps) {
   const lastDataPoint = DATA_POINTS[lastPointIndex] ?? 0;
   const lastPointX = 10 + (lastPointIndex / (DATA_POINTS.length - 1)) * (GRAPH_WIDTH - 20);
   const lastPointY = 10 + (GRAPH_HEIGHT - 20) - (lastDataPoint * (GRAPH_HEIGHT - 20));
+
+  const handleContinue = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onNext();
+  };
 
   return (
     <View style={styles.container}>
@@ -261,17 +258,30 @@ export function ProfitDemoScreen({ onNext }: ProfitDemoScreenProps) {
         </View>
       </Animated.View>
 
-      {/* Swipe Hint */}
+      {/* Continue Button */}
       <Animated.View
         style={[
-          styles.swipeHint,
+          styles.buttonContainer,
           {
             opacity: buttonAnim,
+            transform: [
+              {
+                translateY: buttonAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [20, 0],
+                }),
+              },
+            ],
           },
         ]}
       >
-        <ChevronLeft size={24} color="rgba(255,255,255,0.5)" />
-        <Text style={styles.swipeText}>Swipe to continue</Text>
+        <TouchableOpacity
+          style={styles.continueButton}
+          onPress={handleContinue}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.continueButtonText}>Continue</Text>
+        </TouchableOpacity>
       </Animated.View>
     </View>
   );
@@ -366,17 +376,22 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     padding: 4,
   } as ViewStyle,
-  swipeHint: {
+  buttonContainer: {
     position: 'absolute',
     bottom: 50,
-    alignItems: 'center',
-    alignSelf: 'center',
-    gap: 4,
+    left: 24,
+    right: 24,
   } as ViewStyle,
-  swipeText: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.5)',
-    fontWeight: '500',
+  continueButton: {
+    backgroundColor: colors.onboarding.gold,
+    paddingVertical: 16,
+    borderRadius: 30,
+    alignItems: 'center',
+  } as ViewStyle,
+  continueButtonText: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#000',
   } as TextStyle,
 });
 
