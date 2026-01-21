@@ -13,7 +13,6 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Target, Calculator, Eye } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { AnimatedLogo } from '@/components/AnimatedLogo';
 import { colors } from '@/constants/colors';
 
 const HERO_IMAGE_URL = 'https://bollujxjsgahswigmyvq.supabase.co/storage/v1/object/public/assets/onboarding/studying_poker.png';
@@ -144,9 +143,6 @@ export function LearningProgressScreen({ onNext }: LearningProgressScreenProps) 
             ],
           }}
         >
-          <View style={styles.logoContainer}>
-            <AnimatedLogo variant={1} size="small" loop />
-          </View>
           <Text style={styles.headline}>Level up your game</Text>
           <Text style={styles.subheadline}>Track what you're learning</Text>
         </Animated.View>
@@ -269,12 +265,6 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     paddingHorizontal: 24,
     paddingBottom: 140,
-  } as ViewStyle,
-  logoContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'center',
-    marginBottom: 16,
   } as ViewStyle,
   headline: {
     fontSize: 28,

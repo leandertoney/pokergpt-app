@@ -3,9 +3,10 @@ import {
   View,
   StyleSheet,
   TouchableOpacity,
+  Image,
   type ViewStyle,
+  type ImageStyle,
 } from 'react-native';
-import { AnimatedLogo } from '@/components/AnimatedLogo';
 
 type IntroScreenProps = {
   onNext: () => void;
@@ -13,15 +14,15 @@ type IntroScreenProps = {
 };
 
 /**
- * Pure splash screen - just the animated logo.
- * Auto-advances after the video completes.
+ * Pure splash screen - just the static logo.
+ * Auto-advances after a brief delay.
  */
 export function IntroScreen({
   onNext,
-  autoAdvanceDelay = 2800,
+  autoAdvanceDelay = 1500,
 }: IntroScreenProps) {
   useEffect(() => {
-    // Auto-advance after logo animation completes
+    // Auto-advance after brief delay
     const timer = setTimeout(onNext, autoAdvanceDelay);
     return () => clearTimeout(timer);
   }, [onNext, autoAdvanceDelay]);
@@ -33,7 +34,11 @@ export function IntroScreen({
       activeOpacity={1}
     >
       <View style={styles.logoContainer}>
-        <AnimatedLogo variant={1} size="large" loop={false} />
+        <Image
+          source={require('@/assets/images/pokergpt_logo.png')}
+          style={styles.logo}
+          resizeMode="contain"
+        />
       </View>
     </TouchableOpacity>
   );
@@ -49,6 +54,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   } as ViewStyle,
+  logo: {
+    width: 120,
+    height: 120,
+  } as ImageStyle,
 });
 
 export default IntroScreen;

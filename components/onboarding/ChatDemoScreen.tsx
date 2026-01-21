@@ -240,11 +240,8 @@ export function ChatDemoScreen({ onNext }: ChatDemoScreenProps) {
         />
       </View>
 
-      <TouchableOpacity
-        style={styles.touchableContent}
-        activeOpacity={1}
-        onPress={handlePress}
-      >
+      {/* Content Container */}
+      <View style={styles.content}>
         {/* Content wrapper that slides up when animation completes */}
         <Animated.View
           style={[
@@ -262,49 +259,50 @@ export function ChatDemoScreen({ onNext }: ChatDemoScreenProps) {
           ]}
         >
           {/* Title */}
-        <Animated.Text
-          style={[
-            styles.title,
-            {
-              opacity: titleAnim,
-              transform: [
-                {
-                  translateY: titleAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [-20, 0],
-                  }),
-                },
-              ],
-            },
-          ]}
-        >
-          Your pocket coach
-        </Animated.Text>
+          <Animated.Text
+            style={[
+              styles.title,
+              {
+                opacity: titleAnim,
+                transform: [
+                  {
+                    translateY: titleAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [-20, 0],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          >
+            Your pocket coach
+          </Animated.Text>
 
-        <Animated.Text
-          style={[
-            styles.subtitle,
-            {
-              opacity: titleAnim,
-            },
-          ]}
-        >
-          Ask any question, get expert analysis
-        </Animated.Text>
+          <Animated.Text
+            style={[
+              styles.subtitle,
+              {
+                opacity: titleAnim,
+              },
+            ]}
+          >
+            Ask any question, get expert analysis
+          </Animated.Text>
 
-        {/* Chat Messages - no container border */}
-        <ScrollView
-          ref={scrollViewRef}
-          style={styles.messagesContainer}
-          contentContainerStyle={styles.messagesContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {DEMO_MESSAGES.slice(0, visibleMessages).map((message, index) =>
-            renderMessage(message, index)
-          )}
-          {showTyping && renderTypingIndicator()}
-        </ScrollView>
-      </Animated.View>
+          {/* Chat Messages - no container border */}
+          <ScrollView
+            ref={scrollViewRef}
+            style={styles.messagesContainer}
+            contentContainerStyle={styles.messagesContent}
+            showsVerticalScrollIndicator={false}
+          >
+            {DEMO_MESSAGES.slice(0, visibleMessages).map((message, index) =>
+              renderMessage(message, index)
+            )}
+            {showTyping && renderTypingIndicator()}
+          </ScrollView>
+        </Animated.View>
+      </View>
 
       {/* Continue Button */}
       <Animated.View
@@ -332,24 +330,42 @@ export function ChatDemoScreen({ onNext }: ChatDemoScreenProps) {
           <Text style={styles.continueButtonText}>Continue</Text>
         </TouchableOpacity>
       </Animated.View>
-    </TouchableOpacity>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingTop: 50,
+  } as ViewStyle,
+  heroContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '45%',
+    overflow: 'hidden',
+  } as ViewStyle,
+  heroImage: {
+    width: '100%',
+    height: '100%',
+  } as ImageStyle,
+  heroGradient: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '70%',
+  } as ViewStyle,
+  content: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    paddingBottom: 140,
   } as ViewStyle,
   contentWrapper: {
-    flex: 1,
     width: '100%',
     alignItems: 'center',
-  } as ViewStyle,
-  logoContainer: {
-    marginBottom: 16,
+    paddingHorizontal: 24,
   } as ViewStyle,
   title: {
     fontSize: 26,
@@ -365,8 +381,8 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   } as TextStyle,
   messagesContainer: {
-    flex: 1,
     width: '100%',
+    maxHeight: 280,
   } as ViewStyle,
   messagesContent: {
     paddingVertical: 8,

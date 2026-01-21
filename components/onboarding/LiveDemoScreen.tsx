@@ -5,13 +5,17 @@ import {
   StyleSheet,
   Animated,
   TouchableOpacity,
+  Image,
   type ViewStyle,
   type TextStyle,
+  type ImageStyle,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { VoiceOrb, type VoiceOrbState } from '@/components/VoiceOrb';
-import { AnimatedLogo } from '@/components/AnimatedLogo';
 import { colors } from '@/constants/colors';
+
+const HERO_IMAGE_URL = 'https://bollujxjsgahswigmyvq.supabase.co/storage/v1/object/public/assets/onboarding/talking_to_phone.png';
 
 // Card display component - centered rank + suit design
 function MiniCard({ rank, suit, size = 'medium' }: { rank: string; suit: string; size?: 'small' | 'medium' }) {
@@ -140,145 +144,137 @@ export function LiveDemoScreen({ onNext }: LiveDemoScreenProps) {
   };
 
   return (
-    <TouchableOpacity
-      style={styles.container}
-      activeOpacity={1}
-      onPress={handlePress}
-    >
-      {/* Logo */}
-      <Animated.View
-        style={[
-          styles.logoContainer,
-          {
-            opacity: titleAnim,
-            transform: [
-              {
-                scale: titleAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0.8, 1],
-                }),
-              },
-            ],
-          },
-        ]}
-      >
-        <AnimatedLogo variant={1} size="small" loop />
-      </Animated.View>
-
-      {/* Title */}
-      <Animated.Text
-        style={[
-          styles.title,
-          {
-            opacity: titleAnim,
-            transform: [
-              {
-                translateY: titleAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [-20, 0],
-                }),
-              },
-            ],
-          },
-        ]}
-      >
-        Just speak your hand
-      </Animated.Text>
-
-      <Animated.Text
-        style={[
-          styles.subtitle,
-          {
-            opacity: titleAnim,
-          },
-        ]}
-      >
-        Natural voice input for quick analysis
-      </Animated.Text>
-
-      {/* Voice Orb - Now at top to show this is voice-first */}
-      <View style={styles.orbContainer}>
-        <VoiceOrb state={orbState} size="small" />
+    <View style={styles.container}>
+      {/* Hero Image at Top */}
+      <View style={styles.heroContainer}>
+        <Image
+          source={{ uri: HERO_IMAGE_URL }}
+          style={styles.heroImage}
+          resizeMode="cover"
+        />
+        <LinearGradient
+          colors={['transparent', colors.background.primary]}
+          style={styles.heroGradient}
+        />
       </View>
 
-      {/* Live Transcription Text */}
-      <Animated.View
-        style={[
-          styles.transcriptContainer,
-          {
-            opacity: transcriptAnim,
-          },
-        ]}
-      >
-        <Text style={styles.transcriptText}>
-          {displayedText || '...'}
-        </Text>
-      </Animated.View>
+      {/* Content Container */}
+      <View style={styles.content}>
+        {/* Title */}
+        <Animated.Text
+          style={[
+            styles.title,
+            {
+              opacity: titleAnim,
+              transform: [
+                {
+                  translateY: titleAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [-20, 0],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
+          Just speak your hand
+        </Animated.Text>
 
-      {/* Hand Display Card */}
-      <Animated.View
-        style={[
-          styles.handCard,
-          {
-            opacity: handAnim,
-            transform: [
-              {
-                scale: handAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0.9, 1],
-                }),
-              },
-            ],
-          },
-        ]}
-      >
-        {/* Your Hand */}
-        <View style={styles.handSection}>
-          <Text style={styles.sectionLabel}>Your Hand</Text>
-          <View style={styles.cardsRow}>
-            {showCards && (
-              <>
-                <MiniCard rank="A" suit="s" size="medium" />
-                <MiniCard rank="K" suit="h" size="medium" />
-              </>
-            )}
-          </View>
+        <Animated.Text
+          style={[
+            styles.subtitle,
+            {
+              opacity: titleAnim,
+            },
+          ]}
+        >
+          Natural voice input for quick analysis
+        </Animated.Text>
+
+        {/* Voice Orb - Now at top to show this is voice-first */}
+        <View style={styles.orbContainer}>
+          <VoiceOrb state={orbState} size="small" />
         </View>
 
-        {/* Board */}
+        {/* Live Transcription Text */}
         <Animated.View
           style={[
-            styles.handSection,
+            styles.transcriptContainer,
             {
-              opacity: boardAnim,
+              opacity: transcriptAnim,
             },
           ]}
         >
-          <Text style={styles.sectionLabel}>Flop</Text>
-          <View style={styles.cardsRow}>
-            {showBoard && (
-              <>
-                <MiniCard rank="Q" suit="d" size="small" />
-                <MiniCard rank="J" suit="c" size="small" />
-                <MiniCard rank="3" suit="s" size="small" />
-              </>
-            )}
-          </View>
+          <Text style={styles.transcriptText}>
+            {displayedText || '...'}
+          </Text>
         </Animated.View>
 
-        {/* Action Context */}
+        {/* Hand Display Card */}
         <Animated.View
           style={[
-            styles.actionContext,
+            styles.handCard,
             {
-              opacity: actionAnim,
+              opacity: handAnim,
+              transform: [
+                {
+                  scale: handAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.9, 1],
+                  }),
+                },
+              ],
             },
           ]}
         >
-          <Text style={styles.actionText}>Villain 3-bets to $45</Text>
-          <Text style={styles.potText}>Pot: $120</Text>
+          {/* Your Hand */}
+          <View style={styles.handSection}>
+            <Text style={styles.sectionLabel}>Your Hand</Text>
+            <View style={styles.cardsRow}>
+              {showCards && (
+                <>
+                  <MiniCard rank="A" suit="s" size="medium" />
+                  <MiniCard rank="K" suit="h" size="medium" />
+                </>
+              )}
+            </View>
+          </View>
+
+          {/* Board */}
+          <Animated.View
+            style={[
+              styles.handSection,
+              {
+                opacity: boardAnim,
+              },
+            ]}
+          >
+            <Text style={styles.sectionLabel}>Flop</Text>
+            <View style={styles.cardsRow}>
+              {showBoard && (
+                <>
+                  <MiniCard rank="Q" suit="d" size="small" />
+                  <MiniCard rank="J" suit="c" size="small" />
+                  <MiniCard rank="3" suit="s" size="small" />
+                </>
+              )}
+            </View>
+          </Animated.View>
+
+          {/* Action Context */}
+          <Animated.View
+            style={[
+              styles.actionContext,
+              {
+                opacity: actionAnim,
+              },
+            ]}
+          >
+            <Text style={styles.actionText}>Villain 3-bets to $45</Text>
+            <Text style={styles.potText}>Pot: $120</Text>
+          </Animated.View>
         </Animated.View>
-      </Animated.View>
+      </View>
 
       {/* Continue Button */}
       <Animated.View
@@ -306,19 +302,39 @@ export function LiveDemoScreen({ onNext }: LiveDemoScreenProps) {
           <Text style={styles.continueButtonText}>Continue</Text>
         </TouchableOpacity>
       </Animated.View>
-    </TouchableOpacity>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingTop: 24,
   } as ViewStyle,
-  logoContainer: {
-    marginBottom: 12,
+  heroContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '45%',
+    overflow: 'hidden',
+  } as ViewStyle,
+  heroImage: {
+    width: '100%',
+    height: '100%',
+  } as ImageStyle,
+  heroGradient: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '70%',
+  } as ViewStyle,
+  content: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingHorizontal: 24,
+    paddingBottom: 140,
   } as ViewStyle,
   title: {
     fontSize: 26,

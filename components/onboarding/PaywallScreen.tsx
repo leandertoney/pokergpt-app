@@ -643,6 +643,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
+    marginTop: 'auto',
+    paddingBottom: 20,
   } as ViewStyle,
   footerLink: {
     fontSize: 14,

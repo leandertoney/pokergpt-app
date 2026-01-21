@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
+import * as Updates from "expo-updates";
 import React, { useEffect, useState, useCallback } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { StatusBar } from "expo-status-bar";
@@ -201,6 +202,24 @@ export default function RootLayout() {
     SplashScreen.hideAsync().catch(() => {
       // Ignore error if splash screen isn't registered yet
     });
+
+    // Check for OTA updates on launch
+    async function checkForUpdates() {
+      if (__DEV__) return; // Skip in development
+
+      try {
+        const update = await Updates.checkForUpdateAsync();
+        if (update.isAvailable) {
+          await Updates.fetchUpdateAsync();
+          await Updates.reloadAsync();
+        }
+      } catch (error) {
+        // Silently fail - updates will be applied next launch
+        console.log('Update check failed:', error);
+      }
+    }
+
+    checkForUpdates();
   }, []);
 
   const handleSplashComplete = useCallback(() => {
