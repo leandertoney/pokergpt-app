@@ -15,7 +15,7 @@ import { Star } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { colors } from '@/constants/colors';
 
-const HERO_IMAGE_URL = 'https://bollujxjsgahswigmyvq.supabase.co/storage/v1/object/public/assets/onboarding/pocket_aces.png';
+const HERO_IMAGE_URL = 'https://bollujxjsgahswigmyvq.supabase.co/storage/v1/object/public/assets/onboarding/pocket_aces.png?v=2';
 
 type HeroScreenProps = {
   onNext: () => void;
@@ -268,7 +268,7 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: '45%',
+    height: '55%',
     overflow: 'hidden',
   } as ViewStyle,
   heroImage: {

@@ -5,14 +5,18 @@ import {
   StyleSheet,
   Animated,
   TouchableOpacity,
+  Image,
   type ViewStyle,
   type TextStyle,
+  type ImageStyle,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { TrendingUp, Target, Calculator, Check } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { colors } from '@/constants/colors';
 import { getOnboardingDemoHand } from '@/services/dailyReviewService';
-import { AnimatedLogo } from '@/components/AnimatedLogo';
+
+const HERO_IMAGE_URL = 'https://bollujxjsgahswigmyvq.supabase.co/storage/v1/object/public/assets/onboarding/training_hands.png?v=2';
 
 type DailyReviewDemoScreenProps = {
   onNext: () => void;
@@ -228,72 +232,87 @@ export function DailyReviewDemoScreen({ onNext }: DailyReviewDemoScreenProps) {
   if (phase === 'intro') {
     return (
       <View style={styles.container}>
-        <Animated.View
-          style={[
-            styles.content,
-            {
-              opacity: fadeAnim,
-              transform: [{ scale: scaleAnim }],
-            },
-          ]}
-        >
-          {/* Subheadline */}
-          <Text style={styles.subheadline}>Daily Training</Text>
+        {/* Hero Image */}
+        <View style={styles.heroContainer}>
+          <Image
+            source={{ uri: HERO_IMAGE_URL }}
+            style={styles.heroImage}
+            resizeMode="cover"
+          />
+          <LinearGradient
+            colors={['transparent', colors.background.primary]}
+            style={styles.heroGradient}
+          />
+        </View>
 
-          {/* Demo card preview - Now bigger and more prominent */}
-          <View style={styles.demoPreview}>
-            <View style={styles.miniCardsRow}>
-              {cards.map((card, index) => (
-                <Animated.View
-                  key={index}
-                  style={{
-                    opacity: cardAnims[index],
-                    transform: [
-                      {
-                        translateX: cardAnims[index].interpolate({
-                          inputRange: [0, 1],
-                          outputRange: [-100, 0],
-                        }),
-                      },
-                      {
-                        rotate: cardAnims[index].interpolate({
-                          inputRange: [0, 0.5, 1],
-                          outputRange: ['-15deg', '3deg', '0deg'],
-                        }),
-                      },
-                      {
-                        scale: cardAnims[index].interpolate({
-                          inputRange: [0, 0.8, 1],
-                          outputRange: [0.5, 1.05, 1],
-                        }),
-                      },
-                    ],
-                  }}
-                >
-                  <MiniCard card={card} />
-                </Animated.View>
-              ))}
-            </View>
-            <Text style={styles.previewQuestion}>What would you do?</Text>
-          </View>
-
-          {/* Headline - Now smaller and below the card */}
-          <Text style={styles.headline}>One hand. One minute.</Text>
-
-          <Text style={styles.description}>
-            Every day, a new spot to solve.{'\n'}
-            Build your streak. Sharpen your game.
-          </Text>
-
-          {/* Try Now Button */}
-          <TouchableOpacity
-            style={styles.tryButton}
-            onPress={handleTryNow}
-            activeOpacity={0.85}
+        <View style={styles.introContent}>
+          <Animated.View
+            style={[
+              styles.content,
+              {
+                opacity: fadeAnim,
+                transform: [{ scale: scaleAnim }],
+              },
+            ]}
           >
-            <Text style={styles.tryButtonText}>Try It Now</Text>
-          </TouchableOpacity>
-        </Animated.View>
+            {/* Subheadline */}
+            <Text style={styles.subheadline}>Daily Training</Text>
+
+            {/* Demo card preview - Now bigger and more prominent */}
+            <View style={styles.demoPreview}>
+              <View style={styles.miniCardsRow}>
+                {cards.map((card, index) => (
+                  <Animated.View
+                    key={index}
+                    style={{
+                      opacity: cardAnims[index],
+                      transform: [
+                        {
+                          translateX: cardAnims[index].interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [-100, 0],
+                          }),
+                        },
+                        {
+                          rotate: cardAnims[index].interpolate({
+                            inputRange: [0, 0.5, 1],
+                            outputRange: ['-15deg', '3deg', '0deg'],
+                          }),
+                        },
+                        {
+                          scale: cardAnims[index].interpolate({
+                            inputRange: [0, 0.8, 1],
+                            outputRange: [0.5, 1.05, 1],
+                          }),
+                        },
+                      ],
+                    }}
+                  >
+                    <MiniCard card={card} />
+                  </Animated.View>
+                ))}
+              </View>
+              <Text style={styles.previewQuestion}>What would you do?</Text>
+            </View>
+
+            {/* Headline - Now smaller and below the card */}
+            <Text style={styles.headline}>One hand. One minute.</Text>
+
+            <Text style={styles.description}>
+              Every day, a new spot to solve.{'\n'}
+              Build your streak. Sharpen your game.
+            </Text>
+
+            {/* Try Now Button */}
+            <TouchableOpacity
+              style={styles.tryButton}
+              onPress={handleTryNow}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.tryButtonText}>Try It Now</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </View>
       </View>
     );
   }
@@ -302,7 +321,21 @@ export function DailyReviewDemoScreen({ onNext }: DailyReviewDemoScreenProps) {
   if (phase === 'question') {
     return (
       <View style={styles.container}>
-        <View style={styles.questionContent}>
+        {/* Hero Image */}
+        <View style={styles.heroContainer}>
+          <Image
+            source={{ uri: HERO_IMAGE_URL }}
+            style={styles.heroImage}
+            resizeMode="cover"
+          />
+          <LinearGradient
+            colors={['transparent', colors.background.primary]}
+            style={styles.heroGradient}
+          />
+        </View>
+
+        <View style={styles.phaseContent}>
+          <View style={styles.questionContent}>
           <Text style={styles.questionLabel}>Training Hand</Text>
 
           {/* Cards */}
@@ -374,6 +407,7 @@ export function DailyReviewDemoScreen({ onNext }: DailyReviewDemoScreenProps) {
             >
               <Text style={styles.answerButtonText}>Raise</Text>
             </TouchableOpacity>
+            </View>
           </View>
         </View>
       </View>
@@ -386,12 +420,21 @@ export function DailyReviewDemoScreen({ onNext }: DailyReviewDemoScreenProps) {
 
     return (
       <View style={styles.container}>
-        {/* Logo */}
-        <View style={styles.logoContainer}>
-          <AnimatedLogo variant={1} size="small" loop />
+        {/* Hero Image */}
+        <View style={styles.heroContainer}>
+          <Image
+            source={{ uri: HERO_IMAGE_URL }}
+            style={styles.heroImage}
+            resizeMode="cover"
+          />
+          <LinearGradient
+            colors={['transparent', colors.background.primary]}
+            style={styles.heroGradient}
+          />
         </View>
 
-        <View style={styles.answerContent}>
+        <View style={styles.phaseContent}>
+          <View style={styles.answerContent}>
           {/* Result Header */}
           <View style={styles.resultHeader}>
             <View style={[styles.checkCircle, !isCorrect && styles.wrongCircle]}>
@@ -441,6 +484,7 @@ export function DailyReviewDemoScreen({ onNext }: DailyReviewDemoScreenProps) {
               <Text style={styles.reasoningText}>{demoHand.explanation}</Text>
             </>
           )}
+          </View>
         </View>
       </View>
     );
@@ -450,7 +494,21 @@ export function DailyReviewDemoScreen({ onNext }: DailyReviewDemoScreenProps) {
   if (phase === 'celebrate') {
     return (
       <View style={styles.container}>
-        <View style={styles.celebrateContent}>
+        {/* Hero Image */}
+        <View style={styles.heroContainer}>
+          <Image
+            source={{ uri: HERO_IMAGE_URL }}
+            style={styles.heroImage}
+            resizeMode="cover"
+          />
+          <LinearGradient
+            colors={['transparent', colors.background.primary]}
+            style={styles.heroGradient}
+          />
+        </View>
+
+        <View style={styles.phaseContent}>
+          <View style={styles.celebrateContent}>
           <Animated.View
             style={[
               styles.bigStreakContainer,
@@ -475,6 +533,7 @@ export function DailyReviewDemoScreen({ onNext }: DailyReviewDemoScreenProps) {
             That's all it takes.{'\n'}
             60 seconds a day to become a better player.
           </Text>
+          </View>
         </View>
       </View>
     );
@@ -483,11 +542,21 @@ export function DailyReviewDemoScreen({ onNext }: DailyReviewDemoScreenProps) {
   // Render difficulty reveal phase
   return (
     <View style={styles.container}>
-      <Animated.View style={[styles.revealContent, { opacity: revealFadeAnim }]}>
-        {/* Logo */}
-        <View style={styles.logoContainer}>
-          <AnimatedLogo variant={1} size="small" loop />
-        </View>
+      {/* Hero Image */}
+      <View style={styles.heroContainer}>
+        <Image
+          source={{ uri: HERO_IMAGE_URL }}
+          style={styles.heroImage}
+          resizeMode="cover"
+        />
+        <LinearGradient
+          colors={['transparent', colors.background.primary]}
+          style={styles.heroGradient}
+        />
+      </View>
+
+      <View style={styles.phaseContent}>
+        <Animated.View style={[styles.revealContent, { opacity: revealFadeAnim }]}>
 
         {/* Headline */}
         <Text style={styles.revealSubheadline}>Nice work! But...</Text>
@@ -586,7 +655,8 @@ export function DailyReviewDemoScreen({ onNext }: DailyReviewDemoScreenProps) {
         >
           <Text style={styles.continueButtonText}>Let's Go</Text>
         </TouchableOpacity>
-      </Animated.View>
+        </Animated.View>
+      </View>
     </View>
   );
 }
@@ -624,9 +694,39 @@ const miniCardStyles = StyleSheet.create({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  } as ViewStyle,
+  heroContainer: {
+    position: 'absolute',
+    top: -70,
+    left: 0,
+    right: 0,
+    height: '65%',
+    overflow: 'hidden',
+  } as ViewStyle,
+  heroImage: {
+    width: '100%',
+    height: '100%',
+  } as ImageStyle,
+  heroGradient: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '70%',
+  } as ViewStyle,
+  introContent: {
+    flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
     paddingHorizontal: 24,
+    paddingBottom: 120,
+  } as ViewStyle,
+  phaseContent: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingHorizontal: 24,
+    paddingBottom: 120,
   } as ViewStyle,
   logoContainer: {
     marginBottom: 16,

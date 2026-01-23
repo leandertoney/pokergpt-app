@@ -9,11 +9,16 @@ import {
   Keyboard,
   KeyboardAvoidingView,
   Platform,
+  Image,
   type ViewStyle,
   type TextStyle,
+  type ImageStyle,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { colors } from '@/constants/colors';
+
+const HERO_IMAGE_URL = 'https://bollujxjsgahswigmyvq.supabase.co/storage/v1/object/public/assets/onboarding/name_input.png?v=2';
 
 type NameInputScreenProps = {
   onComplete: (name: string | null) => void;
@@ -85,6 +90,19 @@ export function NameInputScreen({ onComplete }: NameInputScreenProps) {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      {/* Hero Image */}
+      <View style={styles.heroContainer}>
+        <Image
+          source={{ uri: HERO_IMAGE_URL }}
+          style={styles.heroImage}
+          resizeMode="cover"
+        />
+        <LinearGradient
+          colors={['transparent', colors.background.primary]}
+          style={styles.heroGradient}
+        />
+      </View>
+
       <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
         {/* Headline */}
         <Animated.View
@@ -100,7 +118,6 @@ export function NameInputScreen({ onComplete }: NameInputScreenProps) {
             ],
           }}
         >
-          <Text style={styles.emoji}>👋</Text>
           <Text style={styles.headline}>What should we call you?</Text>
           <Text style={styles.subheadline}>
             We'll personalize your experience
@@ -194,17 +211,32 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   } as ViewStyle,
+  heroContainer: {
+    position: 'absolute',
+    top: -70,
+    left: 0,
+    right: 0,
+    height: '65%',
+    overflow: 'hidden',
+  } as ViewStyle,
+  heroImage: {
+    width: '100%',
+    height: '100%',
+  } as ImageStyle,
+  heroGradient: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '70%',
+  } as ViewStyle,
   content: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
     paddingHorizontal: 32,
+    paddingBottom: 80,
   } as ViewStyle,
-  emoji: {
-    fontSize: 56,
-    textAlign: 'center',
-    marginBottom: 24,
-  } as TextStyle,
   headline: {
     fontSize: 28,
     fontWeight: '700',

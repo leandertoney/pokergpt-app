@@ -6,14 +6,18 @@ import {
   Animated,
   Dimensions,
   TouchableOpacity,
+  Image,
   type ViewStyle,
   type TextStyle,
+  type ImageStyle,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { BarChart3, Clock, Layers, TrendingUp } from 'lucide-react-native';
-import Svg, { Path, Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
+import Svg, { Path, Circle, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
-import { AnimatedLogo } from '@/components/AnimatedLogo';
 import { colors } from '@/constants/colors';
+
+const HERO_IMAGE_URL = 'https://bollujxjsgahswigmyvq.supabase.co/storage/v1/object/public/assets/onboarding/poker_journey.png?v=2';
 
 type SessionDemoScreenProps = {
   onNext: () => void;
@@ -175,26 +179,37 @@ export function SessionDemoScreen({ onNext }: SessionDemoScreenProps) {
 
   return (
     <View style={styles.container}>
-      {/* Headline */}
-      <Animated.View
-        style={{
-          opacity: headlineAnim,
-          transform: [
-            {
-              translateY: headlineAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [30, 0],
-              }),
-            },
-          ],
-        }}
-      >
-        <View style={styles.logoContainer}>
-          <AnimatedLogo variant={1} size="small" loop />
-        </View>
-        <Text style={styles.headline}>Your poker journey</Text>
-        <Text style={styles.subheadline}>Track everything, improve always.</Text>
-      </Animated.View>
+      {/* Hero Image */}
+      <View style={styles.heroContainer}>
+        <Image
+          source={{ uri: HERO_IMAGE_URL }}
+          style={styles.heroImage}
+          resizeMode="cover"
+        />
+        <LinearGradient
+          colors={['transparent', colors.background.primary]}
+          style={styles.heroGradient}
+        />
+      </View>
+
+      <View style={styles.content}>
+        {/* Headline */}
+        <Animated.View
+          style={{
+            opacity: headlineAnim,
+            transform: [
+              {
+                translateY: headlineAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [30, 0],
+                }),
+              },
+            ],
+          }}
+        >
+          <Text style={styles.headline}>Your poker journey</Text>
+          <Text style={styles.subheadline}>Track everything, improve always.</Text>
+        </Animated.View>
 
       {/* Stats Card */}
       <Animated.View
@@ -252,10 +267,10 @@ export function SessionDemoScreen({ onNext }: SessionDemoScreenProps) {
         <View style={styles.graphContainer}>
           <Svg width={GRAPH_WIDTH} height={GRAPH_HEIGHT}>
             <Defs>
-              <LinearGradient id="goldGradient" x1="0" y1="0" x2="1" y2="0">
+              <SvgLinearGradient id="goldGradient" x1="0" y1="0" x2="1" y2="0">
                 <Stop offset="0" stopColor={colors.onboarding.gold} stopOpacity="0.6" />
                 <Stop offset="1" stopColor={colors.onboarding.gold} stopOpacity="1" />
-              </LinearGradient>
+              </SvgLinearGradient>
             </Defs>
             {currentPath && (
               <>
@@ -283,31 +298,32 @@ export function SessionDemoScreen({ onNext }: SessionDemoScreenProps) {
         </View>
       </Animated.View>
 
-      {/* Continue Button */}
-      <Animated.View
-        style={[
-          styles.buttonContainer,
-          {
-            opacity: buttonAnim,
-            transform: [
-              {
-                translateY: buttonAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [20, 0],
-                }),
-              },
-            ],
-          },
-        ]}
-      >
-        <TouchableOpacity
-          style={styles.continueButton}
-          onPress={handleContinue}
-          activeOpacity={0.85}
+        {/* Continue Button */}
+        <Animated.View
+          style={[
+            styles.buttonContainer,
+            {
+              opacity: buttonAnim,
+              transform: [
+                {
+                  translateY: buttonAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [20, 0],
+                  }),
+                },
+              ],
+            },
+          ]}
         >
-          <Text style={styles.continueButtonText}>Continue</Text>
-        </TouchableOpacity>
-      </Animated.View>
+          <TouchableOpacity
+            style={styles.continueButton}
+            onPress={handleContinue}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.continueButtonText}>Continue</Text>
+          </TouchableOpacity>
+        </Animated.View>
+      </View>
     </View>
   );
 }
@@ -315,15 +331,32 @@ export function SessionDemoScreen({ onNext }: SessionDemoScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 24,
   } as ViewStyle,
-  logoContainer: {
+  heroContainer: {
+    position: 'absolute',
+    top: -70,
+    left: 0,
+    right: 0,
+    height: '65%',
+    overflow: 'hidden',
+  } as ViewStyle,
+  heroImage: {
+    width: '100%',
+    height: '100%',
+  } as ImageStyle,
+  heroGradient: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '70%',
+  } as ViewStyle,
+  content: {
+    flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'center',
-    marginBottom: 16,
+    justifyContent: 'flex-end',
+    paddingHorizontal: 24,
+    paddingBottom: 120,
   } as ViewStyle,
   headline: {
     fontSize: 28,
@@ -384,10 +417,8 @@ const styles = StyleSheet.create({
     padding: 4,
   } as ViewStyle,
   buttonContainer: {
-    position: 'absolute',
-    bottom: 50,
-    left: 24,
-    right: 24,
+    width: '100%',
+    marginTop: 24,
   } as ViewStyle,
   continueButton: {
     backgroundColor: colors.onboarding.gold,

@@ -7,8 +7,10 @@ import {
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
+  Image,
   type ViewStyle,
   type TextStyle,
+  type ImageStyle,
 } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -19,6 +21,8 @@ import { usePokerChat } from '@/hooks/usePokerChat';
 import { shouldShowSpecialOffer, markSpecialOfferShown, setUserTier } from '@/services/storageService';
 import { colors } from '@/constants/colors';
 import type { ChatMessage as ChatMessageType } from '@/services/pokerAI';
+
+const BACKGROUND_IMAGE_URL = 'https://bollujxjsgahswigmyvq.supabase.co/storage/v1/object/public/assets/chat/poker_table_bg.png?v=2';
 
 export default function PokerChatScreen() {
   const router = useRouter();
@@ -128,41 +132,54 @@ export default function PokerChatScreen() {
         }}
       />
 
-      {/* Messages List */}
-      <FlatList
-        ref={flatListRef}
-        data={messages}
-        keyExtractor={(item) => item.id}
-        renderItem={renderMessage}
-        contentContainerStyle={styles.messagesList}
-        showsVerticalScrollIndicator={false}
-        ListFooterComponent={isLoading ? <TypingIndicator /> : null}
-      />
+      {/* Background Image */}
+      <View style={styles.backgroundContainer}>
+        <Image
+          source={{ uri: BACKGROUND_IMAGE_URL }}
+          style={styles.backgroundImage}
+          resizeMode="cover"
+        />
+        <View style={styles.overlay} />
+      </View>
 
-      {/* Input Bar */}
-      <View style={[styles.inputContainer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
-        <View style={styles.inputRow}>
-          <TextInput
-            style={styles.input}
-            value={inputText}
-            onChangeText={setInputText}
-            placeholder="Ask a poker question..."
-            placeholderTextColor={colors.text.muted}
-            multiline
-            maxLength={1000}
-            returnKeyType="default"
-            blurOnSubmit={false}
-          />
-          <TouchableOpacity
-            style={[styles.sendButton, !inputText.trim() && styles.sendButtonDisabled]}
-            onPress={handleSend}
-            disabled={!inputText.trim() || isLoading}
-          >
-            <Send
-              size={20}
-              color={inputText.trim() ? colors.text.primary : colors.text.muted}
+      {/* Content */}
+      <View style={styles.content}>
+        {/* Messages List */}
+        <FlatList
+          ref={flatListRef}
+          data={messages}
+          keyExtractor={(item) => item.id}
+          renderItem={renderMessage}
+          contentContainerStyle={styles.messagesList}
+          showsVerticalScrollIndicator={false}
+          ListFooterComponent={isLoading ? <TypingIndicator /> : null}
+        />
+
+        {/* Input Bar */}
+        <View style={[styles.inputContainer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+          <View style={styles.inputRow}>
+            <TextInput
+              style={styles.input}
+              value={inputText}
+              onChangeText={setInputText}
+              placeholder="Ask a poker question..."
+              placeholderTextColor={colors.text.muted}
+              multiline
+              maxLength={1000}
+              returnKeyType="default"
+              blurOnSubmit={false}
             />
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.sendButton, !inputText.trim() && styles.sendButtonDisabled]}
+              onPress={handleSend}
+              disabled={!inputText.trim() || isLoading}
+            >
+              <Send
+                size={20}
+                color={inputText.trim() ? colors.text.primary : colors.text.muted}
+              />
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
 
@@ -182,6 +199,28 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background.primary,
   } as ViewStyle,
+  backgroundContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  } as ViewStyle,
+  backgroundImage: {
+    width: '100%',
+    height: '100%',
+  } as ImageStyle,
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+  } as ViewStyle,
+  content: {
+    flex: 1,
+  } as ViewStyle,
   backButton: {
     padding: 8,
     marginLeft: 4,
@@ -192,10 +231,10 @@ const styles = StyleSheet.create({
   } as ViewStyle,
   inputContainer: {
     borderTopWidth: 1,
-    borderTopColor: colors.background.tertiary,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
     paddingHorizontal: 16,
     paddingTop: 12,
-    backgroundColor: colors.background.primary,
+    backgroundColor: 'rgba(13, 2, 2, 0.8)',
   } as ViewStyle,
   inputRow: {
     flexDirection: 'row',

@@ -10,12 +10,17 @@ import {
   KeyboardAvoidingView,
   ScrollView,
   Platform,
+  Image,
   type ViewStyle,
   type TextStyle,
+  type ImageStyle,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Target, Pen, Check } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { colors } from '@/constants/colors';
+
+const HERO_IMAGE_URL = 'https://bollujxjsgahswigmyvq.supabase.co/storage/v1/object/public/assets/onboarding/goal_setting.png?v=2';
 
 type GoalSettingScreenProps = {
   playStyle: string;
@@ -212,6 +217,19 @@ export function GoalSettingScreen({ playStyle, goal, userName, onComplete }: Goa
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
     >
+      {/* Hero Image */}
+      <View style={styles.heroContainer}>
+        <Image
+          source={{ uri: HERO_IMAGE_URL }}
+          style={styles.heroImage}
+          resizeMode="cover"
+        />
+        <LinearGradient
+          colors={['transparent', colors.background.primary]}
+          style={styles.heroGradient}
+        />
+      </View>
+
       {/* Celebration Chips */}
       {showCelebration && chipParticles.map(particle => (
         <Animated.View
@@ -265,7 +283,6 @@ export function GoalSettingScreen({ playStyle, goal, userName, onComplete }: Goa
           },
         ]}
       >
-        <Text style={styles.headerEmoji}>{profile.emoji}</Text>
         <Text style={styles.headerTitle}>Your Poker Commitment</Text>
         <Text style={styles.headerSubtitle}>
           {displayName}, here's what you're signing up for
@@ -419,13 +436,32 @@ const styles = StyleSheet.create({
   keyboardAvoid: {
     flex: 1,
   } as ViewStyle,
+  heroContainer: {
+    position: 'absolute',
+    top: -70,
+    left: 0,
+    right: 0,
+    height: '65%',
+    overflow: 'hidden',
+  } as ViewStyle,
+  heroImage: {
+    width: '100%',
+    height: '100%',
+  } as ImageStyle,
+  heroGradient: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '70%',
+  } as ViewStyle,
   scrollContent: {
     flexGrow: 1,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
     paddingHorizontal: 24,
     paddingTop: 40,
-    paddingBottom: 120, // Extra padding for keyboard
+    paddingBottom: 80,
   } as ViewStyle,
   container: {
     flex: 1,

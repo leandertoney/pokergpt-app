@@ -5,13 +5,17 @@ import {
   StyleSheet,
   Animated,
   TouchableOpacity,
+  Image,
   type ViewStyle,
   type TextStyle,
+  type ImageStyle,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Check, TrendingUp, Target, Calculator } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { AnimatedLogo } from '@/components/AnimatedLogo';
 import { colors } from '@/constants/colors';
+
+const HERO_IMAGE_URL = 'https://bollujxjsgahswigmyvq.supabase.co/storage/v1/object/public/assets/onboarding/instant_analysis.png?v=2';
 
 type AnalysisResultScreenProps = {
   onNext: () => void;
@@ -86,143 +90,138 @@ export function AnalysisResultScreen({ onNext }: AnalysisResultScreenProps) {
 
   return (
     <View style={styles.container}>
-      {/* Logo */}
-      <Animated.View
-        style={[
-          styles.logoContainer,
-          {
-            opacity: titleAnim,
-            transform: [
-              {
-                scale: titleAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0.8, 1],
-                }),
-              },
-            ],
-          },
-        ]}
-      >
-        <AnimatedLogo variant={1} size="small" loop />
-      </Animated.View>
+      {/* Hero Image */}
+      <View style={styles.heroContainer}>
+        <Image
+          source={{ uri: HERO_IMAGE_URL }}
+          style={styles.heroImage}
+          resizeMode="cover"
+        />
+        <LinearGradient
+          colors={['transparent', colors.background.primary]}
+          style={styles.heroGradient}
+        />
+      </View>
 
-      {/* Title */}
-      <Animated.Text
-        style={[
-          styles.title,
-          {
-            opacity: titleAnim,
-            transform: [
-              {
-                translateY: titleAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [-20, 0],
-                }),
-              },
-            ],
-          },
-        ]}
-      >
-        Instant Analysis
-      </Animated.Text>
-
-      <Animated.Text
-        style={[
-          styles.subtitle,
-          {
-            opacity: titleAnim,
-          },
-        ]}
-      >
-        AI-powered recommendations in seconds
-      </Animated.Text>
-
-      {/* Result Card */}
-      <Animated.View
-        style={[
-          styles.resultCard,
-          {
-            opacity: resultAnim,
-            transform: [
-              {
-                translateY: resultAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [50, 0],
-                }),
-              },
-            ],
-          },
-        ]}
-      >
-        {/* Action Header */}
-        <View style={styles.resultHeader}>
-          <View style={styles.checkCircle}>
-            <Check size={16} color="#000" />
-          </View>
-          <Text style={styles.resultAction}>{DEMO_RESULT.action}</Text>
-        </View>
-
-        {/* Stats Row */}
-        <View style={styles.statsRow}>
-          <View style={styles.statItem}>
-            <Target size={14} color={colors.onboarding.data} />
-            <Text style={styles.statLabel}>Equity</Text>
-            <Text style={styles.statValue}>{DEMO_RESULT.equity}%</Text>
-          </View>
-          <View style={styles.statItem}>
-            <TrendingUp size={14} color={colors.onboarding.profit} />
-            <Text style={styles.statLabel}>EV</Text>
-            <Text style={[styles.statValue, styles.evValue]}>+${DEMO_RESULT.ev}</Text>
-          </View>
-          <View style={styles.statItem}>
-            <Calculator size={14} color={colors.onboarding.data} />
-            <Text style={styles.statLabel}>Pot Odds</Text>
-            <Text style={styles.statValue}>{DEMO_RESULT.potOdds}</Text>
-          </View>
-        </View>
-
-        {/* Confidence bar */}
-        <View style={styles.confidenceContainer}>
-          <View style={styles.confidenceBar}>
-            <View
-              style={[
-                styles.confidenceFill,
-                { width: `${confidenceWidth}%` },
-              ]}
-            />
-          </View>
-          <Text style={styles.confidenceText}>{confidenceWidth}%</Text>
-        </View>
-
-        {/* Reasoning */}
-        <Text style={styles.resultReasoning}>{DEMO_RESULT.reasoning}</Text>
-      </Animated.View>
-
-      {/* Continue Button */}
-      <Animated.View
-        style={[
-          styles.buttonContainer,
-          {
-            opacity: buttonAnim,
-            transform: [
-              {
-                translateY: buttonAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [20, 0],
-                }),
-              },
-            ],
-          },
-        ]}
-      >
-        <TouchableOpacity
-          style={styles.continueButton}
-          onPress={handleContinue}
-          activeOpacity={0.85}
+      <View style={styles.content}>
+        {/* Title */}
+        <Animated.Text
+          style={[
+            styles.title,
+            {
+              opacity: titleAnim,
+              transform: [
+                {
+                  translateY: titleAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [-20, 0],
+                  }),
+                },
+              ],
+            },
+          ]}
         >
-          <Text style={styles.continueButtonText}>Continue</Text>
-        </TouchableOpacity>
-      </Animated.View>
+          Instant Analysis
+        </Animated.Text>
+
+        <Animated.Text
+          style={[
+            styles.subtitle,
+            {
+              opacity: titleAnim,
+            },
+          ]}
+        >
+          AI-powered recommendations in seconds
+        </Animated.Text>
+
+        {/* Result Card */}
+        <Animated.View
+          style={[
+            styles.resultCard,
+            {
+              opacity: resultAnim,
+              transform: [
+                {
+                  translateY: resultAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [50, 0],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
+          {/* Action Header */}
+          <View style={styles.resultHeader}>
+            <View style={styles.checkCircle}>
+              <Check size={16} color="#000" />
+            </View>
+            <Text style={styles.resultAction}>{DEMO_RESULT.action}</Text>
+          </View>
+
+          {/* Stats Row */}
+          <View style={styles.statsRow}>
+            <View style={styles.statItem}>
+              <Target size={14} color={colors.onboarding.data} />
+              <Text style={styles.statLabel}>Equity</Text>
+              <Text style={styles.statValue}>{DEMO_RESULT.equity}%</Text>
+            </View>
+            <View style={styles.statItem}>
+              <TrendingUp size={14} color={colors.onboarding.profit} />
+              <Text style={styles.statLabel}>EV</Text>
+              <Text style={[styles.statValue, styles.evValue]}>+${DEMO_RESULT.ev}</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Calculator size={14} color={colors.onboarding.data} />
+              <Text style={styles.statLabel}>Pot Odds</Text>
+              <Text style={styles.statValue}>{DEMO_RESULT.potOdds}</Text>
+            </View>
+          </View>
+
+          {/* Confidence bar */}
+          <View style={styles.confidenceContainer}>
+            <View style={styles.confidenceBar}>
+              <View
+                style={[
+                  styles.confidenceFill,
+                  { width: `${confidenceWidth}%` },
+                ]}
+              />
+            </View>
+            <Text style={styles.confidenceText}>{confidenceWidth}%</Text>
+          </View>
+
+          {/* Reasoning */}
+          <Text style={styles.resultReasoning}>{DEMO_RESULT.reasoning}</Text>
+        </Animated.View>
+
+        {/* Continue Button */}
+        <Animated.View
+          style={[
+            styles.buttonContainer,
+            {
+              opacity: buttonAnim,
+              transform: [
+                {
+                  translateY: buttonAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [20, 0],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
+          <TouchableOpacity
+            style={styles.continueButton}
+            onPress={handleContinue}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.continueButtonText}>Continue</Text>
+          </TouchableOpacity>
+        </Animated.View>
+      </View>
     </View>
   );
 }
@@ -230,12 +229,32 @@ export function AnalysisResultScreen({ onNext }: AnalysisResultScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 24,
   } as ViewStyle,
-  logoContainer: {
-    marginBottom: 16,
+  heroContainer: {
+    position: 'absolute',
+    top: -70,
+    left: 0,
+    right: 0,
+    height: '65%',
+    overflow: 'hidden',
+  } as ViewStyle,
+  heroImage: {
+    width: '100%',
+    height: '100%',
+  } as ImageStyle,
+  heroGradient: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '70%',
+  } as ViewStyle,
+  content: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingHorizontal: 24,
+    paddingBottom: 120,
   } as ViewStyle,
   title: {
     fontSize: 26,
@@ -333,10 +352,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   } as TextStyle,
   buttonContainer: {
-    position: 'absolute',
-    bottom: 50,
-    left: 24,
-    right: 24,
+    width: '100%',
+    marginTop: 24,
   } as ViewStyle,
   continueButton: {
     backgroundColor: colors.onboarding.gold,

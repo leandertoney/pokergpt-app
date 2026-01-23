@@ -14,6 +14,37 @@ const CHANNELS = 1;
 const BITS_PER_SAMPLE = 16;
 const CHUNK_DURATION_MS = 100; // Send audio every 100ms for low latency
 
+// Global tracking of active recording to handle expo-av singleton limitation
+let globalActiveRecording: Audio.Recording | null = null;
+
+/**
+ * Force cleanup of any globally tracked recording
+ * Call this before starting a new recording to avoid "Only one Recording" error
+ */
+async function forceGlobalRecordingCleanup(): Promise<void> {
+  if (globalActiveRecording) {
+    console.log('[PCMAudio] Force cleaning up global recording');
+    try {
+      const status = await globalActiveRecording.getStatusAsync();
+      if (status.isRecording || status.canRecord) {
+        await globalActiveRecording.stopAndUnloadAsync();
+      }
+    } catch (error) {
+      // Recording may already be unloaded, ignore
+      console.log('[PCMAudio] Global cleanup: recording already unloaded');
+    }
+    globalActiveRecording = null;
+  }
+}
+
+/**
+ * Wait for expo-av to settle - used between recording attempts
+ */
+async function waitForAudioSystemToSettle(ms: number = 100): Promise<void> {
+  console.log(`[PCMAudio] Waiting ${ms}ms for audio system to settle...`);
+  await new Promise(resolve => setTimeout(resolve, ms));
+}
+
 /**
  * PCM Audio Player
  *
@@ -320,8 +351,14 @@ export class PCMAudioRecorder {
   async start(onChunk: (base64Chunk: string) => void): Promise<void> {
     console.log('[PCMAudioRecorder] start() called');
 
-    // Clean up any existing recording first to avoid "Only one Recording" error
+    // Force cleanup of any global recording first (handles expo-av singleton limitation)
+    await forceGlobalRecordingCleanup();
+
+    // Clean up any existing recording on this instance
     await this.cleanupExistingRecording();
+
+    // Add delay to ensure system fully releases audio resources
+    await waitForAudioSystemToSettle(200);
 
     if (this.isRecording) {
       console.warn('[PCMAudioRecorder] Already recording');
@@ -364,41 +401,68 @@ export class PCMAudioRecorder {
     console.log('[PCMAudioRecorder] startRecordingLoop() called');
 
     // Ensure no existing recording before creating new one
+    await forceGlobalRecordingCleanup();
     await this.cleanupExistingRecording();
+    // Wait for audio system to settle
+    await waitForAudioSystemToSettle(150);
 
-    const recording = new Audio.Recording();
+    // Try to prepare with retry logic
+    let recording: Audio.Recording | null = null;
+    let attempts = 0;
+    const maxAttempts = 3;
+
+    while (attempts < maxAttempts && !recording) {
+      attempts++;
+      console.log(`[PCMAudioRecorder] Preparing recording (attempt ${attempts}/${maxAttempts})...`);
+
+      try {
+        const newRecording = new Audio.Recording();
+        await newRecording.prepareToRecordAsync({
+          android: {
+            extension: '.wav',
+            outputFormat: Audio.AndroidOutputFormat.DEFAULT,
+            audioEncoder: Audio.AndroidAudioEncoder.DEFAULT,
+            sampleRate: SAMPLE_RATE,
+            numberOfChannels: CHANNELS,
+            bitRate: SAMPLE_RATE * CHANNELS * BITS_PER_SAMPLE,
+          },
+          ios: {
+            extension: '.wav',
+            outputFormat: Audio.IOSOutputFormat.LINEARPCM,
+            audioQuality: Audio.IOSAudioQuality.HIGH,
+            sampleRate: SAMPLE_RATE,
+            numberOfChannels: CHANNELS,
+            bitRate: SAMPLE_RATE * CHANNELS * BITS_PER_SAMPLE,
+            linearPCMBitDepth: 16,
+            linearPCMIsBigEndian: false,
+            linearPCMIsFloat: false,
+          },
+          web: {
+            mimeType: 'audio/wav',
+            bitsPerSecond: SAMPLE_RATE * CHANNELS * BITS_PER_SAMPLE,
+          },
+        });
+        recording = newRecording;
+      } catch (error: any) {
+        console.warn(`[PCMAudioRecorder] Attempt ${attempts} failed:`, error?.message);
+        if (attempts < maxAttempts) {
+          // Wait longer between retries (exponential backoff)
+          await waitForAudioSystemToSettle(300 * attempts);
+        } else {
+          throw error; // Re-throw on final attempt
+        }
+      }
+    }
+
+    if (!recording) {
+      throw new Error('Failed to prepare recording after all attempts');
+    }
 
     try {
-      console.log('[PCMAudioRecorder] Preparing recording...');
-      await recording.prepareToRecordAsync({
-        android: {
-          extension: '.wav',
-          outputFormat: Audio.AndroidOutputFormat.DEFAULT,
-          audioEncoder: Audio.AndroidAudioEncoder.DEFAULT,
-          sampleRate: SAMPLE_RATE,
-          numberOfChannels: CHANNELS,
-          bitRate: SAMPLE_RATE * CHANNELS * BITS_PER_SAMPLE,
-        },
-        ios: {
-          extension: '.wav',
-          outputFormat: Audio.IOSOutputFormat.LINEARPCM,
-          audioQuality: Audio.IOSAudioQuality.HIGH,
-          sampleRate: SAMPLE_RATE,
-          numberOfChannels: CHANNELS,
-          bitRate: SAMPLE_RATE * CHANNELS * BITS_PER_SAMPLE,
-          linearPCMBitDepth: 16,
-          linearPCMIsBigEndian: false,
-          linearPCMIsFloat: false,
-        },
-        web: {
-          mimeType: 'audio/wav',
-          bitsPerSecond: SAMPLE_RATE * CHANNELS * BITS_PER_SAMPLE,
-        },
-      });
-
       console.log('[PCMAudioRecorder] Starting recording...');
       await recording.startAsync();
       this.recording = recording;
+      globalActiveRecording = recording; // Track globally
       console.log('[PCMAudioRecorder] Recording active, starting chunk extraction loop');
 
       // Periodically extract and send audio chunks
@@ -490,12 +554,14 @@ export class PCMAudioRecorder {
         });
         await newRecording.startAsync();
         this.recording = newRecording;
+        globalActiveRecording = newRecording; // Track globally
       }
     } catch (error) {
       console.error('[PCMAudioRecorder] Error extracting chunk:', error);
       // Don't let errors stop the recording loop - try to restart
       if (this.isRecording) {
         // Cleanup any existing recording before restart
+        await forceGlobalRecordingCleanup();
         await this.cleanupExistingRecording();
         // Restart recording after error
         try {
@@ -527,6 +593,7 @@ export class PCMAudioRecorder {
           });
           await newRecording.startAsync();
           this.recording = newRecording;
+          globalActiveRecording = newRecording; // Track globally
           console.log('[PCMAudioRecorder] Recording restarted after error');
         } catch (restartError) {
           console.error('[PCMAudioRecorder] Failed to restart recording:', restartError);
@@ -558,6 +625,7 @@ export class PCMAudioRecorder {
    * Stop recording
    */
   async stop(): Promise<void> {
+    console.log('[PCMAudioRecorder] stop() called');
     // Set flag first to prevent recording loop from creating new recordings
     this.isRecording = false;
 
@@ -570,7 +638,14 @@ export class PCMAudioRecorder {
     // Use cleanup helper for proper recording cleanup
     await this.cleanupExistingRecording();
 
+    // Also clear global reference
+    globalActiveRecording = null;
+
     this.chunkCallback = null;
+
+    // Wait for audio system to fully release resources
+    await waitForAudioSystemToSettle(100);
+
     console.log('[PCMAudioRecorder] Recording stopped');
   }
 

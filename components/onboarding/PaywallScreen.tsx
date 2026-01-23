@@ -34,8 +34,8 @@ type PaywallScreenProps = {
 };
 
 // URLs for Terms and Privacy
-const TERMS_URL = 'https://pokergpt.app/terms';
-const PRIVACY_URL = 'https://pokergpt.app/privacy';
+const TERMS_URL = 'https://universoleappstudios.com/pokergpt/terms';
+const PRIVACY_URL = 'https://universoleappstudios.com/pokergpt/privacy';
 
 // Feature categories with icons and accent colors
 type FeatureItem = {
@@ -55,7 +55,7 @@ const FEATURES: FeatureItem[] = [
 ];
 
 // Hero image URL
-const HERO_IMAGE_URL = 'https://bollujxjsgahswigmyvq.supabase.co/storage/v1/object/public/assets/onboarding/raking_chips.png';
+const HERO_IMAGE_URL = 'https://bollujxjsgahswigmyvq.supabase.co/storage/v1/object/public/assets/onboarding/raking_chips.png?v=2';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export function PaywallScreen({ playStyle, goal, userName, onPurchase, onSkip }: PaywallScreenProps) {
@@ -347,8 +347,8 @@ export function PaywallScreen({ playStyle, goal, userName, onPurchase, onSkip }:
             </View>
 
             <Text style={styles.planName}>Yearly</Text>
-            <Text style={styles.planPrice}>$4.08/mo</Text>
-            <Text style={styles.planBilling}>Billed at {prices.yearly.replace('/yr', '')}/yr{'\n'}after free trial</Text>
+            <Text style={styles.planPrice}>{prices.yearly}</Text>
+            <Text style={styles.planBilling}>Just $4.08/mo{'\n'}after free trial</Text>
 
             {/* Selection Indicator */}
             {selectedPlan === 'yearly' && (
@@ -447,17 +447,16 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 20,
-    paddingTop: 80,
     alignItems: 'center',
     justifyContent: 'flex-end',
     paddingBottom: 20,
   } as ViewStyle,
   heroContainer: {
     position: 'absolute',
-    top: 0,
+    top: -70,
     left: 0,
     right: 0,
-    height: '45%',
+    height: '65%',
     overflow: 'hidden',
   } as ViewStyle,
   heroImage: {
@@ -643,8 +642,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    marginTop: 'auto',
-    paddingBottom: 20,
+    paddingTop: 8,
   } as ViewStyle,
   footerLink: {
     fontSize: 14,

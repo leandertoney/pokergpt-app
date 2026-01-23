@@ -8,7 +8,7 @@
     "icon": "./assets/images/pokergpt_logo.png",
     "scheme": "pokergpt",
     "userInterfaceStyle": "dark",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "splash": {
       "image": "./assets/images/pokergpt_logo.png",
       "resizeMode": "contain",
@@ -17,14 +17,13 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.pokergpt.app",
-      "buildNumber": "8",
+      "buildNumber": "9",
       "icon": "./assets/images/pokergpt_logo.png",
       "infoPlist": {
         "UIBackgroundModes": [
-          "audio",
           "audio"
         ],
-        "NSMicrophoneUsageDescription": "Allow $(PRODUCT_NAME) to access your microphone",
+        "NSMicrophoneUsageDescription": "PokerGPT uses the microphone for hands-free voice conversations with your AI poker coach. Speak naturally to discuss hands and get instant strategy advice.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
@@ -35,11 +34,6 @@
       },
       "package": "com.pokergpt.app",
       "permissions": [
-        "RECORD_AUDIO",
-        "android.permission.RECORD_AUDIO",
-        "android.permission.MODIFY_AUDIO_SETTINGS",
-        "android.permission.POST_NOTIFICATIONS",
-        "android.permission.SCHEDULE_EXACT_ALARM",
         "RECORD_AUDIO",
         "android.permission.RECORD_AUDIO",
         "android.permission.MODIFY_AUDIO_SETTINGS",
@@ -57,7 +51,7 @@
       [
         "expo-av",
         {
-          "microphonePermission": "Allow $(PRODUCT_NAME) to access your microphone"
+          "microphonePermission": "PokerGPT uses the microphone for hands-free voice conversations with your AI poker coach."
         }
       ],
       "expo-asset",

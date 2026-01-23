@@ -15,7 +15,7 @@ import { Target, Calculator, Eye } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { colors } from '@/constants/colors';
 
-const HERO_IMAGE_URL = 'https://bollujxjsgahswigmyvq.supabase.co/storage/v1/object/public/assets/onboarding/studying_poker.png';
+const HERO_IMAGE_URL = 'https://bollujxjsgahswigmyvq.supabase.co/storage/v1/object/public/assets/onboarding/studying_poker.png?v=2';
 
 type LearningProgressScreenProps = {
   onNext: () => void;
@@ -242,10 +242,10 @@ const styles = StyleSheet.create({
   } as ViewStyle,
   heroContainer: {
     position: 'absolute',
-    top: 0,
+    top: -70,
     left: 0,
     right: 0,
-    height: '45%',
+    height: '65%',
     overflow: 'hidden',
   } as ViewStyle,
   heroImage: {

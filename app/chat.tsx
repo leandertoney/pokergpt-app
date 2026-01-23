@@ -1,8 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { View, FlatList, StyleSheet, TouchableOpacity, type ViewStyle } from 'react-native';
+import { View, FlatList, StyleSheet, TouchableOpacity, Image, type ViewStyle, type ImageStyle } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Mic, Keyboard } from 'lucide-react-native';
 import { usePokerFlow } from '@/hooks/usePokerFlow';
 import { useVoiceInput } from '@/hooks/useVoiceInput';
@@ -15,6 +14,7 @@ import { colors } from '@/constants/colors';
 import { MAX_FREE_HANDS } from '@/types/poker';
 
 const OPENAI_API_KEY = process.env.EXPO_PUBLIC_OPENAI_API_KEY || '';
+const BACKGROUND_IMAGE_URL = 'https://bollujxjsgahswigmyvq.supabase.co/storage/v1/object/public/assets/chat/poker_table_bg.png?v=2';
 
 export default function ChatScreen() {
   const {
@@ -139,11 +139,18 @@ export default function ChatScreen() {
         }}
       />
 
-      <LinearGradient
-        colors={[colors.background.tertiary, colors.background.secondary, colors.background.primary, '#0D0202']}
-        locations={[0, 0.3, 0.7, 1]}
-        style={styles.gradient}
-      >
+      {/* Background Image */}
+      <View style={styles.backgroundContainer}>
+        <Image
+          source={{ uri: BACKGROUND_IMAGE_URL }}
+          style={styles.backgroundImage}
+          resizeMode="cover"
+        />
+        <View style={styles.overlay} />
+      </View>
+
+      {/* Content */}
+      <View style={styles.content}>
         <FlatList
           ref={flatListRef}
           data={messages}
@@ -180,7 +187,7 @@ export default function ChatScreen() {
             />
           )}
         </View>
-      </LinearGradient>
+      </View>
 
       {/* Upgrade Modal for free tier limit */}
       <UpgradeModal
@@ -198,7 +205,26 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background.primary,
   } as ViewStyle,
-  gradient: {
+  backgroundContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  } as ViewStyle,
+  backgroundImage: {
+    width: '100%',
+    height: '100%',
+  } as ImageStyle,
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+  } as ViewStyle,
+  content: {
     flex: 1,
   } as ViewStyle,
   messageList: {

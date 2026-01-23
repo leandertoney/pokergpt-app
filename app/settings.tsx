@@ -30,6 +30,7 @@ import {
   LogOut,
   LogIn,
   RefreshCw,
+  Trash2,
 } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { colors } from '@/constants/colors';
@@ -90,13 +91,14 @@ function SettingsSection({ title, children }: { title: string; children: React.R
 export default function SettingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { signOut, isAuthenticated } = useAuth();
+  const { signOut, deleteAccount, isAuthenticated } = useAuth();
 
   // Voice input preference (stored locally for now)
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus | null>(null);
   const [isLoadingSubscription, setIsLoadingSubscription] = useState(true);
   const [isRestoring, setIsRestoring] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const appVersion = Constants.expoConfig?.version || '1.0.0';
 
@@ -235,6 +237,37 @@ export default function SettingsScreen() {
     }
   };
 
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account',
+      'Are you sure you want to delete your account? This will permanently delete all your data including saved hands and chat history. This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete Account',
+          style: 'destructive',
+          onPress: async () => {
+            setIsDeleting(true);
+            try {
+              const { error } = await deleteAccount();
+              if (error) {
+                Alert.alert('Error', error.message || 'Failed to delete account. Please try again.');
+              } else {
+                Alert.alert('Account Deleted', 'Your account has been successfully deleted.', [
+                  { text: 'OK', onPress: () => router.replace('/auth/login') },
+                ]);
+              }
+            } catch (err) {
+              Alert.alert('Error', 'Something went wrong. Please try again.');
+            } finally {
+              setIsDeleting(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <View style={styles.container}>
       <Stack.Screen
@@ -335,12 +368,31 @@ export default function SettingsScreen() {
           </SettingsSection>
 
           {isAuthenticated ? (
-            <SettingsSection title="">
-              <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
-                <LogOut size={20} color={colors.utility.error} />
-                <Text style={styles.signOutText}>Sign Out</Text>
-              </TouchableOpacity>
-            </SettingsSection>
+            <>
+              <SettingsSection title="">
+                <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
+                  <LogOut size={20} color={colors.utility.error} />
+                  <Text style={styles.signOutText}>Sign Out</Text>
+                </TouchableOpacity>
+              </SettingsSection>
+
+              <SettingsSection title="">
+                <TouchableOpacity
+                  style={styles.deleteAccountButton}
+                  onPress={handleDeleteAccount}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? (
+                    <ActivityIndicator size="small" color={colors.utility.error} />
+                  ) : (
+                    <>
+                      <Trash2 size={20} color={colors.utility.error} />
+                      <Text style={styles.deleteAccountText}>Delete Account</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </SettingsSection>
+            </>
           ) : (
             <SettingsSection title="">
               <TouchableOpacity style={styles.signInButton} onPress={() => router.push('/auth/login')}>
@@ -429,6 +481,19 @@ const styles = StyleSheet.create({
   signOutText: {
     fontSize: 16,
     fontWeight: '600' as const,
+    color: colors.utility.error,
+  } as TextStyle,
+  deleteAccountButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    gap: 8,
+    opacity: 0.7,
+  } as ViewStyle,
+  deleteAccountText: {
+    fontSize: 14,
+    fontWeight: '500' as const,
     color: colors.utility.error,
   } as TextStyle,
   signInButton: {

@@ -14,10 +14,9 @@ import {
   type TextStyle,
   type ImageStyle,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { X, Search, Square, Send } from 'lucide-react-native';
+import { X, Search, Square, Send, AlertCircle } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useRealtimeVoice } from '@/hooks/useRealtimeVoice';
 import { colors } from '@/constants/colors';
@@ -29,6 +28,7 @@ import type { HandData, AnalysisResult } from '@/types/poker';
 import { MAX_FREE_HANDS } from '@/types/poker';
 
 const OPENAI_API_KEY = process.env.EXPO_PUBLIC_OPENAI_API_KEY || '';
+const BACKGROUND_IMAGE_URL = 'https://bollujxjsgahswigmyvq.supabase.co/storage/v1/object/public/assets/chat/poker_table_bg.png?v=2';
 
 // Parse hand data AND generate analysis in one API call (fast)
 async function parseAndAnalyzeHand(transcript: string): Promise<{
@@ -123,6 +123,7 @@ export default function VoiceScreen() {
   const [textInput, setTextInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Free tier upgrade modal state
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
@@ -159,6 +160,15 @@ export default function VoiceScreen() {
     onError: (error) => {
       console.error('[VoiceScreen] Error:', error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+
+      // Set user-friendly error message
+      const message = error?.message?.includes('Recording')
+        ? 'Microphone busy. Tap Speak to try again.'
+        : 'Connection error. Tap Speak to retry.';
+      setErrorMessage(message);
+
+      // Clear error after 4 seconds
+      setTimeout(() => setErrorMessage(null), 4000);
     },
   });
 
@@ -307,20 +317,21 @@ export default function VoiceScreen() {
   const isVoiceActive = voiceState !== 'idle' && voiceState !== 'error';
 
   return (
-    <LinearGradient
-      colors={[colors.background.secondary, colors.background.primary, '#0D0202']}
-      locations={[0, 0.5, 1]}
-      style={styles.container}
-    >
+    <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
+
+      {/* Background Image */}
+      <View style={styles.backgroundContainer}>
+        <Image
+          source={{ uri: BACKGROUND_IMAGE_URL }}
+          style={styles.backgroundImage}
+          resizeMode="cover"
+        />
+        <View style={styles.overlay} />
+      </View>
 
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-        <Image
-          source={require('@/assets/images/pokergpt_logo.png')}
-          style={styles.headerLogo}
-          resizeMode="contain"
-        />
         <Text style={styles.headerTitle}>PokerGPT</Text>
         {messages.length > 0 && (
           <TouchableOpacity
@@ -419,6 +430,14 @@ export default function VoiceScreen() {
           </View>
         )}
 
+        {/* Error banner */}
+        {errorMessage && (
+          <View style={styles.errorBanner}>
+            <AlertCircle size={16} color={colors.utility.error} />
+            <Text style={styles.errorText}>{errorMessage}</Text>
+          </View>
+        )}
+
         {/* Status text */}
         <Text style={styles.statusText}>{getStatusText()}</Text>
 
@@ -493,13 +512,33 @@ export default function VoiceScreen() {
         currentCount={savedHandCount}
         maxCount={MAX_FREE_HANDS}
       />
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: colors.background.primary,
+  } as ViewStyle,
+  backgroundContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  } as ViewStyle,
+  backgroundImage: {
+    width: '100%',
+    height: '100%',
+  } as ImageStyle,
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
   } as ViewStyle,
   header: {
     flexDirection: 'row',
@@ -507,16 +546,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 12,
   } as ViewStyle,
-  headerLogo: {
-    width: 32,
-    height: 32,
-  } as ImageStyle,
   headerTitle: {
     flex: 1,
     fontSize: 20,
     fontWeight: '700',
     color: colors.onboarding.gold,
-    marginLeft: 12,
   } as TextStyle,
   closeButton: {
     width: 40,
@@ -579,7 +613,7 @@ const styles = StyleSheet.create({
   } as ViewStyle,
   aiBubble: {
     alignSelf: 'flex-start',
-    backgroundColor: '#2D1A1A',
+    backgroundColor: colors.background.tertiary,
     borderBottomLeftRadius: 4,
   } as ViewStyle,
   liveTranscript: {
@@ -667,5 +701,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.text.muted,
     textAlign: 'center',
+  } as TextStyle,
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    marginHorizontal: 20,
+    marginBottom: 8,
+    gap: 8,
+  } as ViewStyle,
+  errorText: {
+    color: colors.utility.error,
+    fontSize: 14,
+    fontWeight: '500',
   } as TextStyle,
 });

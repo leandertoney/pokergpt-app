@@ -6,14 +6,18 @@ import {
   Animated,
   Dimensions,
   TouchableOpacity,
+  Image,
   type ViewStyle,
   type TextStyle,
+  type ImageStyle,
 } from 'react-native';
+import { LinearGradient as ExpoLinearGradient } from 'expo-linear-gradient';
 import { TrendingUp, TrendingDown } from 'lucide-react-native';
 import Svg, { Path, Circle, Defs, LinearGradient, Stop, Line, Text as SvgText } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
-import { AnimatedLogo } from '@/components/AnimatedLogo';
 import { colors } from '@/constants/colors';
+
+const HERO_IMAGE_URL = 'https://bollujxjsgahswigmyvq.supabase.co/storage/v1/object/public/assets/onboarding/comparison_page.png?v=2';
 
 type ComparisonScreenProps = {
   onNext: () => void;
@@ -166,26 +170,37 @@ export function ComparisonScreen({ onNext }: ComparisonScreenProps) {
 
   return (
     <View style={styles.container}>
-      {/* Headline */}
-      <Animated.View
-        style={{
-          opacity: headlineAnim,
-          transform: [
-            {
-              translateY: headlineAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [30, 0],
-              }),
-            },
-          ],
-        }}
-      >
-        <View style={styles.logoContainer}>
-          <AnimatedLogo variant={1} size="small" loop />
-        </View>
-        <Text style={styles.headline}>They're getting better.</Text>
-        <Text style={styles.subheadline}>PokerGPT players vs the rest</Text>
-      </Animated.View>
+      {/* Hero Image */}
+      <View style={styles.heroContainer}>
+        <Image
+          source={{ uri: HERO_IMAGE_URL }}
+          style={styles.heroImage}
+          resizeMode="cover"
+        />
+        <ExpoLinearGradient
+          colors={['transparent', colors.background.primary]}
+          style={styles.heroGradient}
+        />
+      </View>
+
+      <View style={styles.content}>
+        {/* Headline */}
+        <Animated.View
+          style={{
+            opacity: headlineAnim,
+            transform: [
+              {
+                translateY: headlineAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [30, 0],
+                }),
+              },
+            ],
+          }}
+        >
+          <Text style={styles.headline}>They're getting better.</Text>
+          <Text style={styles.subheadline}>PokerGPT players vs the rest</Text>
+        </Animated.View>
 
       {/* Graph Card */}
       <Animated.View
@@ -380,6 +395,7 @@ export function ComparisonScreen({ onNext }: ComparisonScreenProps) {
           <Text style={styles.continueButtonText}>Continue</Text>
         </TouchableOpacity>
       </Animated.View>
+      </View>
     </View>
   );
 }
@@ -387,15 +403,32 @@ export function ComparisonScreen({ onNext }: ComparisonScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 24,
   } as ViewStyle,
-  logoContainer: {
+  heroContainer: {
+    position: 'absolute',
+    top: -70,
+    left: 0,
+    right: 0,
+    height: '65%',
+    overflow: 'hidden',
+  } as ViewStyle,
+  heroImage: {
+    width: '100%',
+    height: '100%',
+  } as ImageStyle,
+  heroGradient: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '70%',
+  } as ViewStyle,
+  content: {
+    flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'center',
-    marginBottom: 16,
+    justifyContent: 'flex-end',
+    paddingHorizontal: 24,
+    paddingBottom: 60,
   } as ViewStyle,
   headline: {
     fontSize: 28,
@@ -490,10 +523,8 @@ const styles = StyleSheet.create({
     marginTop: 24,
   } as TextStyle,
   buttonContainer: {
-    position: 'absolute',
-    bottom: 50,
-    left: 24,
-    right: 24,
+    width: '100%',
+    marginTop: 24,
   } as ViewStyle,
   continueButton: {
     backgroundColor: colors.onboarding.gold,

@@ -267,6 +267,24 @@ export class OpenAIRealtimeService {
     }));
   }
 
+  sendConversationItem(role: 'user' | 'assistant', content: string): void {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+
+    this.ws.send(JSON.stringify({
+      type: 'conversation.item.create',
+      item: {
+        type: 'message',
+        role: role,
+        content: [
+          {
+            type: role === 'user' ? 'input_text' : 'text',
+            text: content,
+          },
+        ],
+      },
+    }));
+  }
+
   disconnect(): void {
     if (this.ws) {
       this.ws.close();

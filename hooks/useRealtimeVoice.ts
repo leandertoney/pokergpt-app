@@ -67,6 +67,7 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions) {
 
   // Refs for stable callback access (avoid stale closures)
   const voiceStateRef = useRef(voiceState);
+  const messagesRef = useRef<Message[]>([]);
   const onUserTranscriptRef = useRef(onUserTranscript);
   const onAITranscriptRef = useRef(onAITranscript);
   const onErrorRef = useRef(onError);
@@ -74,6 +75,7 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions) {
 
   // Keep refs in sync with values
   useEffect(() => { voiceStateRef.current = voiceState; }, [voiceState]);
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
   useEffect(() => { onUserTranscriptRef.current = onUserTranscript; }, [onUserTranscript]);
   useEffect(() => { onAITranscriptRef.current = onAITranscript; }, [onAITranscript]);
   useEffect(() => { onErrorRef.current = onError; }, [onError]);
@@ -115,6 +117,15 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions) {
   const startAudioStreaming = useCallback(async () => {
     console.log('[RealtimeVoice] startAudioStreaming() called');
 
+    // Stop any existing recording first
+    if (audioRecorderRef.current?.active) {
+      console.log('[RealtimeVoice] Stopping existing recording first...');
+      await audioRecorderRef.current.stop();
+    }
+
+    // Longer delay to ensure any previous recording is fully released
+    await new Promise(resolve => setTimeout(resolve, 300));
+
     if (!audioRecorderRef.current) {
       console.error('[RealtimeVoice] No audio recorder available');
       return;
@@ -125,7 +136,20 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions) {
     }
 
     try {
-      // Configure audio mode for recording using expo-av
+      // Reset audio mode first (this can help clear stale audio state)
+      console.log('[RealtimeVoice] Resetting audio mode...');
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: false,
+        interruptionModeIOS: InterruptionModeIOS.MixWithOthers,
+        interruptionModeAndroid: InterruptionModeAndroid.DuckOthers,
+        shouldDuckAndroid: true,
+        playThroughEarpieceAndroid: false,
+      });
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      // Now configure for recording
       console.log('[RealtimeVoice] Setting audio mode for recording...');
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: true,
@@ -165,6 +189,16 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions) {
   const setupCallbacks = useCallback((): RealtimeCallbacks => ({
     onSessionCreated: () => {
       console.log('[RealtimeVoice] Session created, ready to listen');
+
+      // Replay conversation history to give AI context when reconnecting
+      const currentMessages = messagesRef.current;
+      if (currentMessages.length > 0) {
+        console.log('[RealtimeVoice] Replaying', currentMessages.length, 'messages for context');
+        currentMessages.forEach(msg => {
+          serviceRef.current?.sendConversationItem(msg.role, msg.content);
+        });
+      }
+
       updateState('listening');
       // Start recording and streaming audio
       startAudioStreamingRef.current();

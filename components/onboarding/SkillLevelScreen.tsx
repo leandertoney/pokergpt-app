@@ -7,15 +7,20 @@ import {
   TouchableOpacity,
   ScrollView,
   Modal,
+  Image,
   type ViewStyle,
   type TextStyle,
+  type ImageStyle,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { X } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { colors } from '@/constants/colors';
 import { TRAINING_HANDS } from '@/data/trainingHands';
 import type { ExperienceLevel } from '@/types/poker';
 import type { TrainingHand } from '@/types/dailyReview';
+
+const HERO_IMAGE_URL = 'https://bollujxjsgahswigmyvq.supabase.co/storage/v1/object/public/assets/onboarding/skill_level.png?v=2';
 
 type SkillLevelScreenProps = {
   onComplete: (level: ExperienceLevel) => void;
@@ -134,20 +139,35 @@ export function SkillLevelScreen({ onComplete }: SkillLevelScreenProps) {
 
   return (
     <View style={styles.container}>
-      <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
-        {/* Header */}
-        <Text style={styles.subheadline}>Set Your Challenge Level</Text>
-        <Text style={styles.headline}>What level fits you best?</Text>
-        <Text style={styles.description}>
-          Tap any card to preview an example hand
-        </Text>
+      {/* Full-screen Hero Image */}
+      <View style={styles.heroContainer}>
+        <Image
+          source={{ uri: HERO_IMAGE_URL }}
+          style={styles.heroImage}
+          resizeMode="cover"
+        />
+        <LinearGradient
+          colors={['transparent', 'rgba(26, 5, 5, 0.7)', colors.background.primary]}
+          locations={[0, 0.5, 0.85]}
+          style={styles.heroGradient}
+        />
+      </View>
 
-        {/* Skill level cards */}
-        <ScrollView
-          style={styles.cardsContainer}
-          contentContainerStyle={styles.cardsContent}
-          showsVerticalScrollIndicator={false}
-        >
+      <View style={styles.contentWrapper}>
+        <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
+          {/* Header */}
+          <Text style={styles.subheadline}>Set Your Challenge Level</Text>
+          <Text style={styles.headline}>What level fits you best?</Text>
+          <Text style={styles.description}>
+            Tap any card to preview an example hand
+          </Text>
+
+          {/* Skill level cards */}
+          <ScrollView
+            style={styles.cardsContainer}
+            contentContainerStyle={styles.cardsContent}
+            showsVerticalScrollIndicator={false}
+          >
           {SKILL_OPTIONS.map((option, index) => (
             <Animated.View
               key={option.level}
@@ -202,8 +222,9 @@ export function SkillLevelScreen({ onComplete }: SkillLevelScreenProps) {
               </TouchableOpacity>
             </Animated.View>
           ))}
-        </ScrollView>
-      </Animated.View>
+          </ScrollView>
+        </Animated.View>
+      </View>
 
       {/* Hand Preview Modal */}
       <Modal
@@ -308,6 +329,27 @@ const miniCardStyles = StyleSheet.create({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  } as ViewStyle,
+  heroContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  } as ViewStyle,
+  heroImage: {
+    width: '100%',
+    height: '100%',
+  } as ImageStyle,
+  heroGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  } as ViewStyle,
+  contentWrapper: {
+    flex: 1,
     paddingHorizontal: 24,
     paddingTop: 20,
   } as ViewStyle,
@@ -344,7 +386,7 @@ const styles = StyleSheet.create({
     gap: 16,
   } as ViewStyle,
   skillCard: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: 'rgba(0,0,0,0.6)',
     borderRadius: 20,
     padding: 20,
     borderWidth: 2,

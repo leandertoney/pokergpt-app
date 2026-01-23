@@ -51,17 +51,7 @@ export default function SignupScreen() {
   };
 
   const handleSignup = async () => {
-    // Debug: Test network connectivity
-    console.log('Testing network...');
-    try {
-      const res = await fetch('https://bollujxjsgahswigmyvq.supabase.co/rest/v1/', {
-        headers: { 'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJvbGx1anhqc2dhaHN3aWdteXZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ1MzU2MTAsImV4cCI6MjA4MDExMTYxMH0.CdLOpAyNxogjBu7OxY0jvC02iy4o2Ra9SwjwubNOdcU' }
-      });
-      console.log('Fetch status:', res.status);
-    } catch (e) {
-      console.log('Fetch error:', e);
-    }
-
+    // Validate inputs first (before setting loading state)
     if (!email.trim() || !password.trim() || !confirmPassword.trim()) {
       setError('Please fill in all fields');
       return;
@@ -81,14 +71,21 @@ export default function SignupScreen() {
     setIsLoading(true);
     setError(null);
 
-    const { error: signUpError } = await signUp(email.trim(), password);
+    try {
+      const { error: signUpError } = await signUp(email.trim(), password);
 
-    setIsLoading(false);
-
-    if (signUpError) {
-      setError(signUpError.message);
-    } else {
-      setSuccess(true);
+      if (signUpError) {
+        setError(signUpError.message);
+      } else {
+        setSuccess(true);
+      }
+    } catch (err) {
+      // Handle any unexpected errors
+      setError('An error occurred. Please try again.');
+      console.error('Signup error:', err);
+    } finally {
+      // Always reset loading state
+      setIsLoading(false);
     }
   };
 

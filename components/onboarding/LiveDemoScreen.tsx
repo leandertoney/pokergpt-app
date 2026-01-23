@@ -15,7 +15,7 @@ import * as Haptics from 'expo-haptics';
 import { VoiceOrb, type VoiceOrbState } from '@/components/VoiceOrb';
 import { colors } from '@/constants/colors';
 
-const HERO_IMAGE_URL = 'https://bollujxjsgahswigmyvq.supabase.co/storage/v1/object/public/assets/onboarding/talking_to_phone.png';
+const HERO_IMAGE_URL = 'https://bollujxjsgahswigmyvq.supabase.co/storage/v1/object/public/assets/onboarding/speak_your_hand.png?v=2';
 
 // Card display component - centered rank + suit design
 function MiniCard({ rank, suit, size = 'medium' }: { rank: string; suit: string; size?: 'small' | 'medium' }) {
@@ -312,10 +312,10 @@ const styles = StyleSheet.create({
   } as ViewStyle,
   heroContainer: {
     position: 'absolute',
-    top: 0,
+    top: -70,
     left: 0,
     right: 0,
-    height: '45%',
+    height: '65%',
     overflow: 'hidden',
   } as ViewStyle,
   heroImage: {

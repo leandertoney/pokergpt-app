@@ -17,6 +17,7 @@ interface AuthContextType extends AuthState {
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
+  deleteAccount: () => Promise<{ error: Error | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -198,6 +199,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const deleteAccount = useCallback(async () => {
+    if (!supabase) {
+      return { error: new Error('Supabase not configured') };
+    }
+
+    const userId = state.user?.id;
+    if (!userId) {
+      return { error: new Error('No user logged in') };
+    }
+
+    try {
+      // Delete user's data from database tables
+      // Delete hands first (due to foreign key constraints)
+      await supabase.from('hands').delete().eq('user_id', userId);
+
+      // Delete chat sessions
+      await supabase.from('chat_sessions').delete().eq('user_id', userId);
+
+      // Delete any other user data here...
+
+      // Sign out the user
+      await supabase.auth.signOut();
+
+      // Reset state
+      setState({
+        user: null,
+        session: null,
+        isLoading: false,
+        isAuthenticated: false,
+        migrationStatus: 'idle',
+        lastMigrationResult: null,
+      });
+
+      return { error: null };
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Account deletion failed';
+      return { error: new Error(errorMessage) };
+    }
+  }, [state.user?.id]);
+
   return (
     <AuthContext.Provider
       value={{
@@ -206,6 +247,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signIn,
         signOut,
         resetPassword,
+        deleteAccount,
       }}
     >
       {children}

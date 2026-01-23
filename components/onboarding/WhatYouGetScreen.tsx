@@ -5,27 +5,30 @@ import {
   StyleSheet,
   Animated,
   TouchableOpacity,
+  Image,
   type ViewStyle,
   type TextStyle,
+  type ImageStyle,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Play } from 'lucide-react-native';
-import { AnimatedLogo } from '@/components/AnimatedLogo';
 import * as Haptics from 'expo-haptics';
 import { colors } from '@/constants/colors';
+
+const HERO_IMAGE_URL = 'https://bollujxjsgahswigmyvq.supabase.co/storage/v1/object/public/assets/onboarding/pokergpt_championship_1_to_1.png?v=2';
 
 type WhatYouGetScreenProps = {
   onComplete: () => void;
 };
 
 export function WhatYouGetScreen({ onComplete }: WhatYouGetScreenProps) {
-  const sparkleAnim = useRef(new Animated.Value(1)).current; // Start visible immediately
   const titleAnim = useRef(new Animated.Value(0)).current;
   const subtitleAnim = useRef(new Animated.Value(0)).current;
   const buttonAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    // Title entrance (logo already visible)
+    // Title entrance
     setTimeout(() => {
       Animated.spring(titleAnim, {
         toValue: 1,
@@ -78,84 +81,79 @@ export function WhatYouGetScreen({ onComplete }: WhatYouGetScreenProps) {
 
   return (
     <View style={styles.container}>
-      {/* Animated Logo */}
-      <Animated.View
-        style={[
-          styles.logoContainer,
-          {
-            opacity: sparkleAnim,
+      {/* Hero Image */}
+      <View style={styles.heroContainer}>
+        <Image
+          source={{ uri: HERO_IMAGE_URL }}
+          style={styles.heroImage}
+          resizeMode="contain"
+        />
+        <LinearGradient
+          colors={['transparent', colors.background.primary]}
+          style={styles.heroGradient}
+        />
+      </View>
+
+      <View style={styles.content}>
+        {/* Title */}
+        <Animated.View
+          style={{
+            opacity: titleAnim,
             transform: [
               {
-                scale: sparkleAnim.interpolate({
-                  inputRange: [0, 0.5, 1],
-                  outputRange: [0.5, 1.1, 1],
-                }),
-              },
-            ],
-          },
-        ]}
-      >
-        <AnimatedLogo variant={1} size="small" loop />
-      </Animated.View>
-
-      {/* Title */}
-      <Animated.View
-        style={{
-          opacity: titleAnim,
-          transform: [
-            {
-              translateY: titleAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [30, 0],
-              }),
-            },
-          ],
-        }}
-      >
-        <Text style={styles.title}>Ready to{'\n'}start winning?</Text>
-      </Animated.View>
-
-      {/* Subtitle */}
-      <Animated.Text
-        style={[
-          styles.subtitle,
-          {
-            opacity: subtitleAnim,
-          },
-        ]}
-      >
-        Your AI poker coach is ready.{'\n'}Let's make every hand count.
-      </Animated.Text>
-
-      {/* Start Button */}
-      <Animated.View
-        style={[
-          styles.buttonContainer,
-          {
-            opacity: buttonAnim,
-            transform: [
-              {
-                translateY: buttonAnim.interpolate({
+                translateY: titleAnim.interpolate({
                   inputRange: [0, 1],
                   outputRange: [30, 0],
                 }),
               },
-              {
-                scale: pulseAnim,
-              },
             ],
-          },
-        ]}
-      >
-        <TouchableOpacity
-          style={styles.button}
-          onPress={handlePress}
-          activeOpacity={0.85}
+          }}
         >
-          <Play size={22} color="#000" fill="#000" />
-          <Text style={styles.buttonText}>Start Winning</Text>
-        </TouchableOpacity>
-      </Animated.View>
+          <Text style={styles.title}>Ready to{'\n'}start winning?</Text>
+        </Animated.View>
+
+        {/* Subtitle */}
+        <Animated.Text
+          style={[
+            styles.subtitle,
+            {
+              opacity: subtitleAnim,
+            },
+          ]}
+        >
+          Your AI poker coach is ready.{'\n'}Let's make every hand count.
+        </Animated.Text>
+
+        {/* Start Button */}
+        <Animated.View
+          style={[
+            styles.buttonContainer,
+            {
+              opacity: buttonAnim,
+              transform: [
+                {
+                  translateY: buttonAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [30, 0],
+                  }),
+                },
+                {
+                  scale: pulseAnim,
+                },
+              ],
+            },
+          ]}
+        >
+          <TouchableOpacity
+            style={styles.button}
+            onPress={handlePress}
+            activeOpacity={0.85}
+          >
+            <Play size={22} color="#000" fill="#000" />
+            <Text style={styles.buttonText}>Start Winning</Text>
+          </TouchableOpacity>
+        </Animated.View>
+      </View>
     </View>
   );
 }
@@ -163,12 +161,32 @@ export function WhatYouGetScreen({ onComplete }: WhatYouGetScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 32,
   } as ViewStyle,
-  logoContainer: {
-    marginBottom: 24,
+  heroContainer: {
+    position: 'absolute',
+    top: -70,
+    left: 0,
+    right: 0,
+    height: '65%',
+    overflow: 'hidden',
+  } as ViewStyle,
+  heroImage: {
+    width: '100%',
+    height: '100%',
+  } as ImageStyle,
+  heroGradient: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '70%',
+  } as ViewStyle,
+  content: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingHorizontal: 32,
+    paddingBottom: 140,
   } as ViewStyle,
   title: {
     fontSize: 36,
@@ -185,10 +203,8 @@ const styles = StyleSheet.create({
     marginTop: 16,
   } as TextStyle,
   buttonContainer: {
-    position: 'absolute',
-    bottom: 100,
-    left: 32,
-    right: 32,
+    width: '100%',
+    marginTop: 32,
   } as ViewStyle,
   button: {
     flexDirection: 'row',

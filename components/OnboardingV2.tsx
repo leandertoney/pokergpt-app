@@ -304,8 +304,26 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
     }
   };
 
-  // Show progress bar for all steps except splash and hero
-  const showProgress = step !== 'splash' && step !== 'hero';
+  // Hide progress bar on screens with hero images
+  const screensWithImages: OnboardingStep[] = [
+    'splash',
+    'hero',
+    'chatDemo',
+    'liveDemo',
+    'analysisResult',
+    'sessionDemo',
+    'dailyReviewDemo',
+    'skillLevel',
+    'profitDemo',
+    'learningProgress',
+    'comparison',
+    'identity',
+    'name',
+    'goalSetting',
+    'paywall',
+    'whatYouGet',
+  ];
+  const showProgress = !screensWithImages.includes(step);
 
   return (
     <View style={styles.container}>
@@ -415,6 +433,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 60,
     paddingBottom: 8,
+    zIndex: 10,
   } as ViewStyle,
   segmentRow: {
     flexDirection: 'row',
