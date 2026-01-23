@@ -8,7 +8,7 @@
     "icon": "./assets/images/pokergpt_logo.png",
     "scheme": "pokergpt",
     "userInterfaceStyle": "dark",
-    "newArchEnabled": false,
+    "newArchEnabled": true,
     "splash": {
       "image": "./assets/images/pokergpt_logo.png",
       "resizeMode": "contain",
