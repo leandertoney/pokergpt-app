@@ -30,6 +30,7 @@ import { AnalysisResultScreen } from './onboarding/AnalysisResultScreen';
 import { setUserTier, setUserIdentity, setUserDisplayName, setPaywallState, setGoalConfirmation } from '@/services/storageService';
 import { updateUserIdentity as syncUserIdentityToSupabase, getOrCreateUser } from '@/services/supabaseStorage';
 import { checkSubscriptionStatus } from '@/services/revenueCat';
+import { withTimeout } from '@/utils/withTimeout';
 import { colors } from '@/constants/colors';
 import type { UserIdentity, ExperienceLevel } from '@/types/poker';
 
@@ -381,7 +382,11 @@ export async function checkOnboardingComplete(isAuthenticated: boolean = false):
 
   // Check if user is already subscribed via RevenueCat - skip onboarding for subscribers
   try {
-    const subscriptionStatus = await checkSubscriptionStatus();
+    const subscriptionStatus = await withTimeout(
+      checkSubscriptionStatus(),
+      8000,
+      'checkOnboardingComplete subscription check'
+    );
     if (subscriptionStatus.isSubscribed) {
       // Mark onboarding as complete and set user tier
       await AsyncStorage.setItem(ONBOARDING_COMPLETE_KEY, 'true');
@@ -389,8 +394,8 @@ export async function checkOnboardingComplete(isAuthenticated: boolean = false):
       return true;
     }
   } catch (error) {
-    console.warn('Failed to check subscription status:', error);
-    // Continue with normal flow if RevenueCat check fails
+    console.warn('Failed to check subscription status during onboarding check:', error);
+    // Continue with normal flow if RevenueCat check fails or times out
   }
 
   if (!isAuthenticated) return false;

@@ -26,6 +26,7 @@ import {
 } from 'lucide-react-native';
 import { colors } from '@/constants/colors';
 import { useVoiceSettings } from '@/hooks/useVoiceSettings';
+import * as Haptics from 'expo-haptics';
 import { speak } from '@/services/ttsService';
 import { Audio } from 'expo-av';
 import { setAudioModeAsync } from 'expo-audio';
@@ -61,11 +62,13 @@ export default function VoiceSettingsScreen() {
   const [validationError, setValidationError] = useState<string | null>(null);
 
   const handleProviderChange = async (provider: VoiceProvider) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setValidationError(null);
     await updateSettings({ provider });
   };
 
   const handleOpenAIVoiceChange = async (voice: OpenAIVoice) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     await updateSettings({ openaiVoice: voice });
   };
 
@@ -331,7 +334,10 @@ export default function VoiceSettingsScreen() {
                     maximumValue={1}
                     step={0.05}
                     value={settings.elevenlabsStability}
-                    onSlidingComplete={(value) => updateSettings({ elevenlabsStability: value })}
+                    onSlidingComplete={(value) => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      updateSettings({ elevenlabsStability: value });
+                    }}
                     minimumTrackTintColor={colors.accent.gold}
                     maximumTrackTintColor={colors.background.tertiary}
                     thumbTintColor={colors.accent.gold}
@@ -352,7 +358,10 @@ export default function VoiceSettingsScreen() {
                     maximumValue={1}
                     step={0.05}
                     value={settings.elevenlabsSimilarityBoost}
-                    onSlidingComplete={(value) => updateSettings({ elevenlabsSimilarityBoost: value })}
+                    onSlidingComplete={(value) => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      updateSettings({ elevenlabsSimilarityBoost: value });
+                    }}
                     minimumTrackTintColor={colors.accent.gold}
                     maximumTrackTintColor={colors.background.tertiary}
                     thumbTintColor={colors.accent.gold}

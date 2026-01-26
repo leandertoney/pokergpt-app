@@ -5,6 +5,7 @@ import Purchases, {
   LOG_LEVEL,
 } from 'react-native-purchases';
 import { Platform } from 'react-native';
+import { withTimeout } from '@/utils/withTimeout';
 
 // RevenueCat API Keys from dashboard
 const REVENUECAT_IOS_KEY = 'appl_UpYGVTernIJdqPdLcHXQNtQwHgU';
@@ -137,7 +138,11 @@ class RevenueCatService {
    */
   async checkSubscriptionStatus(): Promise<SubscriptionStatus> {
     try {
-      const customerInfo = await Purchases.getCustomerInfo();
+      const customerInfo = await withTimeout(
+        Purchases.getCustomerInfo(),
+        5000,
+        'RevenueCat getCustomerInfo'
+      );
 
       const premiumEntitlement = customerInfo.entitlements.active[ENTITLEMENTS.PREMIUM];
       const isSubscribed = !!premiumEntitlement;

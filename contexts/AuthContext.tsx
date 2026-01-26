@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, typ
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import type { User, Session } from '@supabase/supabase-js';
 import { migrateGuestDataToUser, type MigrationResult } from '@/services/syncService';
+import { withTimeout } from '@/utils/withTimeout';
 
 interface AuthState {
   user: User | null;
@@ -40,7 +41,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     // Get initial session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    withTimeout(
+      supabase.auth.getSession(),
+      10000,
+      'Supabase getSession'
+    ).then(async ({ data: { session } }) => {
       setState({
         user: session?.user ?? null,
         session,
@@ -56,7 +61,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setState((prev) => ({ ...prev, migrationStatus: 'in_progress' }));
 
         try {
-          const result = await migrateGuestDataToUser(session.user.id);
+          const result = await withTimeout(
+            migrateGuestDataToUser(session.user.id),
+            15000,
+            'Initial migration'
+          );
           console.log('Initial migration completed:', result);
           setState((prev) => ({
             ...prev,
@@ -72,6 +81,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }));
         }
       }
+    }).catch((error) => {
+      console.error('getSession failed or timed out:', error);
+      setState((prev) => ({ ...prev, isLoading: false }));
     });
 
     // Listen for auth changes
@@ -91,7 +103,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setState((prev) => ({ ...prev, migrationStatus: 'in_progress' }));
 
           try {
-            const result = await migrateGuestDataToUser(session.user.id);
+            const result = await withTimeout(
+              migrateGuestDataToUser(session.user.id),
+              15000,
+              'Auth state change migration'
+            );
             console.log('Migration completed:', result);
             setState((prev) => ({
               ...prev,
@@ -121,10 +137,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-      });
+      const { error } = await withTimeout(
+        supabase.auth.signUp({ email, password }),
+        15000,
+        'Supabase signUp'
+      );
 
       if (error) {
         return { error: new Error(error.message) };

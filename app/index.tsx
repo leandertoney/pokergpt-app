@@ -216,6 +216,19 @@ Only return the JSON array, nothing else.`;
     checkOnboarding();
   }, [isAuthenticated]);
 
+  // Safety net: never show loading screen for more than 12 seconds
+  useEffect(() => {
+    const safetyTimer = setTimeout(() => {
+      if (isCheckingOnboarding) {
+        console.warn('Onboarding check safety timeout triggered - forcing completion');
+        setIsCheckingOnboarding(false);
+        setShowOnboarding(false);
+      }
+    }, 12000);
+
+    return () => clearTimeout(safetyTimer);
+  }, [isCheckingOnboarding]);
+
   // Check if user can access sessions (Pro feature)
   useEffect(() => {
     async function checkSessionAccess() {

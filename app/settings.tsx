@@ -34,6 +34,7 @@ import {
 } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { colors } from '@/constants/colors';
+import * as Haptics from 'expo-haptics';
 import Constants from 'expo-constants';
 import {
   checkSubscriptionStatus,
@@ -319,7 +320,10 @@ export default function SettingsScreen() {
               rightElement={
                 <Switch
                   value={voiceEnabled}
-                  onValueChange={setVoiceEnabled}
+                  onValueChange={(value) => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                    setVoiceEnabled(value);
+                  }}
                   trackColor={{ false: colors.background.tertiary, true: colors.accent.gold }}
                   thumbColor={colors.text.primary}
                 />
