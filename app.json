@@ -15,7 +15,7 @@
       "backgroundColor": "#6A0B0B"
     },
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "com.pokergpt.app",
       "buildNumber": "9",
       "icon": "./assets/images/pokergpt_logo.png",
