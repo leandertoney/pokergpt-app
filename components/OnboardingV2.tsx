@@ -384,7 +384,7 @@ export async function checkOnboardingComplete(isAuthenticated: boolean = false):
   try {
     const subscriptionStatus = await withTimeout(
       checkSubscriptionStatus(),
-      8000,
+      5000,
       'checkOnboardingComplete subscription check'
     );
     if (subscriptionStatus.isSubscribed) {

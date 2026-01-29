@@ -16,7 +16,7 @@ import {
   clearBadge,
 } from "@/services/notificationService";
 
-SplashScreen.preventAutoHideAsync();
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 // Initialize RevenueCat early
 initializeRevenueCat().catch((error) => {
@@ -85,7 +85,7 @@ function RootLayoutNav() {
       <Stack.Screen
         name="index"
         options={{
-          headerShown: true,
+          headerShown: false,
           title: "PokerGPT",
         }}
       />

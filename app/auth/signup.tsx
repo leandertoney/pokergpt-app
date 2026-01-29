@@ -72,13 +72,15 @@ export default function SignupScreen() {
     setError(null);
 
     try {
-      const { error: signUpError } = await signUp(email.trim(), password);
+      const { error: signUpError, autoConfirmed } = await signUp(email.trim(), password);
 
       if (signUpError) {
         setError(signUpError.message);
-      } else {
+      } else if (!autoConfirmed) {
+        // Only show "Check Your Email" if email confirmation is required
         setSuccess(true);
       }
+      // If autoConfirmed, useProtectedRoute will redirect to home automatically
     } catch (err) {
       // Handle any unexpected errors
       setError('An error occurred. Please try again.');

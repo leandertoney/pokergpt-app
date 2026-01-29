@@ -44,10 +44,8 @@ export default function LoginScreen() {
     if (signInError) {
       setError(signInError.message);
       setIsLoading(false);
-    } else {
-      // Navigation will happen automatically via auth state change
-      router.replace('/');
     }
+    // Navigation happens automatically via useProtectedRoute when auth state changes
   };
 
   return (

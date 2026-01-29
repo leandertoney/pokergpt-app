@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { View, StyleSheet, Text, TouchableOpacity, FlatList, Animated, KeyboardAvoidingView, Platform, Image, type ViewStyle, type TextStyle, type ImageStyle } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Settings, MessageCircle, Star } from 'lucide-react-native';
@@ -224,7 +224,7 @@ Only return the JSON array, nothing else.`;
         setIsCheckingOnboarding(false);
         setShowOnboarding(false);
       }
-    }, 12000);
+    }, 5000);
 
     return () => clearTimeout(safetyTimer);
   }, [isCheckingOnboarding]);
@@ -477,9 +477,11 @@ Only return the JSON array, nothing else.`;
   if (isCheckingOnboarding) {
     return (
       <View style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <LoadingIndicator variant={2} size="medium" />
-        </View>
+        <LinearGradient
+          colors={[colors.background.secondary, colors.background.primary, '#0D0202']}
+          locations={[0, 0.5, 1]}
+          style={styles.gradient}
+        />
       </View>
     );
   }
@@ -597,8 +599,6 @@ Only return the JSON array, nothing else.`;
 
   return (
     <View style={styles.container}>
-      <Stack.Screen options={{ headerShown: false }} />
-
       <KeyboardAvoidingView
         style={styles.keyboardAvoid}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -622,9 +622,7 @@ Only return the JSON array, nothing else.`;
             </TouchableOpacity>
           </View>
           {isLoading ? (
-            <View style={styles.loadingContainer}>
-              <LoadingIndicator variant={2} size="medium" text="Loading hands..." />
-            </View>
+            <View style={styles.loadingContainer} />
           ) : error ? (
             <View style={styles.content}>
               <Text style={styles.sectionHeader}>Hand History</Text>

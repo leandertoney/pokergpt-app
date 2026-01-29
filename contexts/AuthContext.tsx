@@ -14,7 +14,7 @@ interface AuthState {
 }
 
 interface AuthContextType extends AuthState {
-  signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string) => Promise<{ error: Error | null; autoConfirmed?: boolean }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
@@ -43,7 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Get initial session
     withTimeout(
       supabase.auth.getSession(),
-      10000,
+      5000,
       'Supabase getSession'
     ).then(async ({ data: { session } }) => {
       setState({
@@ -63,7 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
           const result = await withTimeout(
             migrateGuestDataToUser(session.user.id),
-            15000,
+            10000,
             'Initial migration'
           );
           console.log('Initial migration completed:', result);
@@ -105,7 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           try {
             const result = await withTimeout(
               migrateGuestDataToUser(session.user.id),
-              15000,
+              10000,
               'Auth state change migration'
             );
             console.log('Migration completed:', result);
@@ -137,9 +137,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      const { error } = await withTimeout(
+      const { data, error } = await withTimeout(
         supabase.auth.signUp({ email, password }),
-        15000,
+        10000,
         'Supabase signUp'
       );
 
@@ -147,11 +147,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { error: new Error(error.message) };
       }
 
-      return { error: null };
+      return { error: null, autoConfirmed: !!data.session };
     } catch (err) {
-      // Check for network errors
       const errorMessage = err instanceof Error ? err.message : 'Sign up failed';
-      if (errorMessage.includes('Network request failed')) {
+      if (errorMessage.includes('Network request failed') || errorMessage.includes('timed out')) {
         return { error: new Error('Unable to connect. Please check your internet connection and try again.') };
       }
       return { error: new Error(errorMessage) };
@@ -164,10 +163,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const { error } = await withTimeout(
+        supabase.auth.signInWithPassword({ email, password }),
+        10000,
+        'Supabase signIn'
+      );
 
       if (error) {
         return { error: new Error(error.message) };
@@ -175,9 +175,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       return { error: null };
     } catch (err) {
-      // Check for network errors
       const errorMessage = err instanceof Error ? err.message : 'Sign in failed';
-      if (errorMessage.includes('Network request failed')) {
+      if (errorMessage.includes('Network request failed') || errorMessage.includes('timed out')) {
         return { error: new Error('Unable to connect. Please check your internet connection and try again.') };
       }
       return { error: new Error(errorMessage) };

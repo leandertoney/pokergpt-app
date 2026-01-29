@@ -72,6 +72,8 @@ class RevenueCatService {
    * Call this after user authentication
    */
   async identifyUser(userId: string): Promise<void> {
+    if (!this.initialized) return;
+
     try {
       await Purchases.logIn(userId);
       console.log('RevenueCat user identified:', userId);
@@ -84,6 +86,8 @@ class RevenueCatService {
    * Log out the current user (for anonymous mode)
    */
   async logOut(): Promise<void> {
+    if (!this.initialized) return;
+
     try {
       await Purchases.logOut();
       console.log('RevenueCat user logged out');
@@ -96,6 +100,8 @@ class RevenueCatService {
    * Get available offerings (products configured in RevenueCat)
    */
   async getOfferings(): Promise<PurchasesOffering | null> {
+    if (!this.initialized) return null;
+
     try {
       const offerings = await Purchases.getOfferings();
       return offerings.current;
@@ -137,10 +143,20 @@ class RevenueCatService {
    * Check if user has premium access
    */
   async checkSubscriptionStatus(): Promise<SubscriptionStatus> {
+    if (!this.initialized) {
+      return {
+        isSubscribed: false,
+        activeEntitlements: [],
+        expirationDate: null,
+        willRenew: false,
+        isInTrial: false,
+      };
+    }
+
     try {
       const customerInfo = await withTimeout(
         Purchases.getCustomerInfo(),
-        5000,
+        3000,
         'RevenueCat getCustomerInfo'
       );
 
@@ -172,6 +188,10 @@ class RevenueCatService {
    * Purchase a subscription package
    */
   async purchasePackage(planType: PlanType): Promise<PurchaseResult> {
+    if (!this.initialized) {
+      return { success: false, error: 'Purchase service not available. Please try again.' };
+    }
+
     try {
       const pkg = await this.getPackageForPlan(planType);
 
@@ -219,6 +239,10 @@ class RevenueCatService {
    * Restore previous purchases
    */
   async restorePurchases(): Promise<PurchaseResult> {
+    if (!this.initialized) {
+      return { success: false, error: 'Purchase service not available. Please try again.' };
+    }
+
     try {
       const customerInfo = await Purchases.restorePurchases();
 
@@ -244,6 +268,8 @@ class RevenueCatService {
   addCustomerInfoUpdateListener(
     callback: (info: CustomerInfo) => void
   ): () => void {
+    if (!this.initialized) return () => {};
+
     Purchases.addCustomerInfoUpdateListener(callback);
     // Note: In newer SDK versions, use Purchases.removeCustomerInfoUpdateListener if needed
     return () => {};
