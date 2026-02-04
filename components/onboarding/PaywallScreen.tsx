@@ -15,7 +15,7 @@ import {
   type ImageStyle,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Check, X, Mic, Brain, Clock, Target, MessageCircle, Sparkles } from 'lucide-react-native';
+import { Check, Mic, Brain, Clock, MessageCircle, Sparkles } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { colors } from '@/constants/colors';
 import {
@@ -47,11 +47,10 @@ type FeatureItem = {
 
 const FEATURES: FeatureItem[] = [
   { icon: MessageCircle, text: 'Unlimited hand analysis', highlight: true },
-  { icon: Mic, text: 'Voice coaching - hands free', highlight: true },
-  { icon: Brain, text: 'GTO & exploitative breakdowns' },
-  { icon: Clock, text: 'Complete hand history' },
-  { icon: Target, text: 'Daily review quiz + streaks', profit: true },
-  { icon: Sparkles, text: 'Full hand training scenarios', profit: true },
+  { icon: Mic, text: 'Voice Mode: Hands-free coaching', highlight: true },
+  { icon: Clock, text: 'Save & review hand history' },
+  { icon: Brain, text: 'Hybrid solver logic (GTO + Exploit)' },
+  { icon: Sparkles, text: 'Faster AI processing' },
 ];
 
 // Hero image URL
@@ -235,16 +234,6 @@ export function PaywallScreen({ playStyle, goal, userName, onPurchase, onSkip }:
         />
       </Animated.View>
 
-      {/* X Button - Top Right */}
-      <TouchableOpacity
-        style={styles.closeButton}
-        onPress={handleSkip}
-        activeOpacity={0.7}
-        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-      >
-        <X size={24} color="rgba(255,255,255,0.5)" />
-      </TouchableOpacity>
-
       <View style={styles.content}>
         {/* Header with Logo */}
         <Animated.View
@@ -263,8 +252,8 @@ export function PaywallScreen({ playStyle, goal, userName, onPurchase, onSkip }:
             },
           ]}
         >
-          <Text style={styles.headline}>Get PokerGPT Pro</Text>
-          <Text style={styles.subtitle}>Unlock your edge at the table</Text>
+          <Text style={styles.headline}>Unlock PokerPro AI Premium</Text>
+          <Text style={styles.subtitle}>Master live poker with unlimited AI coaching.</Text>
         </Animated.View>
 
         {/* Features Card */}
@@ -284,7 +273,6 @@ export function PaywallScreen({ playStyle, goal, userName, onPurchase, onSkip }:
             },
           ]}
         >
-          <Text style={styles.featuresTitle}>Everything you need to win</Text>
           <View style={styles.featuresContainer}>
             {FEATURES.map((feature, index) => {
               const IconComponent = feature.icon;
@@ -300,7 +288,7 @@ export function PaywallScreen({ playStyle, goal, userName, onPurchase, onSkip }:
                     feature.profit && styles.featureIconProfit,
                     feature.highlight && styles.featureIconHighlight,
                   ]}>
-                    <IconComponent size={14} color={iconColor} />
+                    <IconComponent size={18} color={iconColor} />
                   </View>
                   <Text style={[
                     styles.featureText,
@@ -406,8 +394,16 @@ export function PaywallScreen({ playStyle, goal, userName, onPurchase, onSkip }:
             {isPurchasing ? (
               <ActivityIndicator color={colors.text.dark} />
             ) : (
-              <Text style={styles.ctaButtonText}>Start 3-day free trial</Text>
+              <Text style={styles.ctaButtonText}>Start 3-Day Free Trial</Text>
             )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.skipButton}
+            onPress={handleSkip}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.skipButtonText}>Continue with Free Plan</Text>
           </TouchableOpacity>
         </Animated.View>
 
@@ -484,19 +480,19 @@ const styles = StyleSheet.create({
   } as ViewStyle,
   header: {
     width: '100%',
-    marginBottom: 8,
+    marginBottom: 16,
     alignItems: 'center',
   } as ViewStyle,
   headline: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: '700',
     color: '#fff',
-    marginBottom: 4,
+    marginBottom: 8,
     textAlign: 'center',
   } as TextStyle,
   subtitle: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.6)',
+    fontSize: 16,
+    color: 'rgba(255,255,255,0.7)',
     textAlign: 'center',
   } as TextStyle,
   featuresCard: {
@@ -504,9 +500,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.04)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 14,
-    padding: 12,
-    marginBottom: 10,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
   } as ViewStyle,
   featuresTitle: {
     fontSize: 15,
@@ -516,17 +512,17 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   } as TextStyle,
   featuresContainer: {
-    gap: 6,
+    gap: 12,
   } as ViewStyle,
   featureRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
   } as ViewStyle,
   featureIconContainer: {
-    width: 24,
-    height: 24,
-    borderRadius: 6,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     backgroundColor: 'rgba(255,255,255,0.08)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -538,7 +534,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(34, 197, 94, 0.15)',
   } as ViewStyle,
   featureText: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '500',
     color: 'rgba(255,255,255,0.8)',
     flex: 1,
@@ -554,16 +550,16 @@ const styles = StyleSheet.create({
   pricingContainer: {
     flexDirection: 'row',
     width: '100%',
-    gap: 8,
-    marginBottom: 10,
+    gap: 12,
+    marginBottom: 16,
   } as ViewStyle,
   pricingCard: {
     flex: 1,
     backgroundColor: 'rgba(255,255,255,0.06)',
     borderWidth: 2,
     borderColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 12,
-    padding: 10,
+    borderRadius: 14,
+    padding: 14,
     alignItems: 'center',
     position: 'relative',
   } as ViewStyle,
@@ -573,33 +569,33 @@ const styles = StyleSheet.create({
   } as ViewStyle,
   discountBadge: {
     backgroundColor: colors.onboarding.gold,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
     borderRadius: 8,
-    marginBottom: 8,
+    marginBottom: 10,
   } as ViewStyle,
   discountText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700',
     color: colors.text.dark,
   } as TextStyle,
   planName: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '600',
     color: '#fff',
     marginBottom: 8,
   } as TextStyle,
   planPrice: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '700',
     color: '#fff',
-    marginBottom: 4,
+    marginBottom: 6,
   } as TextStyle,
   planBilling: {
-    fontSize: 12,
+    fontSize: 13,
     color: 'rgba(255,255,255,0.5)',
     textAlign: 'center',
-    lineHeight: 16,
+    lineHeight: 18,
   } as TextStyle,
   selectedIndicator: {
     position: 'absolute',
@@ -619,8 +615,8 @@ const styles = StyleSheet.create({
   ctaButton: {
     width: '100%',
     backgroundColor: colors.onboarding.gold,
-    borderRadius: 12,
-    paddingVertical: 14,
+    borderRadius: 14,
+    paddingVertical: 18,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: colors.onboarding.gold,
@@ -630,13 +626,23 @@ const styles = StyleSheet.create({
     elevation: 6,
   } as ViewStyle,
   ctaButtonText: {
-    fontSize: 18,
+    fontSize: 19,
     fontWeight: '700',
     color: colors.text.dark,
   } as TextStyle,
   ctaButtonDisabled: {
     opacity: 0.7,
   } as ViewStyle,
+  skipButton: {
+    marginTop: 12,
+    paddingVertical: 8,
+    alignItems: 'center',
+  } as ViewStyle,
+  skipButtonText: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: 'rgba(255,255,255,0.6)',
+  } as TextStyle,
   footer: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -1,4 +1,4 @@
-// PokerGPT Brand Colors
+// PokerPro AI Brand Colors
 // Based on the robot card character logo - EXACT colors from logo design
 
 export const colors = {

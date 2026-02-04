@@ -50,7 +50,7 @@ const steps: OnboardingStep[] = [
   {
     type: 'social',
     title: '50,000+ Players Trust Us',
-    description: 'Top pros and grinders use PokerGPT to study hands and fix leaks faster than ever.',
+    description: 'Top pros and grinders use PokerPro AI to study hands and fix leaks faster than ever.',
     icon: <Users size={64} color={colors.accent.primary} />,
   },
   {
@@ -840,7 +840,7 @@ function ReinforcementStep({ identity, onNext, scaleAnim, iconScaleAnim }: {
       </View>
 
       <Text style={styles.calibratedText}>
-        PokerGPT is now calibrated to <Text style={styles.calibratedHighlight}>your game</Text>
+        PokerPro AI is now calibrated to <Text style={styles.calibratedHighlight}>your game</Text>
       </Text>
 
       <View style={styles.footer}>

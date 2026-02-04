@@ -27,10 +27,7 @@ import {
   Mic,
   Volume2,
   Info,
-  LogOut,
   LogIn,
-  RefreshCw,
-  Trash2,
 } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { colors } from '@/constants/colors';
@@ -92,14 +89,13 @@ function SettingsSection({ title, children }: { title: string; children: React.R
 export default function SettingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { signOut, deleteAccount, isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAuth();
 
   // Voice input preference (stored locally for now)
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus | null>(null);
   const [isLoadingSubscription, setIsLoadingSubscription] = useState(true);
   const [isRestoring, setIsRestoring] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
 
   const appVersion = Constants.expoConfig?.version || '1.0.0';
 
@@ -154,26 +150,9 @@ export default function SettingsScreen() {
 
   const showAbout = () => {
     Alert.alert(
-      'PokerGPT',
+      'PokerPro AI',
       `Version ${appVersion}\n\nYour AI-powered poker coach.\n\nAnalyze hands, calculate odds, and improve your game with expert guidance.`,
       [{ text: 'OK' }]
-    );
-  };
-
-  const handleSignOut = () => {
-    Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Sign Out',
-          style: 'destructive',
-          onPress: async () => {
-            await signOut();
-          },
-        },
-      ]
     );
   };
 
@@ -236,37 +215,6 @@ export default function SettingsScreen() {
     } finally {
       setIsRestoring(false);
     }
-  };
-
-  const handleDeleteAccount = () => {
-    Alert.alert(
-      'Delete Account',
-      'Are you sure you want to delete your account? This will permanently delete all your data including saved hands and chat history. This action cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete Account',
-          style: 'destructive',
-          onPress: async () => {
-            setIsDeleting(true);
-            try {
-              const { error } = await deleteAccount();
-              if (error) {
-                Alert.alert('Error', error.message || 'Failed to delete account. Please try again.');
-              } else {
-                Alert.alert('Account Deleted', 'Your account has been successfully deleted.', [
-                  { text: 'OK', onPress: () => router.replace('/auth/login') },
-                ]);
-              }
-            } catch (err) {
-              Alert.alert('Error', 'Something went wrong. Please try again.');
-            } finally {
-              setIsDeleting(false);
-            }
-          },
-        },
-      ]
-    );
   };
 
   return (
@@ -371,33 +319,7 @@ export default function SettingsScreen() {
             />
           </SettingsSection>
 
-          {isAuthenticated ? (
-            <>
-              <SettingsSection title="">
-                <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
-                  <LogOut size={20} color={colors.utility.error} />
-                  <Text style={styles.signOutText}>Sign Out</Text>
-                </TouchableOpacity>
-              </SettingsSection>
-
-              <SettingsSection title="">
-                <TouchableOpacity
-                  style={styles.deleteAccountButton}
-                  onPress={handleDeleteAccount}
-                  disabled={isDeleting}
-                >
-                  {isDeleting ? (
-                    <ActivityIndicator size="small" color={colors.utility.error} />
-                  ) : (
-                    <>
-                      <Trash2 size={20} color={colors.utility.error} />
-                      <Text style={styles.deleteAccountText}>Delete Account</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-              </SettingsSection>
-            </>
-          ) : (
+          {!isAuthenticated && (
             <SettingsSection title="">
               <TouchableOpacity style={styles.signInButton} onPress={() => router.push('/auth/login')}>
                 <LogIn size={20} color={colors.accent.gold} />
@@ -407,8 +329,7 @@ export default function SettingsScreen() {
           )}
 
           <View style={styles.versionContainer}>
-            <Text style={styles.versionText}>PokerGPT v{appVersion}</Text>
-            <Text style={styles.copyrightText}>Made with AI</Text>
+            <Text style={styles.versionText}>PokerPro AI v{appVersion}</Text>
           </View>
         </ScrollView>
       </LinearGradient>
@@ -475,31 +396,6 @@ const styles = StyleSheet.create({
     color: colors.text.muted,
     marginTop: 2,
   } as TextStyle,
-  signOutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    gap: 8,
-  } as ViewStyle,
-  signOutText: {
-    fontSize: 16,
-    fontWeight: '600' as const,
-    color: colors.utility.error,
-  } as TextStyle,
-  deleteAccountButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    gap: 8,
-    opacity: 0.7,
-  } as ViewStyle,
-  deleteAccountText: {
-    fontSize: 14,
-    fontWeight: '500' as const,
-    color: colors.utility.error,
-  } as TextStyle,
   signInButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -519,11 +415,5 @@ const styles = StyleSheet.create({
   versionText: {
     fontSize: 13,
     color: colors.text.muted,
-  } as TextStyle,
-  copyrightText: {
-    fontSize: 12,
-    color: colors.text.muted,
-    marginTop: 4,
-    opacity: 0.7,
   } as TextStyle,
 });

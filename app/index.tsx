@@ -616,7 +616,7 @@ Only return the JSON array, nothing else.`;
               style={styles.headerLogo}
               resizeMode="contain"
             />
-            <Text style={styles.headerTitle}>PokerGPT</Text>
+            <Text style={styles.headerTitle}>PokerPro AI</Text>
             <TouchableOpacity onPress={() => router.push('/settings')}>
               <Settings size={22} color={colors.text.muted} />
             </TouchableOpacity>

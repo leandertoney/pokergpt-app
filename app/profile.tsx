@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, ScrollView, StyleSheet, Text, TouchableOpacity, Alert, type ViewStyle, type TextStyle } from 'react-native';
+import { View, ScrollView, StyleSheet, Text, TouchableOpacity, Alert, ActivityIndicator, type ViewStyle, type TextStyle } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -11,6 +11,7 @@ import {
   LogOut,
   Camera,
   ChevronRight,
+  Trash2,
 } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { resetOnboarding } from '@/components/Onboarding';
@@ -60,8 +61,9 @@ function ProfileSection({ title, children }: { title?: string; children: React.R
 export default function ProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { user: authUser, signOut } = useAuth();
+  const { user: authUser, signOut, deleteAccount } = useAuth();
   const [isResetting, setIsResetting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Get user data from auth context
   const user = {
@@ -116,6 +118,37 @@ export default function ProfileScreen() {
       ]
     );
   }, [signOut]);
+
+  const handleDeleteAccount = useCallback(() => {
+    Alert.alert(
+      'Delete Account',
+      'Are you sure you want to delete your account? This will permanently delete all your data including saved hands and chat history. This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete Account',
+          style: 'destructive',
+          onPress: async () => {
+            setIsDeleting(true);
+            try {
+              const { error } = await deleteAccount();
+              if (error) {
+                Alert.alert('Error', error.message || 'Failed to delete account. Please try again.');
+              } else {
+                Alert.alert('Account Deleted', 'Your account has been successfully deleted.', [
+                  { text: 'OK', onPress: () => router.replace('/auth/login') },
+                ]);
+              }
+            } catch (err) {
+              Alert.alert('Error', 'Something went wrong. Please try again.');
+            } finally {
+              setIsDeleting(false);
+            }
+          },
+        },
+      ]
+    );
+  }, [deleteAccount, router]);
 
   const handleEditAvatar = useCallback(() => {
     // TODO: Implement avatar editing (camera/gallery picker)
@@ -196,12 +229,18 @@ export default function ProfileScreen() {
             />
           </ProfileSection>
 
-          {/* Sign Out */}
-          <ProfileSection>
+          {/* Account Actions */}
+          <ProfileSection title="Account Actions">
             <ProfileItem
-              icon={<LogOut size={20} color={colors.utility.error} />}
+              icon={<LogOut size={20} color={colors.text.primary} />}
               title="Sign Out"
               onPress={handleSignOut}
+              showChevron
+            />
+            <ProfileItem
+              icon={isDeleting ? <ActivityIndicator size="small" color={colors.utility.error} /> : <Trash2 size={20} color={colors.utility.error} />}
+              title={isDeleting ? "Deleting..." : "Delete Account"}
+              onPress={isDeleting ? undefined : handleDeleteAccount}
               danger
             />
           </ProfileSection>
@@ -296,7 +335,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
   } as ViewStyle,
   profileItemIconDanger: {
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
   } as ViewStyle,
   profileItemContent: {
     flex: 1,

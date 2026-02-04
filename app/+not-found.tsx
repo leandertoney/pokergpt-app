@@ -17,7 +17,7 @@ export default function NotFoundScreen() {
 
         <Link href="/" asChild>
           <View style={styles.linkContainer}>
-            <Text style={styles.linkText}>Go to PokerGPT</Text>
+            <Text style={styles.linkText}>Go to PokerPro AI</Text>
           </View>
         </Link>
       </View>

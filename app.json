@@ -3,7 +3,7 @@
     "name": "PokerGPT",
     "slug": "pokergpt",
     "owner": "leandertoney",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/pokergpt_logo.png",
     "scheme": "pokergpt",
@@ -17,13 +17,13 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.pokergpt.app",
-      "buildNumber": "13",
+      "buildNumber": "15",
       "icon": "./assets/images/pokergpt_logo.png",
       "infoPlist": {
         "UIBackgroundModes": [
           "audio"
         ],
-        "NSMicrophoneUsageDescription": "PokerGPT uses the microphone for hands-free voice conversations with your AI poker coach. Speak naturally to discuss hands and get instant strategy advice.",
+        "NSMicrophoneUsageDescription": "PokerPro AI uses the microphone for hands-free voice conversations with your AI poker coach. Speak naturally to discuss hands and get instant strategy advice.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
@@ -51,7 +51,7 @@
       [
         "expo-av",
         {
-          "microphonePermission": "PokerGPT uses the microphone for hands-free voice conversations with your AI poker coach."
+          "microphonePermission": "PokerPro AI uses the microphone for hands-free voice conversations with your AI poker coach."
         }
       ],
       "expo-asset",

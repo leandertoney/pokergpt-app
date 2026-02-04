@@ -86,7 +86,7 @@ function RootLayoutNav() {
         name="index"
         options={{
           headerShown: false,
-          title: "PokerGPT",
+          title: "PokerPro AI",
         }}
       />
       <Stack.Screen

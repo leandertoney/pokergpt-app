@@ -325,7 +325,7 @@ export function GoalSettingScreen({ playStyle, goal, userName, onComplete }: Goa
         <View style={styles.commitmentItem}>
           <View style={styles.bulletPoint} />
           <Text style={styles.commitmentText}>
-            Using PokerGPT to <Text style={styles.highlightText}>level up my game</Text>
+            Using PokerPro AI to <Text style={styles.highlightText}>level up my game</Text>
           </Text>
         </View>
 
