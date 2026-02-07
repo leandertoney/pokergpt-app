@@ -1,0 +1,73 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-surface-black text-text-ivory font-sans antialiased;
+  }
+
+  ::selection {
+    @apply bg-accent-red/30;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-accent-red text-white font-semibold px-6 py-3 rounded-xl
+           hover:bg-accent-redLight transition-all duration-200
+           shadow-glow-red hover:shadow-glow-red-lg;
+  }
+
+  .btn-secondary {
+    @apply bg-accent-gold text-text-dark font-semibold px-6 py-3 rounded-xl
+           hover:bg-accent-goldDark transition-all duration-200;
+  }
+
+  .section-container {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  .card {
+    @apply bg-surface-darkGray/80 border border-white/10 rounded-2xl p-6 backdrop-blur-sm;
+  }
+
+  .glow-orb {
+    @apply absolute rounded-full blur-3xl pointer-events-none;
+  }
+
+  /* Section variants for visual rhythm */
+  .section-dark {
+    @apply bg-surface-black;
+  }
+
+  .section-elevated {
+    @apply bg-surface-darkGray/50;
+  }
+
+  .section-accent {
+    @apply bg-gradient-to-b from-brand-shadow/40 via-brand-primary/20 to-brand-shadow/40;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0A0A0A;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #3A0000;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #6A0B0B;
+}
