@@ -19,6 +19,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Target, Pen, Check } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { colors } from '@/constants/colors';
+import type { PainPoint } from '@/types/poker';
 
 const HERO_IMAGE_URL = 'https://bollujxjsgahswigmyvq.supabase.co/storage/v1/object/public/assets/onboarding/goal_setting.png?v=2';
 
@@ -26,6 +27,7 @@ type GoalSettingScreenProps = {
   playStyle: string;
   goal: string;
   userName: string | null;
+  painPoint: PainPoint | null;
   onComplete: (timestamp: number) => void;
 };
 
@@ -43,6 +45,13 @@ const GOAL_COMMITMENTS: Record<string, string> = {
   win: 'compete at the highest level',
   learn: 'become a true student of the game',
   confidence: 'trust my reads and decisions',
+};
+
+const PAIN_POINT_COMMITMENTS: Record<PainPoint, string> = {
+  tilt: 'keeping my head when the deck hits me',
+  leaks: 'plugging the leaks that are costing me',
+  overwhelmed: 'cutting through the noise',
+  consistency: 'building a process that prints',
 };
 
 // Poker chip particle for celebration
@@ -65,9 +74,10 @@ const CHIP_VARIANTS = [
   { color: '#7B1FA2', stripeColor: '#FFFFFF' },
 ];
 
-export function GoalSettingScreen({ playStyle, goal, userName, onComplete }: GoalSettingScreenProps) {
+export function GoalSettingScreen({ playStyle, goal, userName, painPoint, onComplete }: GoalSettingScreenProps) {
   const profile = PROFILES[playStyle] || PROFILES.shark;
   const goalCommitment = GOAL_COMMITMENTS[goal] || GOAL_COMMITMENTS.profit;
+  const painPointCommitment = painPoint ? PAIN_POINT_COMMITMENTS[painPoint] : null;
 
   const [initials, setInitials] = useState('');
   const [showCelebration, setShowCelebration] = useState(false);
@@ -321,6 +331,15 @@ export function GoalSettingScreen({ playStyle, goal, userName, onComplete }: Goa
             My mission: <Text style={styles.highlightText}>{goalCommitment}</Text>
           </Text>
         </View>
+
+        {painPointCommitment && (
+          <View style={styles.commitmentItem}>
+            <View style={styles.bulletPoint} />
+            <Text style={styles.commitmentText}>
+              Working on <Text style={styles.highlightText}>{painPointCommitment}</Text>
+            </Text>
+          </View>
+        )}
 
         <View style={styles.commitmentItem}>
           <View style={styles.bulletPoint} />

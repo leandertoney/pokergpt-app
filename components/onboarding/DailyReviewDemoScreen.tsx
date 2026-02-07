@@ -296,11 +296,11 @@ export function DailyReviewDemoScreen({ onNext }: DailyReviewDemoScreenProps) {
             </View>
 
             {/* Headline - Now smaller and below the card */}
-            <Text style={styles.headline}>One hand. One minute.</Text>
+            <Text style={styles.headline}>Practice one hand a day</Text>
 
             <Text style={styles.description}>
-              Every day, a new spot to solve.{'\n'}
-              Build your streak. Sharpen your game.
+              A new poker spot every day.{'\n'}
+              Pick your play, get instant feedback on why.
             </Text>
 
             {/* Try Now Button */}

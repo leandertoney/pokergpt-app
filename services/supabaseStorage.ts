@@ -154,6 +154,7 @@ export async function getUserIdentity(): Promise<UserIdentity | null> {
       experienceLevel: user.experience_level as UserIdentity["experienceLevel"],
       primaryGoal: user.primary_goal as UserIdentity["primaryGoal"],
       biggestChallenge: user.biggest_challenge as UserIdentity["biggestChallenge"],
+      painPoint: ((user as unknown) as { pain_point?: string }).pain_point as UserIdentity["painPoint"] ?? null,
     };
   } catch {
     return null;

@@ -109,7 +109,7 @@ export function WhatYouGetScreen({ onComplete }: WhatYouGetScreenProps) {
             ],
           }}
         >
-          <Text style={styles.title}>Ready to{'\n'}start winning?</Text>
+          <Text style={styles.title}>You're all set</Text>
         </Animated.View>
 
         {/* Subtitle */}
@@ -121,7 +121,7 @@ export function WhatYouGetScreen({ onComplete }: WhatYouGetScreenProps) {
             },
           ]}
         >
-          Your AI poker coach is ready.{'\n'}Let's make every hand count.
+          Everything's set up. Jump in and start playing smarter.
         </Animated.Text>
 
         {/* Start Button */}

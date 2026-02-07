@@ -122,9 +122,16 @@ export type BiggestChallenge =
   | 'spots'        // Difficult decisions
   | 'discipline';  // Bankroll/game selection
 
+export type PainPoint =
+  | 'tilt'         // "I spew when I'm tilted"
+  | 'leaks'        // "I'm bleeding chips somewhere"
+  | 'overwhelmed'  // "GTO makes my brain melt"
+  | 'consistency'; // "I run hot then run like death"
+
 export type UserIdentity = {
   archetype: PlayerArchetype | null;
   experienceLevel: ExperienceLevel | null;
   primaryGoal: PrimaryGoal | null;
   biggestChallenge: BiggestChallenge | null;
+  painPoint: PainPoint | null;
 };

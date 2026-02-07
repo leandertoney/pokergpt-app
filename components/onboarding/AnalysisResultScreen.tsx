@@ -121,7 +121,7 @@ export function AnalysisResultScreen({ onNext }: AnalysisResultScreenProps) {
             },
           ]}
         >
-          Instant Analysis
+          Get a clear answer
         </Animated.Text>
 
         <Animated.Text
@@ -132,7 +132,7 @@ export function AnalysisResultScreen({ onNext }: AnalysisResultScreenProps) {
             },
           ]}
         >
-          AI-powered recommendations in seconds
+          Call, fold, or raise - with equity, pot odds, and the reasoning to back it up.
         </Animated.Text>
 
         {/* Result Card */}

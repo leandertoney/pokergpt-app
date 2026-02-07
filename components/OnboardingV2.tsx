@@ -11,12 +11,12 @@ import * as Haptics from 'expo-haptics';
 
 // Onboarding screens
 import { IntroScreen } from './onboarding/IntroScreen';
+import { PainPointScreen } from './onboarding/PainPointScreen';
+import { ValidationScreen } from './onboarding/ValidationScreen';
+import { HookScreen } from './onboarding/HookScreen';
 import { HeroScreen } from './onboarding/HeroScreen';
-import { ProfitDemoScreen } from './onboarding/ProfitDemoScreen';
 import { LiveDemoScreen } from './onboarding/LiveDemoScreen';
 import { SessionDemoScreen } from './onboarding/SessionDemoScreen';
-import { LearningProgressScreen } from './onboarding/LearningProgressScreen';
-import { ComparisonScreen } from './onboarding/ComparisonScreen';
 import { QuickIdentityScreen } from './onboarding/QuickIdentityScreen';
 import { NameInputScreen } from './onboarding/NameInputScreen';
 import { WhatYouGetScreen } from './onboarding/WhatYouGetScreen';
@@ -32,23 +32,23 @@ import { updateUserIdentity as syncUserIdentityToSupabase, getOrCreateUser } fro
 import { checkSubscriptionStatus } from '@/services/revenueCat';
 import { withTimeout } from '@/utils/withTimeout';
 import { colors } from '@/constants/colors';
-import type { UserIdentity, ExperienceLevel } from '@/types/poker';
+import type { UserIdentity, ExperienceLevel, PainPoint } from '@/types/poker';
 
 const ONBOARDING_COMPLETE_KEY = '@onboarding_complete';
 
 // All possible steps in the onboarding flow
 type OnboardingStep =
   | 'splash'
+  | 'hook'
   | 'hero'
+  | 'painPoint'
+  | 'validation'
   | 'chatDemo'
-  | 'profitDemo'
   | 'liveDemo'
   | 'analysisResult'
   | 'sessionDemo'
   | 'dailyReviewDemo'
   | 'skillLevel'
-  | 'learningProgress'
-  | 'comparison'
   | 'identity'
   | 'name'
   | 'goalSetting'
@@ -61,27 +61,28 @@ type OnboardingV2Props = {
 
 // Define the order of swipeable steps
 const SWIPE_FLOW: OnboardingStep[] = [
-  'hero',
+  'hook',            // Win MORE. Tilt LESS.
+  'hero',            // Pain points
+  'painPoint',       // Which one hits closest
+  'validation',      // Validate their pain
   'chatDemo',        // Chat conversation demo
   'liveDemo',        // Real-time analysis
   'sessionDemo',     // Session tracking
   'dailyReviewDemo', // 60-second review
-  'profitDemo',      // Bankroll tracking (moved later)
-  'learningProgress',
-  'comparison',
 ];
 
-// All steps in order for progress calculation (excluding splash and hero)
+// All steps in order for progress calculation (excluding splash)
 const ALL_STEPS: OnboardingStep[] = [
+  'hook',
+  'hero',
+  'painPoint',
+  'validation',
   'chatDemo',
   'liveDemo',
   'analysisResult',
   'sessionDemo',
   'dailyReviewDemo',
   'skillLevel',
-  'learningProgress',
-  'profitDemo',
-  'comparison',
   'identity',
   'name',
   'goalSetting',
@@ -92,6 +93,7 @@ const ALL_STEPS: OnboardingStep[] = [
 export function OnboardingV2({ onComplete }: OnboardingV2Props) {
   const [step, setStep] = useState<OnboardingStep>('splash');
   const [stepHistory, setStepHistory] = useState<OnboardingStep[]>(['splash']);
+  const [painPoint, setPainPoint] = useState<PainPoint | null>(null);
   const [playStyle, setPlayStyle] = useState<string>('shark');
   const [goal, setGoal] = useState<string>('profit');
   const [userName, setUserName] = useState<string | null>(null);
@@ -132,6 +134,15 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
     });
   }, [fadeAnim, slideAnim]);
 
+  const handlePainPointComplete = (selectedPainPoint: PainPoint) => {
+    setPainPoint(selectedPainPoint);
+    transitionTo('validation');
+  };
+
+  const handleValidationComplete = () => {
+    transitionTo('chatDemo');
+  };
+
   const handleIdentityComplete = (selectedPlayStyle: string, selectedGoal: string) => {
     setPlayStyle(selectedPlayStyle);
     setGoal(selectedGoal);
@@ -145,7 +156,7 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
 
   const handleSkillLevelComplete = (level: ExperienceLevel) => {
     setExperienceLevel(level);
-    transitionTo('learningProgress');
+    transitionTo('identity');
   };
 
   const handleGoalConfirmed = async (timestamp: number) => {
@@ -206,6 +217,7 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
         experienceLevel: experienceLevel,
         primaryGoal: goalMap[goal] as UserIdentity['primaryGoal'],
         biggestChallenge: null,
+        painPoint: painPoint,
       };
 
       // Save to local storage
@@ -236,16 +248,28 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
     switch (step) {
       // PHASE 1: HOOK
       case 'splash':
-        return <IntroScreen onNext={() => transitionTo('hero')} />;
+        return <IntroScreen onNext={() => transitionTo('hook')} />;
+
+      case 'hook':
+        return <HookScreen onNext={() => transitionTo('hero')} />;
 
       case 'hero':
-        return <HeroScreen onNext={() => transitionTo('chatDemo')} />;
+        return <HeroScreen onNext={() => transitionTo('painPoint')} />;
+
+      // PHASE 2: GET PERSONAL
+      case 'painPoint':
+        return <PainPointScreen onComplete={handlePainPointComplete} />;
+
+      case 'validation':
+        return (
+          <ValidationScreen
+            painPoint={painPoint!}
+            onNext={handleValidationComplete}
+          />
+        );
 
       case 'chatDemo':
         return <ChatDemoScreen onNext={() => transitionTo('liveDemo')} />;
-
-      case 'profitDemo':
-        return <ProfitDemoScreen onNext={() => transitionTo('comparison')} />;
 
       case 'liveDemo':
         return <LiveDemoScreen onNext={() => transitionTo('analysisResult')} />;
@@ -262,12 +286,6 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
       case 'skillLevel':
         return <SkillLevelScreen onComplete={handleSkillLevelComplete} />;
 
-      case 'learningProgress':
-        return <LearningProgressScreen onNext={() => transitionTo('profitDemo')} />;
-
-      case 'comparison':
-        return <ComparisonScreen onNext={() => transitionTo('identity')} />;
-
       // PHASE 3: IDENTITY (Quick tap cards, no dots)
       case 'identity':
         return <QuickIdentityScreen onComplete={handleIdentityComplete} />;
@@ -281,6 +299,7 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
             playStyle={playStyle}
             goal={goal}
             userName={userName}
+            painPoint={painPoint}
             onComplete={handleGoalConfirmed}
           />
         );
@@ -308,16 +327,16 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
   // Hide progress bar on screens with hero images
   const screensWithImages: OnboardingStep[] = [
     'splash',
+    'hook',
     'hero',
+    'painPoint',
+    'validation',
     'chatDemo',
     'liveDemo',
     'analysisResult',
     'sessionDemo',
     'dailyReviewDemo',
     'skillLevel',
-    'profitDemo',
-    'learningProgress',
-    'comparison',
     'identity',
     'name',
     'goalSetting',

@@ -367,6 +367,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
     experienceLevel: null,
     primaryGoal: null,
     biggestChallenge: null,
+    painPoint: null,
   });
   const [selectedPlan, setSelectedPlan] = useState<'weekly' | 'yearly' | 'lifetime'>('lifetime');
 

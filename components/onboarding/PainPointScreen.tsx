@@ -14,67 +14,51 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Check } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { colors } from '@/constants/colors';
+import type { PainPoint } from '@/types/poker';
 
+// Placeholder - replace with real Supabase URL later
 const HERO_IMAGE_URL = 'https://bollujxjsgahswigmyvq.supabase.co/storage/v1/object/public/assets/onboarding/identity_screen.png?v=2';
 
-type QuickIdentityScreenProps = {
-  onComplete: (playStyle: string, goal: string) => void;
+type PainPointScreenProps = {
+  onComplete: (painPoint: PainPoint) => void;
 };
 
-type Option = {
+type PainPointOption = {
   label: string;
-  value: string;
+  value: PainPoint;
   description: string;
 };
 
-type Question = {
-  title: string;
-  subtitle: string;
-  options: Option[];
-};
-
-const QUESTIONS: Question[] = [
+const PAIN_POINT_OPTIONS: PainPointOption[] = [
   {
-    title: 'How do you like to play?',
-    subtitle: 'Select your style',
-    options: [
-      { label: 'Exploitative', value: 'shark', description: 'Read opponents and find edges' },
-      { label: 'Game Theory', value: 'analyst', description: 'Math-based decisions' },
-      { label: 'High Volume', value: 'grinder', description: 'Discipline and consistency' },
-      { label: 'Learning Focus', value: 'student', description: 'Improving every session' },
-    ],
+    label: 'Tilt and emotional control',
+    value: 'tilt',
+    description: 'I make bad decisions when frustrated',
   },
   {
-    title: "What's your main goal?",
-    subtitle: 'Select your priority',
-    options: [
-      { label: 'Build Bankroll', value: 'profit', description: 'Grow my poker income' },
-      { label: 'Beat Opponents', value: 'win', description: 'Compete at a higher level' },
-      { label: 'Master Strategy', value: 'learn', description: 'Deepen my understanding' },
-      { label: 'Play Confidently', value: 'confidence', description: 'Trust my decisions' },
-    ],
+    label: 'Finding my leaks',
+    value: 'leaks',
+    description: "I'm losing but can't pinpoint why",
+  },
+  {
+    label: 'Information overload',
+    value: 'overwhelmed',
+    description: 'Strategy feels too complex',
+  },
+  {
+    label: 'Inconsistent results',
+    value: 'consistency',
+    description: 'I swing between winning and losing streaks',
   },
 ];
 
-export function QuickIdentityScreen({ onComplete }: QuickIdentityScreenProps) {
-  const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [playStyle, setPlayStyle] = useState<string | null>(null);
-  const [selectedOption, setSelectedOption] = useState<string | null>(null);
+export function PainPointScreen({ onComplete }: PainPointScreenProps) {
+  const [selectedOption, setSelectedOption] = useState<PainPoint | null>(null);
 
-  const fadeAnim = useRef(new Animated.Value(1)).current;
   const headlineAnim = useRef(new Animated.Value(0)).current;
-  const itemAnims = useRef(QUESTIONS[0].options.map(() => new Animated.Value(0))).current;
+  const itemAnims = useRef(PAIN_POINT_OPTIONS.map(() => new Animated.Value(0))).current;
 
   useEffect(() => {
-    animateIn();
-  }, [currentQuestion]);
-
-  const animateIn = () => {
-    // Reset animations
-    headlineAnim.setValue(0);
-    itemAnims.forEach(anim => anim.setValue(0));
-    fadeAnim.setValue(1);
-
     // Headline entrance
     Animated.spring(headlineAnim, {
       toValue: 1,
@@ -94,36 +78,18 @@ export function QuickIdentityScreen({ onComplete }: QuickIdentityScreenProps) {
         }).start();
       }, 150 + index * 70);
     });
-  };
+  }, []);
 
-  const handleSelect = (value: string) => {
+  const handleSelect = (value: PainPoint) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setSelectedOption(value);
 
-    // Brief delay to show selection
+    // Brief delay to show selection, then complete
     setTimeout(() => {
-      if (currentQuestion === 0) {
-        // First question - save and move to next
-        setPlayStyle(value);
-
-        // Fade out
-        Animated.timing(fadeAnim, {
-          toValue: 0,
-          duration: 200,
-          useNativeDriver: true,
-        }).start(() => {
-          setCurrentQuestion(1);
-          setSelectedOption(null);
-        });
-      } else {
-        // Second question - complete
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        onComplete(playStyle!, value);
-      }
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      onComplete(value);
     }, 350);
   };
-
-  const question = QUESTIONS[currentQuestion];
 
   return (
     <View style={styles.container}>
@@ -140,7 +106,7 @@ export function QuickIdentityScreen({ onComplete }: QuickIdentityScreenProps) {
         />
       </View>
 
-      <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
+      <View style={styles.content}>
         {/* Headline */}
         <Animated.View
           style={[
@@ -158,13 +124,13 @@ export function QuickIdentityScreen({ onComplete }: QuickIdentityScreenProps) {
             },
           ]}
         >
-          <Text style={styles.headline}>{question.title}</Text>
-          <Text style={styles.subheadline}>{question.subtitle}</Text>
+          <Text style={styles.headline}>Which one hits closest to home?</Text>
+          <Text style={styles.subheadline}>Pick the one you feel most</Text>
         </Animated.View>
 
         {/* Individual Option Cards */}
         <View style={styles.optionsContainer}>
-          {question.options.map((option, index) => {
+          {PAIN_POINT_OPTIONS.map((option, index) => {
             const isSelected = selectedOption === option.value;
             return (
               <Animated.View
@@ -208,7 +174,7 @@ export function QuickIdentityScreen({ onComplete }: QuickIdentityScreenProps) {
             );
           })}
         </View>
-      </Animated.View>
+      </View>
     </View>
   );
 }
@@ -238,9 +204,9 @@ const styles = StyleSheet.create({
   } as ViewStyle,
   content: {
     flex: 1,
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
     paddingHorizontal: 24,
-    paddingBottom: 50,
+    paddingTop: 40,
   } as ViewStyle,
   headlineContainer: {
     marginBottom: 28,
@@ -305,4 +271,4 @@ const styles = StyleSheet.create({
   } as ViewStyle,
 });
 
-export default QuickIdentityScreen;
+export default PainPointScreen;

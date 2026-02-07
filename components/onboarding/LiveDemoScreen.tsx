@@ -177,7 +177,7 @@ export function LiveDemoScreen({ onNext }: LiveDemoScreenProps) {
             },
           ]}
         >
-          Just speak your hand
+          Talk through your hand
         </Animated.Text>
 
         <Animated.Text
@@ -188,7 +188,7 @@ export function LiveDemoScreen({ onNext }: LiveDemoScreenProps) {
             },
           ]}
         >
-          Natural voice input for quick analysis
+          Just talk. AI-powered voice recognition picks up your cards, the action, and the board.
         </Animated.Text>
 
         {/* Voice Orb - Now at top to show this is voice-first */}

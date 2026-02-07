@@ -207,8 +207,8 @@ export function SessionDemoScreen({ onNext }: SessionDemoScreenProps) {
             ],
           }}
         >
-          <Text style={styles.headline}>Your poker journey</Text>
-          <Text style={styles.subheadline}>Track everything, improve always.</Text>
+          <Text style={styles.headline}>See where you stand</Text>
+          <Text style={styles.subheadline}>Log your sessions and track profit over time. AI-powered insights surface patterns you'd miss on your own.</Text>
         </Animated.View>
 
       {/* Stats Card */}

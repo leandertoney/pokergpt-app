@@ -275,7 +275,7 @@ export function ChatDemoScreen({ onNext }: ChatDemoScreenProps) {
               },
             ]}
           >
-            Your pocket coach
+            Ask anything about poker
           </Animated.Text>
 
           <Animated.Text
@@ -286,7 +286,7 @@ export function ChatDemoScreen({ onNext }: ChatDemoScreenProps) {
               },
             ]}
           >
-            Ask any question, get expert analysis
+            Type any hand or question. Get real, specific answers - not generic poker tips.
           </Animated.Text>
 
           {/* Chat Messages - no container border */}
