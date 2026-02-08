@@ -46,6 +46,7 @@ export function PaywallScreen({ goal, userName, onPurchase, onSkip }: PaywallScr
     weekly: '$9.99/wk',
     yearlyPerWeek: '$0.94/wk',
     yearlyTotal: '$49/yr',
+    yearlyPerMonth: '$4.08/mo',
   });
 
   const headerAnim = useRef(new Animated.Value(0)).current;
@@ -63,12 +64,14 @@ export function PaywallScreen({ goal, userName, onPurchase, onSkip }: PaywallScr
           const yearlyPrice = offerings.annual?.product.priceString;
           const yearlyRaw = offerings.annual?.product.price ?? 49;
           const perWeek = (yearlyRaw / 52).toFixed(2);
+          const perMonth = (yearlyRaw / 12).toFixed(2);
           const currencySymbol = yearlyPrice?.match(/^[^0-9]*/)?.[0] || '$';
 
           setPrices({
             weekly: weeklyPrice ? `${weeklyPrice}/wk` : '$9.99/wk',
             yearlyPerWeek: `${currencySymbol}${perWeek}/wk`,
             yearlyTotal: yearlyPrice ? `${yearlyPrice}/yr` : '$49/yr',
+            yearlyPerMonth: `${currencySymbol}${perMonth}/mo`,
           });
         }
       } catch (error) {
@@ -402,7 +405,7 @@ export function PaywallScreen({ goal, userName, onPurchase, onSkip }: PaywallScr
           {/* Below button - pricing info */}
           <Text style={styles.belowButtonText}>
             {selectedPlan === 'yearly'
-              ? `3 days free, then ${prices.yearlyTotal.replace('/yr', '')} per year ($4.08/mo)`
+              ? `3 days free, then ${prices.yearlyTotal.replace('/yr', '')} per year (${prices.yearlyPerMonth})`
               : prices.weekly.replace('/wk', ' per week')}
           </Text>
         </Animated.View>
