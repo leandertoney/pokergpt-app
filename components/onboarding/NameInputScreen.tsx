@@ -77,12 +77,6 @@ export function NameInputScreen({ onComplete }: NameInputScreenProps) {
     onComplete(trimmedName.length > 0 ? trimmedName : null);
   };
 
-  const handleSkip = () => {
-    Keyboard.dismiss();
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onComplete(null);
-  };
-
   const isValidName = name.trim().length > 0;
 
   return (
@@ -194,13 +188,6 @@ export function NameInputScreen({ onComplete }: NameInputScreenProps) {
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.skipButton}
-            onPress={handleSkip}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.skipButtonText}>Skip for now</Text>
-          </TouchableOpacity>
         </Animated.View>
       </Animated.View>
     </KeyboardAvoidingView>
@@ -213,7 +200,7 @@ const styles = StyleSheet.create({
   } as ViewStyle,
   heroContainer: {
     position: 'absolute',
-    top: -70,
+    top: -120,
     left: 0,
     right: 0,
     height: '65%',
@@ -291,15 +278,6 @@ const styles = StyleSheet.create({
   } as TextStyle,
   continueButtonTextDisabled: {
     color: 'rgba(0, 0, 0, 0.5)',
-  } as TextStyle,
-  skipButton: {
-    paddingVertical: 12,
-    alignItems: 'center',
-  } as ViewStyle,
-  skipButtonText: {
-    fontSize: 15,
-    color: 'rgba(255,255,255,0.5)',
-    fontWeight: '500',
   } as TextStyle,
 });
 

@@ -20,7 +20,6 @@ export type PricingPlan = {
 };
 
 export type GoalConfirmation = {
-  playStyle: string;
   goal: string;
   userName: string | null;
   timestamp: number;

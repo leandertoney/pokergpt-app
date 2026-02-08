@@ -135,3 +135,10 @@ export type UserIdentity = {
   biggestChallenge: BiggestChallenge | null;
   painPoint: PainPoint | null;
 };
+
+export type OnboardingProfile = {
+  frequency: string | null;
+  goalTimeline: string | null;
+  referralSource: string | null;
+  notificationsEnabled: boolean;
+};

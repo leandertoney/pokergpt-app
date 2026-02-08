@@ -232,7 +232,7 @@ const styles = StyleSheet.create({
   } as ViewStyle,
   heroContainer: {
     position: 'absolute',
-    top: -70,
+    top: -120,
     left: 0,
     right: 0,
     height: '65%',

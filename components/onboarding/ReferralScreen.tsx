@@ -11,71 +11,46 @@ import {
   type ImageStyle,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Check } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { colors } from '@/constants/colors';
 
 const HERO_IMAGE_URL = 'https://bollujxjsgahswigmyvq.supabase.co/storage/v1/object/public/assets/onboarding/identity_screen.png?v=2';
 
-type QuickIdentityScreenProps = {
-  onComplete: (playStyle: string, goal: string) => void;
+type ReferralScreenProps = {
+  onComplete: (source: string) => void;
 };
 
 type Option = {
   label: string;
   value: string;
-  description: string;
+  icon: string;
 };
 
-type Question = {
-  title: string;
-  subtitle: string;
-  options: Option[];
-};
+const ICON_BASE = 'https://bollujxjsgahswigmyvq.supabase.co/storage/v1/object/public/assets/onboarding/referral';
 
-const QUESTIONS: Question[] = [
-  {
-    title: 'How do you like to play?',
-    subtitle: 'Select your style',
-    options: [
-      { label: 'Exploitative', value: 'shark', description: 'Read opponents and find edges' },
-      { label: 'Game Theory', value: 'analyst', description: 'Math-based decisions' },
-      { label: 'High Volume', value: 'grinder', description: 'Discipline and consistency' },
-      { label: 'Learning Focus', value: 'student', description: 'Improving every session' },
-    ],
-  },
-  {
-    title: "What's your main goal?",
-    subtitle: 'Select your priority',
-    options: [
-      { label: 'Build Bankroll', value: 'profit', description: 'Grow my poker income' },
-      { label: 'Beat Opponents', value: 'win', description: 'Compete at a higher level' },
-      { label: 'Master Strategy', value: 'learn', description: 'Deepen my understanding' },
-      { label: 'Play Confidently', value: 'confidence', description: 'Trust my decisions' },
-    ],
-  },
+const OPTIONS: Option[] = [
+  { label: 'TikTok', value: 'tiktok', icon: `${ICON_BASE}/tiktok.png?v=2` },
+  { label: 'Instagram', value: 'instagram', icon: `${ICON_BASE}/instagram.png?v=2` },
+  { label: 'YouTube', value: 'youtube', icon: `${ICON_BASE}/youtube.png?v=2` },
+  { label: 'X', value: 'x', icon: `${ICON_BASE}/x.png?v=2` },
+  { label: 'App Store', value: 'app_store', icon: `${ICON_BASE}/appstore.png?v=2` },
+  { label: 'A Friend', value: 'friend', icon: `${ICON_BASE}/friend.png?v=2` },
 ];
 
-export function QuickIdentityScreen({ onComplete }: QuickIdentityScreenProps) {
-  const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [playStyle, setPlayStyle] = useState<string | null>(null);
+export function ReferralScreen({ onComplete }: ReferralScreenProps) {
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
 
-  const fadeAnim = useRef(new Animated.Value(1)).current;
   const headlineAnim = useRef(new Animated.Value(0)).current;
-  const itemAnims = useRef(QUESTIONS[0].options.map(() => new Animated.Value(0))).current;
+  const itemAnims = useRef(OPTIONS.map(() => new Animated.Value(0))).current;
 
   useEffect(() => {
     animateIn();
-  }, [currentQuestion]);
+  }, []);
 
   const animateIn = () => {
-    // Reset animations
     headlineAnim.setValue(0);
     itemAnims.forEach(anim => anim.setValue(0));
-    fadeAnim.setValue(1);
 
-    // Headline entrance
     Animated.spring(headlineAnim, {
       toValue: 1,
       tension: 50,
@@ -83,7 +58,6 @@ export function QuickIdentityScreen({ onComplete }: QuickIdentityScreenProps) {
       useNativeDriver: true,
     }).start();
 
-    // Staggered items
     itemAnims.forEach((anim, index) => {
       setTimeout(() => {
         Animated.spring(anim, {
@@ -100,30 +74,10 @@ export function QuickIdentityScreen({ onComplete }: QuickIdentityScreenProps) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setSelectedOption(value);
 
-    // Brief delay to show selection
     setTimeout(() => {
-      if (currentQuestion === 0) {
-        // First question - save and move to next
-        setPlayStyle(value);
-
-        // Fade out
-        Animated.timing(fadeAnim, {
-          toValue: 0,
-          duration: 200,
-          useNativeDriver: true,
-        }).start(() => {
-          setCurrentQuestion(1);
-          setSelectedOption(null);
-        });
-      } else {
-        // Second question - complete
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        onComplete(playStyle!, value);
-      }
+      onComplete(value);
     }, 350);
   };
-
-  const question = QUESTIONS[currentQuestion];
 
   return (
     <View style={styles.container}>
@@ -140,7 +94,7 @@ export function QuickIdentityScreen({ onComplete }: QuickIdentityScreenProps) {
         />
       </View>
 
-      <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
+      <View style={styles.content}>
         {/* Headline */}
         <Animated.View
           style={[
@@ -158,13 +112,13 @@ export function QuickIdentityScreen({ onComplete }: QuickIdentityScreenProps) {
             },
           ]}
         >
-          <Text style={styles.headline}>{question.title}</Text>
-          <Text style={styles.subheadline}>{question.subtitle}</Text>
+          <Text style={styles.headline}>How did you hear about us?</Text>
+          <Text style={styles.subheadline}>Just curious!</Text>
         </Animated.View>
 
-        {/* Individual Option Cards */}
+        {/* Option List */}
         <View style={styles.optionsContainer}>
-          {question.options.map((option, index) => {
+          {OPTIONS.map((option, index) => {
             const isSelected = selectedOption === option.value;
             return (
               <Animated.View
@@ -189,26 +143,25 @@ export function QuickIdentityScreen({ onComplete }: QuickIdentityScreenProps) {
                   onPress={() => handleSelect(option.value)}
                   activeOpacity={0.7}
                 >
-                  {/* Text Content */}
-                  <View style={styles.optionText}>
-                    <Text style={[styles.optionLabel, isSelected && styles.optionLabelSelected]}>
-                      {option.label}
-                    </Text>
-                    <Text style={styles.optionDescription}>{option.description}</Text>
-                  </View>
-
-                  {/* Check Circle - Right Side */}
-                  <View style={[styles.checkCircle, isSelected && styles.checkCircleSelected]}>
-                    {isSelected && (
-                      <Check size={16} color="#000" strokeWidth={3} />
-                    )}
-                  </View>
+                  <Image
+                    source={{ uri: option.icon }}
+                    style={styles.iconImage}
+                    resizeMode="contain"
+                  />
+                  <Text
+                    style={[
+                      styles.optionLabel,
+                      isSelected && styles.optionLabelSelected,
+                    ]}
+                  >
+                    {option.label}
+                  </Text>
                 </TouchableOpacity>
               </Animated.View>
             );
           })}
         </View>
-      </Animated.View>
+      </View>
     </View>
   );
 }
@@ -219,7 +172,7 @@ const styles = StyleSheet.create({
   } as ViewStyle,
   heroContainer: {
     position: 'absolute',
-    top: -70,
+    top: -120,
     left: 0,
     right: 0,
     height: '50%',
@@ -257,7 +210,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   } as TextStyle,
   optionsContainer: {
-    gap: 12,
+    gap: 10,
   } as ViewStyle,
   optionCard: {
     flexDirection: 'row',
@@ -266,16 +219,19 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1.5,
     borderColor: 'rgba(255,255,255,0.1)',
-    paddingVertical: 16,
-    paddingHorizontal: 18,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    gap: 14,
   } as ViewStyle,
   optionCardSelected: {
     backgroundColor: 'rgba(212, 168, 75, 0.12)',
     borderColor: colors.onboarding.gold,
   } as ViewStyle,
-  optionText: {
-    flex: 1,
-  } as ViewStyle,
+  iconImage: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+  } as ImageStyle,
   optionLabel: {
     fontSize: 16,
     fontWeight: '600',
@@ -284,25 +240,6 @@ const styles = StyleSheet.create({
   optionLabelSelected: {
     color: colors.onboarding.gold,
   } as TextStyle,
-  optionDescription: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.5)',
-    marginTop: 3,
-  } as TextStyle,
-  checkCircle: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.25)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 14,
-  } as ViewStyle,
-  checkCircleSelected: {
-    backgroundColor: colors.onboarding.gold,
-    borderColor: colors.onboarding.gold,
-  } as ViewStyle,
 });
 
-export default QuickIdentityScreen;
+export default ReferralScreen;

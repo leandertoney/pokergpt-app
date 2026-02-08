@@ -8,16 +8,18 @@ import {
   ActivityIndicator,
   Alert,
   Linking,
+  ScrollView,
   Image,
-  Dimensions,
   type ViewStyle,
   type TextStyle,
   type ImageStyle,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Check, Mic, Brain, Clock, MessageCircle, Sparkles } from 'lucide-react-native';
+import { Check } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { colors } from '@/constants/colors';
+
+const HERO_IMAGE_URL = 'https://bollujxjsgahswigmyvq.supabase.co/storage/v1/object/public/assets/onboarding/raking_chips.png?v=2';
 import {
   getOfferings,
   purchasePackage,
@@ -26,7 +28,6 @@ import {
 } from '@/services/revenueCat';
 
 type PaywallScreenProps = {
-  playStyle: string;
   goal: string;
   userName: string | null;
   onPurchase: (planId: 'weekly' | 'yearly') => void;
@@ -37,37 +38,18 @@ type PaywallScreenProps = {
 const TERMS_URL = 'https://universoleappstudios.com/pokergpt/terms';
 const PRIVACY_URL = 'https://universoleappstudios.com/pokergpt/privacy';
 
-// Feature categories with icons and accent colors
-type FeatureItem = {
-  icon: typeof Check;
-  text: string;
-  highlight?: boolean; // Gold highlight for premium features
-  profit?: boolean; // Green highlight for profit-related features
-};
-
-const FEATURES: FeatureItem[] = [
-  { icon: MessageCircle, text: 'Unlimited hand analysis', highlight: true },
-  { icon: Mic, text: 'Voice Mode: Hands-free coaching', highlight: true },
-  { icon: Clock, text: 'Save & review hand history' },
-  { icon: Brain, text: 'Hybrid solver logic (GTO + Exploit)' },
-  { icon: Sparkles, text: 'Faster AI processing' },
-];
-
-// Hero image URL
-const HERO_IMAGE_URL = 'https://bollujxjsgahswigmyvq.supabase.co/storage/v1/object/public/assets/onboarding/raking_chips.png?v=2';
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
-export function PaywallScreen({ playStyle, goal, userName, onPurchase, onSkip }: PaywallScreenProps) {
+export function PaywallScreen({ goal, userName, onPurchase, onSkip }: PaywallScreenProps) {
   const [selectedPlan, setSelectedPlan] = useState<'weekly' | 'yearly'>('yearly');
   const [isLoading, setIsLoading] = useState(false);
   const [isPurchasing, setIsPurchasing] = useState(false);
-  const [prices, setPrices] = useState<{ weekly: string; yearly: string }>({
+  const [prices, setPrices] = useState({
     weekly: '$9.99/wk',
-    yearly: '$49/yr',
+    yearlyPerWeek: '$0.94/wk',
+    yearlyTotal: '$49/yr',
   });
 
   const headerAnim = useRef(new Animated.Value(0)).current;
-  const cardAnim = useRef(new Animated.Value(0)).current;
+  const timelineAnim = useRef(new Animated.Value(0)).current;
   const pricingAnim = useRef(new Animated.Value(0)).current;
   const buttonAnim = useRef(new Animated.Value(0)).current;
 
@@ -79,15 +61,18 @@ export function PaywallScreen({ playStyle, goal, userName, onPurchase, onSkip }:
         if (offerings) {
           const weeklyPrice = offerings.weekly?.product.priceString;
           const yearlyPrice = offerings.annual?.product.priceString;
+          const yearlyRaw = offerings.annual?.product.price ?? 49;
+          const perWeek = (yearlyRaw / 52).toFixed(2);
+          const currencySymbol = yearlyPrice?.match(/^[^0-9]*/)?.[0] || '$';
 
           setPrices({
             weekly: weeklyPrice ? `${weeklyPrice}/wk` : '$9.99/wk',
-            yearly: yearlyPrice ? `${yearlyPrice}/yr` : '$49/yr',
+            yearlyPerWeek: `${currencySymbol}${perWeek}/wk`,
+            yearlyTotal: yearlyPrice ? `${yearlyPrice}/yr` : '$49/yr',
           });
         }
       } catch (error) {
         console.warn('Failed to fetch prices:', error);
-        // Keep default prices on error
       }
     };
 
@@ -103,15 +88,15 @@ export function PaywallScreen({ playStyle, goal, userName, onPurchase, onSkip }:
       useNativeDriver: true,
     }).start();
 
-    // Features card entrance
+    // Timeline entrance
     setTimeout(() => {
-      Animated.spring(cardAnim, {
+      Animated.spring(timelineAnim, {
         toValue: 1,
         tension: 60,
         friction: 8,
         useNativeDriver: true,
       }).start();
-    }, 150);
+    }, 200);
 
     // Pricing cards entrance
     setTimeout(() => {
@@ -121,7 +106,7 @@ export function PaywallScreen({ playStyle, goal, userName, onPurchase, onSkip }:
         friction: 8,
         useNativeDriver: true,
       }).start();
-    }, 300);
+    }, 400);
 
     // Button entrance
     setTimeout(() => {
@@ -131,7 +116,7 @@ export function PaywallScreen({ playStyle, goal, userName, onPurchase, onSkip }:
         friction: 8,
         useNativeDriver: true,
       }).start();
-    }, 450);
+    }, 600);
   }, []);
 
   const handlePlanSelect = (plan: 'weekly' | 'yearly') => {
@@ -152,7 +137,6 @@ export function PaywallScreen({ playStyle, goal, userName, onPurchase, onSkip }:
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         onPurchase(selectedPlan);
       } else if (result.error === 'cancelled') {
-        // User cancelled - do nothing
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       } else {
         Alert.alert('Purchase Failed', result.error || 'Please try again.');
@@ -203,39 +187,32 @@ export function PaywallScreen({ playStyle, goal, userName, onPurchase, onSkip }:
     }
   };
 
+  // Dynamic timeline Day 3 text based on selected plan
+  const billingText = selectedPlan === 'yearly'
+    ? `Billing starts. You'll be charged ${prices.yearlyTotal.replace('/yr', '')} per year`
+    : `Billing starts. You'll be charged ${prices.weekly.replace('/wk', '')} per week`;
+
   return (
     <View style={styles.container}>
-      {/* Hero Image - Absolute positioned to fill top */}
-      <Animated.View
-        style={[
-          styles.heroContainer,
-          {
-            opacity: headerAnim,
-            transform: [
-              {
-                scale: headerAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [1.1, 1],
-                }),
-              },
-            ],
-          },
-        ]}
-      >
+      {/* Hero Image */}
+      <View style={styles.heroContainer}>
         <Image
           source={{ uri: HERO_IMAGE_URL }}
           style={styles.heroImage}
           resizeMode="cover"
         />
         <LinearGradient
-          colors={['transparent', 'rgba(26, 26, 26, 0.6)', colors.background.primary]}
-          locations={[0, 0.5, 1]}
+          colors={['transparent', colors.background.primary]}
           style={styles.heroGradient}
         />
-      </Animated.View>
+      </View>
 
-      <View style={styles.content}>
-        {/* Header with Logo */}
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        bounces={false}
+      >
+        {/* Headline */}
         <Animated.View
           style={[
             styles.header,
@@ -252,19 +229,20 @@ export function PaywallScreen({ playStyle, goal, userName, onPurchase, onSkip }:
             },
           ]}
         >
-          <Text style={styles.headline}>Unlock PokerPro AI Premium</Text>
-          <Text style={styles.subtitle}>Master live poker with unlimited AI coaching.</Text>
+          <Text style={styles.headline}>
+            {selectedPlan === 'yearly' ? `Start your 3-day${'\n'}free trial` : `Choose your${'\n'}plan`}
+          </Text>
         </Animated.View>
 
-        {/* Features Card */}
+        {/* Trial Timeline */}
         <Animated.View
           style={[
-            styles.featuresCard,
+            styles.timelineCard,
             {
-              opacity: cardAnim,
+              opacity: timelineAnim,
               transform: [
                 {
-                  scale: cardAnim.interpolate({
+                  scale: timelineAnim.interpolate({
                     inputRange: [0, 1],
                     outputRange: [0.95, 1],
                   }),
@@ -273,33 +251,43 @@ export function PaywallScreen({ playStyle, goal, userName, onPurchase, onSkip }:
             },
           ]}
         >
-          <View style={styles.featuresContainer}>
-            {FEATURES.map((feature, index) => {
-              const IconComponent = feature.icon;
-              const iconColor = feature.profit
-                ? colors.onboarding.profit
-                : feature.highlight
-                ? colors.onboarding.gold
-                : 'rgba(255,255,255,0.7)';
-              return (
-                <View key={index} style={styles.featureRow}>
-                  <View style={[
-                    styles.featureIconContainer,
-                    feature.profit && styles.featureIconProfit,
-                    feature.highlight && styles.featureIconHighlight,
-                  ]}>
-                    <IconComponent size={18} color={iconColor} />
-                  </View>
-                  <Text style={[
-                    styles.featureText,
-                    feature.profit && styles.featureTextProfit,
-                    feature.highlight && styles.featureTextHighlight,
-                  ]}>
-                    {feature.text}
-                  </Text>
-                </View>
-              );
-            })}
+          {/* Day 1 - Today */}
+          <View style={styles.timelineRow}>
+            <View style={styles.timelineDotColumn}>
+              <View style={styles.timelineDot} />
+              <View style={styles.timelineLine} />
+            </View>
+            <View style={styles.timelineContent}>
+              <Text style={styles.timelineDayLabel}>Today</Text>
+              <Text style={styles.timelineDescription}>
+                Unlock all app features — AI coaching, voice mode, hand analysis
+              </Text>
+            </View>
+          </View>
+
+          {/* Day 2 */}
+          <View style={styles.timelineRow}>
+            <View style={styles.timelineDotColumn}>
+              <View style={styles.timelineDot} />
+              <View style={styles.timelineLine} />
+            </View>
+            <View style={styles.timelineContent}>
+              <Text style={styles.timelineDayLabel}>Day 2</Text>
+              <Text style={styles.timelineDescription}>
+                We'll remind you your trial is ending soon
+              </Text>
+            </View>
+          </View>
+
+          {/* Day 3 */}
+          <View style={styles.timelineRow}>
+            <View style={styles.timelineDotColumn}>
+              <View style={[styles.timelineDot, styles.timelineDotLast]} />
+            </View>
+            <View style={styles.timelineContent}>
+              <Text style={styles.timelineDayLabel}>Day 3</Text>
+              <Text style={styles.timelineDescription}>{billingText}</Text>
+            </View>
           </View>
         </Animated.View>
 
@@ -320,32 +308,6 @@ export function PaywallScreen({ playStyle, goal, userName, onPurchase, onSkip }:
             },
           ]}
         >
-          {/* Yearly Card */}
-          <TouchableOpacity
-            style={[
-              styles.pricingCard,
-              selectedPlan === 'yearly' && styles.pricingCardSelected,
-            ]}
-            onPress={() => handlePlanSelect('yearly')}
-            activeOpacity={0.8}
-          >
-            {/* Discount Badge */}
-            <View style={styles.discountBadge}>
-              <Text style={styles.discountText}>91% OFF</Text>
-            </View>
-
-            <Text style={styles.planName}>Yearly</Text>
-            <Text style={styles.planPrice}>{prices.yearly}</Text>
-            <Text style={styles.planBilling}>Just $4.08/mo{'\n'}after free trial</Text>
-
-            {/* Selection Indicator */}
-            {selectedPlan === 'yearly' && (
-              <View style={styles.selectedIndicator}>
-                <Check size={16} color="#fff" />
-              </View>
-            )}
-          </TouchableOpacity>
-
           {/* Weekly Card */}
           <TouchableOpacity
             style={[
@@ -355,17 +317,54 @@ export function PaywallScreen({ playStyle, goal, userName, onPurchase, onSkip }:
             onPress={() => handlePlanSelect('weekly')}
             activeOpacity={0.8}
           >
-            <Text style={[styles.planName, { marginTop: 24 }]}>Weekly</Text>
+            <Text style={[styles.planName, { marginTop: 20 }]}>Weekly</Text>
             <Text style={styles.planPrice}>{prices.weekly}</Text>
-            <Text style={styles.planBilling}>Billed weekly{'\n'}after free trial</Text>
 
-            {/* Selection Indicator */}
             {selectedPlan === 'weekly' && (
               <View style={styles.selectedIndicator}>
                 <Check size={16} color="#fff" />
               </View>
             )}
           </TouchableOpacity>
+
+          {/* Yearly Card */}
+          <TouchableOpacity
+            style={[
+              styles.pricingCard,
+              selectedPlan === 'yearly' && styles.pricingCardSelected,
+            ]}
+            onPress={() => handlePlanSelect('yearly')}
+            activeOpacity={0.8}
+          >
+            {/* 3 days free badge - sits on top border */}
+            {selectedPlan === 'yearly' && (
+              <View style={styles.trialBadge}>
+                <Text style={styles.trialBadgeText}>3 days free</Text>
+              </View>
+            )}
+
+            <Text style={[styles.planName, { marginTop: 20 }]}>Yearly</Text>
+            <Text style={styles.planPrice}>{prices.yearlyPerWeek}</Text>
+
+            {selectedPlan === 'yearly' && (
+              <View style={styles.selectedIndicator}>
+                <Check size={16} color="#fff" />
+              </View>
+            )}
+          </TouchableOpacity>
+        </Animated.View>
+
+        {/* No payment due now */}
+        <Animated.View
+          style={[
+            styles.reassuranceRow,
+            {
+              opacity: buttonAnim,
+            },
+          ]}
+        >
+          <Check size={18} color={colors.onboarding.gold} strokeWidth={3} />
+          <Text style={styles.reassuranceText}>No payment due now</Text>
         </Animated.View>
 
         {/* CTA Button */}
@@ -394,17 +393,18 @@ export function PaywallScreen({ playStyle, goal, userName, onPurchase, onSkip }:
             {isPurchasing ? (
               <ActivityIndicator color={colors.text.dark} />
             ) : (
-              <Text style={styles.ctaButtonText}>Start 3-Day Free Trial</Text>
+              <Text style={styles.ctaButtonText}>
+                {selectedPlan === 'yearly' ? 'Start my 3-day free trial' : 'Subscribe Weekly'}
+              </Text>
             )}
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.skipButton}
-            onPress={handleSkip}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.skipButtonText}>Continue with Free Plan</Text>
-          </TouchableOpacity>
+          {/* Below button - pricing info */}
+          <Text style={styles.belowButtonText}>
+            {selectedPlan === 'yearly'
+              ? `3 days free, then ${prices.yearlyTotal.replace('/yr', '')} per year ($4.08/mo)`
+              : prices.weekly.replace('/wk', ' per week')}
+          </Text>
         </Animated.View>
 
         {/* Footer Links */}
@@ -431,7 +431,13 @@ export function PaywallScreen({ playStyle, goal, userName, onPurchase, onSkip }:
           </TouchableOpacity>
         </Animated.View>
 
-      </View>
+        {/* DEV ONLY: Skip paywall */}
+        {__DEV__ && (
+          <TouchableOpacity onPress={handleSkip} style={styles.devSkip}>
+            <Text style={styles.devSkipText}>DEV SKIP</Text>
+          </TouchableOpacity>
+        )}
+      </ScrollView>
     </View>
   );
 }
@@ -440,113 +446,79 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   } as ViewStyle,
-  content: {
-    flex: 1,
+  scrollContent: {
+    flexGrow: 1,
     paddingHorizontal: 20,
-    alignItems: 'center',
+    paddingBottom: 30,
     justifyContent: 'flex-end',
-    paddingBottom: 20,
-  } as ViewStyle,
-  heroContainer: {
-    position: 'absolute',
-    top: -70,
-    left: 0,
-    right: 0,
-    height: '65%',
-    overflow: 'hidden',
-  } as ViewStyle,
-  heroImage: {
-    width: '100%',
-    height: '100%',
-  } as ImageStyle,
-  heroGradient: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: '70%',
-  } as ViewStyle,
-  closeButton: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    zIndex: 10,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
   } as ViewStyle,
   header: {
     width: '100%',
-    marginBottom: 16,
+    marginBottom: 24,
     alignItems: 'center',
   } as ViewStyle,
   headline: {
-    fontSize: 28,
-    fontWeight: '700',
+    fontSize: 32,
+    fontWeight: '800',
     color: '#fff',
-    marginBottom: 8,
     textAlign: 'center',
+    lineHeight: 40,
   } as TextStyle,
-  subtitle: {
-    fontSize: 16,
-    color: 'rgba(255,255,255,0.7)',
-    textAlign: 'center',
-  } as TextStyle,
-  featuresCard: {
-    width: '100%',
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+  // Timeline
+  timelineCard: {
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    marginBottom: 24,
+    backgroundColor: 'rgba(0,0,0,0.45)',
     borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
   } as ViewStyle,
-  featuresTitle: {
-    fontSize: 15,
+  timelineRow: {
+    flexDirection: 'row',
+    marginBottom: 4,
+  } as ViewStyle,
+  timelineDotColumn: {
+    width: 28,
+    alignItems: 'center',
+    paddingTop: 5,
+  } as ViewStyle,
+  timelineDot: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: colors.onboarding.gold,
+  } as ViewStyle,
+  timelineDotLast: {
+    backgroundColor: colors.onboarding.gold,
+  } as ViewStyle,
+  timelineLine: {
+    width: 2,
+    flex: 1,
+    backgroundColor: 'rgba(212, 168, 75, 0.3)',
+    marginVertical: 4,
+  } as ViewStyle,
+  timelineContent: {
+    flex: 1,
+    marginLeft: 16,
+    paddingBottom: 20,
+  } as ViewStyle,
+  timelineDayLabel: {
+    fontSize: 18,
     fontWeight: '700',
     color: '#fff',
-    textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: 4,
+    textShadowColor: 'rgba(0,0,0,0.8)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   } as TextStyle,
-  featuresContainer: {
-    gap: 12,
-  } as ViewStyle,
-  featureRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  } as ViewStyle,
-  featureIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  } as ViewStyle,
-  featureIconHighlight: {
-    backgroundColor: 'rgba(232, 184, 74, 0.15)',
-  } as ViewStyle,
-  featureIconProfit: {
-    backgroundColor: 'rgba(34, 197, 94, 0.15)',
-  } as ViewStyle,
-  featureText: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: 'rgba(255,255,255,0.8)',
-    flex: 1,
+  timelineDescription: {
+    fontSize: 16,
+    color: '#fff',
+    lineHeight: 23,
+    textShadowColor: 'rgba(0,0,0,0.8)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   } as TextStyle,
-  featureTextHighlight: {
-    color: colors.onboarding.gold,
-    fontWeight: '600',
-  } as TextStyle,
-  featureTextProfit: {
-    color: colors.onboarding.profit,
-    fontWeight: '600',
-  } as TextStyle,
+  // Pricing
   pricingContainer: {
     flexDirection: 'row',
     width: '100%',
@@ -561,21 +533,24 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     padding: 14,
     alignItems: 'center',
-    position: 'relative',
+    overflow: 'visible',
   } as ViewStyle,
   pricingCardSelected: {
     borderColor: colors.onboarding.gold,
     backgroundColor: 'rgba(232, 184, 74, 0.08)',
   } as ViewStyle,
-  discountBadge: {
+  trialBadge: {
+    position: 'absolute',
+    top: -12,
+    alignSelf: 'center',
     backgroundColor: colors.onboarding.gold,
     paddingHorizontal: 12,
-    paddingVertical: 5,
+    paddingVertical: 4,
     borderRadius: 8,
-    marginBottom: 10,
+    zIndex: 1,
   } as ViewStyle,
-  discountText: {
-    fontSize: 13,
+  trialBadgeText: {
+    fontSize: 12,
     fontWeight: '700',
     color: colors.text.dark,
   } as TextStyle,
@@ -591,12 +566,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     marginBottom: 6,
   } as TextStyle,
-  planBilling: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.5)',
-    textAlign: 'center',
-    lineHeight: 18,
-  } as TextStyle,
   selectedIndicator: {
     position: 'absolute',
     top: -8,
@@ -608,6 +577,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   } as ViewStyle,
+  // Reassurance
+  reassuranceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginBottom: 16,
+  } as ViewStyle,
+  reassuranceText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.7)',
+  } as TextStyle,
+  // CTA
   ctaContainer: {
     width: '100%',
     marginBottom: 8,
@@ -633,6 +616,12 @@ const styles = StyleSheet.create({
   ctaButtonDisabled: {
     opacity: 0.7,
   } as ViewStyle,
+  belowButtonText: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.4)',
+    textAlign: 'center',
+    marginTop: 10,
+  } as TextStyle,
   skipButton: {
     marginTop: 12,
     paddingVertical: 8,
@@ -659,6 +648,35 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: 'rgba(255,255,255,0.3)',
   } as TextStyle,
+  devSkip: {
+    marginTop: 12,
+    alignItems: 'center',
+    padding: 8,
+  } as ViewStyle,
+  devSkipText: {
+    fontSize: 12,
+    color: '#FF3B30',
+    fontWeight: '700',
+  } as TextStyle,
+  heroContainer: {
+    position: 'absolute',
+    top: -120,
+    left: 0,
+    right: 0,
+    height: '65%',
+    overflow: 'hidden',
+  } as ViewStyle,
+  heroImage: {
+    width: '100%',
+    height: '100%',
+  } as ImageStyle,
+  heroGradient: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '70%',
+  } as ViewStyle,
 });
 
 export default PaywallScreen;

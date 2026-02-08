@@ -124,7 +124,7 @@ export function PainPointScreen({ onComplete }: PainPointScreenProps) {
             },
           ]}
         >
-          <Text style={styles.headline}>Which one hits closest to home?</Text>
+          <Text style={styles.headline}>What's your biggest struggle at the table?</Text>
           <Text style={styles.subheadline}>Pick the one you feel most</Text>
         </Animated.View>
 
@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
   } as ViewStyle,
   heroContainer: {
     position: 'absolute',
-    top: -70,
+    top: -120,
     left: 0,
     right: 0,
     height: '50%',

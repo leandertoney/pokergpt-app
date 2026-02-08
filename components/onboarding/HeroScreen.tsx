@@ -51,62 +51,64 @@ type HeroScreenProps = {
 };
 
 export function HeroScreen({ onNext }: HeroScreenProps) {
-  const imageAnim = useRef(new Animated.Value(0)).current;
   const headlineAnim = useRef(new Animated.Value(0)).current;
   const commentAnims = useRef(COMMENTS.map(() => new Animated.Value(0))).current;
   const closerAnim = useRef(new Animated.Value(0)).current;
   const buttonAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Slow cinematic zoom on hero image
-    Animated.timing(imageAnim, {
-      toValue: 1,
-      duration: 8000,
-      useNativeDriver: true,
-    }).start();
+    // Reset all values to 0 (handles Fast Refresh / remount edge cases)
+    headlineAnim.setValue(0);
+    commentAnims.forEach(a => a.setValue(0));
+    closerAnim.setValue(0);
+    buttonAnim.setValue(0);
+
+    const timers: ReturnType<typeof setTimeout>[] = [];
 
     // Headline appears first
-    setTimeout(() => {
+    timers.push(setTimeout(() => {
       Animated.spring(headlineAnim, {
         toValue: 1,
         tension: 40,
         friction: 9,
         useNativeDriver: true,
       }).start();
-    }, 200);
+    }, 200));
 
     // Comments fly in from all directions
     COMMENTS.forEach((comment, index) => {
-      setTimeout(() => {
+      timers.push(setTimeout(() => {
         Animated.spring(commentAnims[index], {
           toValue: 1,
           tension: 65,
           friction: 7,
           useNativeDriver: true,
         }).start();
-      }, comment.delay);
+      }, comment.delay));
     });
 
     // Closer fades in after all comments
     const lastDelay = Math.max(...COMMENTS.map(c => c.delay));
-    setTimeout(() => {
+    timers.push(setTimeout(() => {
       Animated.spring(closerAnim, {
         toValue: 1,
         tension: 35,
         friction: 10,
         useNativeDriver: true,
       }).start();
-    }, lastDelay + 400);
+    }, lastDelay + 400));
 
     // Button slides up last
-    setTimeout(() => {
+    timers.push(setTimeout(() => {
       Animated.spring(buttonAnim, {
         toValue: 1,
         tension: 50,
         friction: 8,
         useNativeDriver: true,
       }).start();
-    }, lastDelay + 700);
+    }, lastDelay + 700));
+
+    return () => timers.forEach(clearTimeout);
   }, []);
 
   const handleContinue = () => {
@@ -116,22 +118,8 @@ export function HeroScreen({ onNext }: HeroScreenProps) {
 
   return (
     <View style={styles.container}>
-      {/* Background image with Ken Burns zoom */}
-      <Animated.View
-        style={[
-          styles.heroContainer,
-          {
-            transform: [
-              {
-                scale: imageAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [1, 1.08],
-                }),
-              },
-            ],
-          },
-        ]}
-      >
+      {/* Background image */}
+      <View style={styles.heroContainer}>
         <Image
           source={{ uri: HERO_IMAGE_URL }}
           style={styles.heroImage}
@@ -142,7 +130,7 @@ export function HeroScreen({ onNext }: HeroScreenProps) {
           locations={[0, 0.45, 0.75]}
           style={StyleSheet.absoluteFillObject}
         />
-      </Animated.View>
+      </View>
 
       {/* Flying comment cards */}
       {COMMENTS.map((comment, index) => (
@@ -250,7 +238,7 @@ export function HeroScreen({ onNext }: HeroScreenProps) {
           onPress={handleContinue}
           activeOpacity={0.85}
         >
-          <Text style={styles.continueButtonText}>That's me</Text>
+          <Text style={styles.continueButtonText}>Continue</Text>
         </TouchableOpacity>
       </Animated.View>
     </View>
@@ -262,7 +250,11 @@ const styles = StyleSheet.create({
     flex: 1,
   } as ViewStyle,
   heroContainer: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: -120,
+    left: 0,
+    right: 0,
+    bottom: 0,
     overflow: 'hidden',
   } as ViewStyle,
   heroImage: {
@@ -323,7 +315,7 @@ const styles = StyleSheet.create({
   } as TextStyle,
   closerContainer: {
     position: 'absolute',
-    top: SH * 0.78,
+    bottom: 120,
     left: 24,
     right: 24,
     alignItems: 'center',

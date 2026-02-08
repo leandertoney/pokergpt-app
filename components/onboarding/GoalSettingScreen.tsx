@@ -24,7 +24,6 @@ import type { PainPoint } from '@/types/poker';
 const HERO_IMAGE_URL = 'https://bollujxjsgahswigmyvq.supabase.co/storage/v1/object/public/assets/onboarding/goal_setting.png?v=2';
 
 type GoalSettingScreenProps = {
-  playStyle: string;
   goal: string;
   userName: string | null;
   painPoint: PainPoint | null;
@@ -33,11 +32,11 @@ type GoalSettingScreenProps = {
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-const PROFILES: Record<string, { emoji: string; title: string; action: string; commitment: string }> = {
-  shark: { emoji: '🦈', title: 'The Shark', action: 'Reading opponents and exploiting every edge', commitment: 'dominate every table I sit at' },
-  analyst: { emoji: '📊', title: 'The Analyst', action: 'Making data-driven decisions at every turn', commitment: 'master the math behind every decision' },
-  grinder: { emoji: '⚡', title: 'The Grinder', action: 'Putting in the volume and staying disciplined', commitment: 'outwork and outlast the competition' },
-  student: { emoji: '📚', title: 'The Student', action: 'Studying and improving every single session', commitment: 'learn something new every session' },
+const GOAL_ACTIONS: Record<string, string> = {
+  profit: 'Making smarter, more profitable decisions every session',
+  win: 'Studying my opponents and finding every edge',
+  learn: 'Building a deep understanding of the game',
+  confidence: 'Trusting my reads and playing my A-game',
 };
 
 const GOAL_COMMITMENTS: Record<string, string> = {
@@ -74,8 +73,8 @@ const CHIP_VARIANTS = [
   { color: '#7B1FA2', stripeColor: '#FFFFFF' },
 ];
 
-export function GoalSettingScreen({ playStyle, goal, userName, painPoint, onComplete }: GoalSettingScreenProps) {
-  const profile = PROFILES[playStyle] || PROFILES.shark;
+export function GoalSettingScreen({ goal, userName, painPoint, onComplete }: GoalSettingScreenProps) {
+  const goalAction = GOAL_ACTIONS[goal] || GOAL_ACTIONS.profit;
   const goalCommitment = GOAL_COMMITMENTS[goal] || GOAL_COMMITMENTS.profit;
   const painPointCommitment = painPoint ? PAIN_POINT_COMMITMENTS[painPoint] : null;
 
@@ -321,7 +320,7 @@ export function GoalSettingScreen({ playStyle, goal, userName, painPoint, onComp
         <View style={styles.commitmentItem}>
           <View style={styles.bulletPoint} />
           <Text style={styles.commitmentText}>
-            <Text style={styles.highlightText}>{profile.action}</Text>
+            <Text style={styles.highlightText}>{goalAction}</Text>
           </Text>
         </View>
 
@@ -457,7 +456,7 @@ const styles = StyleSheet.create({
   } as ViewStyle,
   heroContainer: {
     position: 'absolute',
-    top: -70,
+    top: -120,
     left: 0,
     right: 0,
     height: '65%',

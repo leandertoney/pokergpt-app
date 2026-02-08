@@ -17,8 +17,8 @@ import { colors } from '@/constants/colors';
 
 const HERO_IMAGE_URL = 'https://bollujxjsgahswigmyvq.supabase.co/storage/v1/object/public/assets/onboarding/identity_screen.png?v=2';
 
-type QuickIdentityScreenProps = {
-  onComplete: (playStyle: string, goal: string) => void;
+type FrequencyScreenProps = {
+  onComplete: (frequency: string) => void;
 };
 
 type Option = {
@@ -27,53 +27,26 @@ type Option = {
   description: string;
 };
 
-type Question = {
-  title: string;
-  subtitle: string;
-  options: Option[];
-};
-
-const QUESTIONS: Question[] = [
-  {
-    title: 'How do you like to play?',
-    subtitle: 'Select your style',
-    options: [
-      { label: 'Exploitative', value: 'shark', description: 'Read opponents and find edges' },
-      { label: 'Game Theory', value: 'analyst', description: 'Math-based decisions' },
-      { label: 'High Volume', value: 'grinder', description: 'Discipline and consistency' },
-      { label: 'Learning Focus', value: 'student', description: 'Improving every session' },
-    ],
-  },
-  {
-    title: "What's your main goal?",
-    subtitle: 'Select your priority',
-    options: [
-      { label: 'Build Bankroll', value: 'profit', description: 'Grow my poker income' },
-      { label: 'Beat Opponents', value: 'win', description: 'Compete at a higher level' },
-      { label: 'Master Strategy', value: 'learn', description: 'Deepen my understanding' },
-      { label: 'Play Confidently', value: 'confidence', description: 'Trust my decisions' },
-    ],
-  },
+const OPTIONS: Option[] = [
+  { label: 'Once or twice a week', value: '1_2', description: 'Casual sessions' },
+  { label: 'A few times a week', value: '3_4', description: 'Regular grinder' },
+  { label: 'Almost every day', value: '5_plus', description: 'Serious volume' },
+  { label: 'Every single day', value: 'daily', description: "It's a lifestyle" },
 ];
 
-export function QuickIdentityScreen({ onComplete }: QuickIdentityScreenProps) {
-  const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [playStyle, setPlayStyle] = useState<string | null>(null);
+export function FrequencyScreen({ onComplete }: FrequencyScreenProps) {
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
 
-  const fadeAnim = useRef(new Animated.Value(1)).current;
   const headlineAnim = useRef(new Animated.Value(0)).current;
-  const itemAnims = useRef(QUESTIONS[0].options.map(() => new Animated.Value(0))).current;
+  const itemAnims = useRef(OPTIONS.map(() => new Animated.Value(0))).current;
 
   useEffect(() => {
     animateIn();
-  }, [currentQuestion]);
+  }, []);
 
   const animateIn = () => {
-    // Reset animations
     headlineAnim.setValue(0);
     itemAnims.forEach(anim => anim.setValue(0));
-    fadeAnim.setValue(1);
 
     // Headline entrance
     Animated.spring(headlineAnim, {
@@ -100,30 +73,10 @@ export function QuickIdentityScreen({ onComplete }: QuickIdentityScreenProps) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setSelectedOption(value);
 
-    // Brief delay to show selection
     setTimeout(() => {
-      if (currentQuestion === 0) {
-        // First question - save and move to next
-        setPlayStyle(value);
-
-        // Fade out
-        Animated.timing(fadeAnim, {
-          toValue: 0,
-          duration: 200,
-          useNativeDriver: true,
-        }).start(() => {
-          setCurrentQuestion(1);
-          setSelectedOption(null);
-        });
-      } else {
-        // Second question - complete
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        onComplete(playStyle!, value);
-      }
+      onComplete(value);
     }, 350);
   };
-
-  const question = QUESTIONS[currentQuestion];
 
   return (
     <View style={styles.container}>
@@ -140,7 +93,7 @@ export function QuickIdentityScreen({ onComplete }: QuickIdentityScreenProps) {
         />
       </View>
 
-      <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
+      <View style={styles.content}>
         {/* Headline */}
         <Animated.View
           style={[
@@ -158,13 +111,13 @@ export function QuickIdentityScreen({ onComplete }: QuickIdentityScreenProps) {
             },
           ]}
         >
-          <Text style={styles.headline}>{question.title}</Text>
-          <Text style={styles.subheadline}>{question.subtitle}</Text>
+          <Text style={styles.headline}>How often do you play?</Text>
+          <Text style={styles.subheadline}>We'll match your pace</Text>
         </Animated.View>
 
-        {/* Individual Option Cards */}
+        {/* Option Cards */}
         <View style={styles.optionsContainer}>
-          {question.options.map((option, index) => {
+          {OPTIONS.map((option, index) => {
             const isSelected = selectedOption === option.value;
             return (
               <Animated.View
@@ -208,7 +161,7 @@ export function QuickIdentityScreen({ onComplete }: QuickIdentityScreenProps) {
             );
           })}
         </View>
-      </Animated.View>
+      </View>
     </View>
   );
 }
@@ -219,7 +172,7 @@ const styles = StyleSheet.create({
   } as ViewStyle,
   heroContainer: {
     position: 'absolute',
-    top: -70,
+    top: -120,
     left: 0,
     right: 0,
     height: '50%',
@@ -305,4 +258,4 @@ const styles = StyleSheet.create({
   } as ViewStyle,
 });
 
-export default QuickIdentityScreen;
+export default FrequencyScreen;

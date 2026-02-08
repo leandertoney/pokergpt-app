@@ -207,7 +207,7 @@ const styles = StyleSheet.create({
   } as ViewStyle,
   heroContainer: {
     position: 'absolute',
-    top: 0,
+    top: -120,
     left: 0,
     right: 0,
     height: '50%',
@@ -230,6 +230,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 32,
     paddingTop: 40,
+    paddingBottom: 130,
   } as ViewStyle,
   headline: {
     fontSize: 32,

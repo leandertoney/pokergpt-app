@@ -332,7 +332,7 @@ const styles = StyleSheet.create({
   } as ViewStyle,
   heroContainer: {
     position: 'absolute',
-    top: 0,
+    top: -120,
     left: 0,
     right: 0,
     bottom: 0,
@@ -343,7 +343,7 @@ const styles = StyleSheet.create({
   } as ImageStyle,
   heroGradient: {
     position: 'absolute',
-    top: 0,
+    top: -120,
     left: 0,
     right: 0,
     bottom: 0,

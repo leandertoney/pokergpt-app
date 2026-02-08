@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Star } from 'lucide-react-native';
+import Svg, { Text as SvgText } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 import { colors } from '@/constants/colors';
 
@@ -22,7 +23,6 @@ type HookScreenProps = {
 };
 
 export function HookScreen({ onNext }: HookScreenProps) {
-  const imageAnim = useRef(new Animated.Value(0)).current;
   const badgeAnim = useRef(new Animated.Value(0)).current;
   const winAnim = useRef(new Animated.Value(0)).current;
   const moreAnim = useRef(new Animated.Value(0)).current;
@@ -32,81 +32,87 @@ export function HookScreen({ onNext }: HookScreenProps) {
   const buttonAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Slow cinematic zoom on hero image
-    Animated.timing(imageAnim, {
-      toValue: 1,
-      duration: 8000,
-      useNativeDriver: true,
-    }).start();
+    // Reset all values to 0 (handles Fast Refresh / remount edge cases)
+    badgeAnim.setValue(0);
+    winAnim.setValue(0);
+    moreAnim.setValue(0);
+    tiltAnim.setValue(0);
+    lessAnim.setValue(0);
+    subtextAnim.setValue(0);
+    buttonAnim.setValue(0);
+
+    const timers: ReturnType<typeof setTimeout>[] = [];
 
     // Badge fades in
-    setTimeout(() => {
+    timers.push(setTimeout(() => {
       Animated.spring(badgeAnim, {
         toValue: 1,
         tension: 50,
         friction: 8,
         useNativeDriver: true,
       }).start();
-    }, 200);
+    }, 200));
 
     // "Win" slides in
-    setTimeout(() => {
+    timers.push(setTimeout(() => {
       Animated.spring(winAnim, {
         toValue: 1,
         tension: 60,
         friction: 7,
         useNativeDriver: true,
       }).start();
-    }, 500);
+    }, 500));
 
     // "MORE" punches in
-    setTimeout(() => {
+    timers.push(setTimeout(() => {
       Animated.spring(moreAnim, {
         toValue: 1,
         tension: 80,
         friction: 5,
         useNativeDriver: true,
       }).start();
-    }, 700);
+    }, 700));
 
     // "Tilt" appears
-    setTimeout(() => {
+    timers.push(setTimeout(() => {
       Animated.spring(tiltAnim, {
         toValue: 1,
         tension: 60,
         friction: 7,
         useNativeDriver: true,
       }).start();
-    }, 1050);
+    }, 1050));
 
     // "LESS" fades in
-    setTimeout(() => {
+    timers.push(setTimeout(() => {
       Animated.spring(lessAnim, {
         toValue: 1,
         tension: 40,
         friction: 10,
         useNativeDriver: true,
       }).start();
-    }, 1250);
+    }, 1250));
 
     // Subtext
-    setTimeout(() => {
+    timers.push(setTimeout(() => {
       Animated.timing(subtextAnim, {
         toValue: 1,
         duration: 400,
         useNativeDriver: true,
       }).start();
-    }, 1600);
+    }, 1600));
 
     // Button
-    setTimeout(() => {
+    timers.push(setTimeout(() => {
       Animated.spring(buttonAnim, {
         toValue: 1,
         tension: 50,
         friction: 8,
         useNativeDriver: true,
       }).start();
-    }, 1900);
+    }, 1900));
+
+    return () => timers.forEach(clearTimeout);
   }, []);
 
   const handleContinue = () => {
@@ -117,21 +123,7 @@ export function HookScreen({ onNext }: HookScreenProps) {
   return (
     <View style={styles.container}>
       {/* Hero Image */}
-      <Animated.View
-        style={[
-          styles.heroContainer,
-          {
-            transform: [
-              {
-                scale: imageAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [1, 1.08],
-                }),
-              },
-            ],
-          },
-        ]}
-      >
+      <View style={styles.heroContainer}>
         <Image
           source={{ uri: HERO_IMAGE_URL }}
           style={styles.heroImage}
@@ -141,19 +133,39 @@ export function HookScreen({ onNext }: HookScreenProps) {
           colors={['transparent', colors.background.primary]}
           style={styles.heroGradient}
         />
-      </Animated.View>
+      </View>
 
       {/* Content */}
       <View style={styles.content}>
-        {/* App Name */}
-        <Animated.Text
-          style={[
-            styles.appName,
-            { opacity: badgeAnim },
-          ]}
-        >
-          PokerPro AI
-        </Animated.Text>
+        {/* App Name - White fill with gold stroke */}
+        <Animated.View style={[styles.appNameContainer, { opacity: badgeAnim }]}>
+          <Svg height={52} width={300}>
+            {/* White stroke layer (behind) */}
+            <SvgText
+              x="150"
+              y="42"
+              textAnchor="middle"
+              fontSize={42}
+              fontWeight="800"
+              fill="none"
+              stroke="#FFFFFF"
+              strokeWidth={3}
+            >
+              PokerPro AI
+            </SvgText>
+            {/* Gold fill layer (on top) */}
+            <SvgText
+              x="150"
+              y="42"
+              textAnchor="middle"
+              fontSize={42}
+              fontWeight="800"
+              fill={colors.onboarding.gold}
+            >
+              PokerPro AI
+            </SvgText>
+          </Svg>
+        </Animated.View>
 
         {/* Social proof badge */}
         <Animated.View
@@ -311,10 +323,10 @@ const styles = StyleSheet.create({
   } as ViewStyle,
   heroContainer: {
     position: 'absolute',
-    top: 0,
+    top: -120,
     left: 0,
     right: 0,
-    height: '50%',
+    height: '65%',
     overflow: 'hidden',
   } as ViewStyle,
   heroImage: {
@@ -335,13 +347,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
     paddingTop: 100,
   } as ViewStyle,
-  appName: {
-    fontSize: 42,
-    fontWeight: '800',
-    color: colors.onboarding.gold,
-    letterSpacing: 1,
+  appNameContainer: {
+    alignItems: 'center',
     marginBottom: 20,
-  } as TextStyle,
+  } as ViewStyle,
   badge: {
     flexDirection: 'row',
     alignItems: 'center',

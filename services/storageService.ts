@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { HandData, AnalysisResult, StoredHand, UserTier, UserIdentity } from '@/types/poker';
+import type { HandData, AnalysisResult, StoredHand, UserTier, UserIdentity, OnboardingProfile } from '@/types/poker';
 import { MAX_FREE_HANDS } from '@/types/poker';
 import type { PaywallState, GoalConfirmation } from '@/types/paywall';
 import { DEFAULT_PAYWALL_STATE } from '@/types/paywall';
@@ -789,6 +789,7 @@ import { DEFAULT_VOICE_SETTINGS } from '@/types/voice';
 
 const FAVORITES_STORAGE_KEY = '@poker_favorites';
 const VOICE_SETTINGS_KEY = '@voice_settings';
+const ONBOARDING_PROFILE_KEY = '@onboarding_profile';
 
 // Get all favorites
 export async function getFavorites(): Promise<FavoriteItem[]> {
@@ -891,5 +892,27 @@ export async function clearVoiceSettings(): Promise<void> {
     console.log('Voice settings cleared');
   } catch (error) {
     console.error('Error clearing voice settings:', error);
+  }
+}
+
+// ============================================
+// Onboarding Profile Storage
+// ============================================
+
+export async function getOnboardingProfile(): Promise<OnboardingProfile | null> {
+  try {
+    const stored = await AsyncStorage.getItem(ONBOARDING_PROFILE_KEY);
+    return stored ? JSON.parse(stored) : null;
+  } catch (error) {
+    console.error('Error getting onboarding profile:', error);
+    return null;
+  }
+}
+
+export async function setOnboardingProfile(profile: OnboardingProfile): Promise<void> {
+  try {
+    await AsyncStorage.setItem(ONBOARDING_PROFILE_KEY, JSON.stringify(profile));
+  } catch (error) {
+    console.error('Error setting onboarding profile:', error);
   }
 }

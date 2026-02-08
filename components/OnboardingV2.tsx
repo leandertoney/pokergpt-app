@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -8,16 +8,14 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Onboarding screens
-import { IntroScreen } from './onboarding/IntroScreen';
 import { PainPointScreen } from './onboarding/PainPointScreen';
 import { ValidationScreen } from './onboarding/ValidationScreen';
 import { HookScreen } from './onboarding/HookScreen';
 import { HeroScreen } from './onboarding/HeroScreen';
 import { LiveDemoScreen } from './onboarding/LiveDemoScreen';
-import { SessionDemoScreen } from './onboarding/SessionDemoScreen';
-import { QuickIdentityScreen } from './onboarding/QuickIdentityScreen';
 import { NameInputScreen } from './onboarding/NameInputScreen';
 import { WhatYouGetScreen } from './onboarding/WhatYouGetScreen';
 import { DailyReviewDemoScreen } from './onboarding/DailyReviewDemoScreen';
@@ -26,32 +24,45 @@ import { GoalSettingScreen } from './onboarding/GoalSettingScreen';
 import { PaywallScreen } from './onboarding/PaywallScreen';
 import { SkillLevelScreen } from './onboarding/SkillLevelScreen';
 import { AnalysisResultScreen } from './onboarding/AnalysisResultScreen';
+import { PrimingScreenOne } from './onboarding/PrimingScreenOne';
+import { PrimingScreenTwo } from './onboarding/PrimingScreenTwo';
+import { FrequencyScreen } from './onboarding/FrequencyScreen';
+import { AccomplishScreen } from './onboarding/AccomplishScreen';
+import { GoalTimelineScreen } from './onboarding/GoalTimelineScreen';
+import { PotentialScreen } from './onboarding/PotentialScreen';
+import { NotificationScreen } from './onboarding/NotificationScreen';
+import { ReferralScreen } from './onboarding/ReferralScreen';
 
-import { setUserTier, setUserIdentity, setUserDisplayName, setPaywallState, setGoalConfirmation } from '@/services/storageService';
+import { setUserTier, setUserIdentity, setUserDisplayName, setPaywallState, setGoalConfirmation, setOnboardingProfile } from '@/services/storageService';
 import { updateUserIdentity as syncUserIdentityToSupabase, getOrCreateUser } from '@/services/supabaseStorage';
 import { checkSubscriptionStatus } from '@/services/revenueCat';
 import { withTimeout } from '@/utils/withTimeout';
 import { colors } from '@/constants/colors';
-import type { UserIdentity, ExperienceLevel, PainPoint } from '@/types/poker';
+import type { UserIdentity, ExperienceLevel, PainPoint, OnboardingProfile } from '@/types/poker';
 
 const ONBOARDING_COMPLETE_KEY = '@onboarding_complete';
 
 // All possible steps in the onboarding flow
 type OnboardingStep =
-  | 'splash'
   | 'hook'
   | 'hero'
   | 'painPoint'
   | 'validation'
   | 'chatDemo'
-  | 'liveDemo'
-  | 'analysisResult'
-  | 'sessionDemo'
-  | 'dailyReviewDemo'
   | 'skillLevel'
-  | 'identity'
+  | 'liveDemo'
+  | 'frequency'
+  | 'analysisResult'
+  | 'dailyReviewDemo'
   | 'name'
+  | 'referral'
+  | 'accomplish'
+  | 'goalTimeline'
   | 'goalSetting'
+  | 'potential'
+  | 'notifications'
+  | 'primingOne'
+  | 'primingTwo'
   | 'paywall'
   | 'whatYouGet';
 
@@ -59,48 +70,54 @@ type OnboardingV2Props = {
   onComplete: () => void;
 };
 
-// Define the order of swipeable steps
-const SWIPE_FLOW: OnboardingStep[] = [
-  'hook',            // Win MORE. Tilt LESS.
-  'hero',            // Pain points
-  'painPoint',       // Which one hits closest
-  'validation',      // Validate their pain
-  'chatDemo',        // Chat conversation demo
-  'liveDemo',        // Real-time analysis
-  'sessionDemo',     // Session tracking
-  'dailyReviewDemo', // 60-second review
+// All steps in order for progress calculation
+const ALL_STEPS: OnboardingStep[] = [
+  // PHASE 1: HOOK
+  'hook', 'hero',
+  // PHASE 2: IDENTIFY
+  'painPoint', 'validation',
+  // PHASE 3: DEMO + QUESTIONS (interleaved)
+  'chatDemo', 'liveDemo', 'frequency',
+  'analysisResult', 'skillLevel', 'dailyReviewDemo',
+  // PHASE 4: PERSONALIZE
+  'name', 'referral', 'accomplish', 'goalTimeline',
+  // PHASE 5: COMMIT
+  'goalSetting', 'potential',
+  // PHASE 6: CONVERT
+  'notifications', 'primingOne', 'primingTwo', 'paywall', 'whatYouGet',
 ];
 
-// All steps in order for progress calculation (excluding splash)
-const ALL_STEPS: OnboardingStep[] = [
-  'hook',
-  'hero',
-  'painPoint',
-  'validation',
-  'chatDemo',
-  'liveDemo',
-  'analysisResult',
-  'sessionDemo',
-  'dailyReviewDemo',
-  'skillLevel',
-  'identity',
-  'name',
-  'goalSetting',
-  'paywall',
-  'whatYouGet',
-];
+// DEV ONLY: Set to any step name to jump straight there (e.g. 'paywall', 'primingTwo')
+// Set to null for normal flow. Ignored in production builds.
+const DEV_START_STEP: OnboardingStep | null = __DEV__ ? null : null;
 
 export function OnboardingV2({ onComplete }: OnboardingV2Props) {
-  const [step, setStep] = useState<OnboardingStep>('splash');
-  const [stepHistory, setStepHistory] = useState<OnboardingStep[]>(['splash']);
+  const insets = useSafeAreaInsets();
+  const [step, setStep] = useState<OnboardingStep>(DEV_START_STEP ?? 'hook');
+  const [stepHistory, setStepHistory] = useState<OnboardingStep[]>([DEV_START_STEP ?? 'hook']);
   const [painPoint, setPainPoint] = useState<PainPoint | null>(null);
-  const [playStyle, setPlayStyle] = useState<string>('shark');
   const [goal, setGoal] = useState<string>('profit');
   const [userName, setUserName] = useState<string | null>(null);
   const [experienceLevel, setExperienceLevel] = useState<ExperienceLevel>('intermediate');
+  const [frequency, setFrequency] = useState<string | null>(null);
+  const [goalTimeline, setGoalTimeline] = useState<string | null>(null);
+  const [referralSource, setReferralSource] = useState<string | null>(null);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
 
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const slideAnim = useRef(new Animated.Value(0)).current;
+  const progressAnim = useRef(new Animated.Value(0)).current;
+
+  // Animate progress bar when step changes
+  useEffect(() => {
+    const stepIndex = ALL_STEPS.indexOf(step);
+    const progress = stepIndex >= 0 ? (stepIndex + 1) / ALL_STEPS.length : 0;
+    Animated.timing(progressAnim, {
+      toValue: progress,
+      duration: 300,
+      useNativeDriver: false,
+    }).start();
+  }, [step, progressAnim]);
 
   const transitionTo = useCallback((nextStep: OnboardingStep) => {
     setStepHistory(prev => [...prev, nextStep]);
@@ -134,6 +151,8 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
     });
   }, [fadeAnim, slideAnim]);
 
+  // --- Handlers ---
+
   const handlePainPointComplete = (selectedPainPoint: PainPoint) => {
     setPainPoint(selectedPainPoint);
     transitionTo('validation');
@@ -143,30 +162,48 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
     transitionTo('chatDemo');
   };
 
-  const handleIdentityComplete = (selectedPlayStyle: string, selectedGoal: string) => {
-    setPlayStyle(selectedPlayStyle);
-    setGoal(selectedGoal);
-    transitionTo('name');
+  const handleSkillLevelComplete = (level: ExperienceLevel) => {
+    setExperienceLevel(level);
+    transitionTo('dailyReviewDemo');
+  };
+
+  const handleFrequencyComplete = (selectedFrequency: string) => {
+    setFrequency(selectedFrequency);
+    transitionTo('analysisResult');
   };
 
   const handleNameComplete = (name: string | null) => {
     setUserName(name);
-    transitionTo('goalSetting');
+    transitionTo('referral');
   };
 
-  const handleSkillLevelComplete = (level: ExperienceLevel) => {
-    setExperienceLevel(level);
-    transitionTo('identity');
+  const handleReferralComplete = (source: string) => {
+    setReferralSource(source);
+    transitionTo('accomplish');
+  };
+
+  const handleAccomplishComplete = (selectedGoal: string) => {
+    setGoal(selectedGoal);
+    transitionTo('goalTimeline');
+  };
+
+  const handleGoalTimelineComplete = (timeline: string) => {
+    setGoalTimeline(timeline);
+    transitionTo('goalSetting');
   };
 
   const handleGoalConfirmed = async (timestamp: number) => {
     await setGoalConfirmation({
-      playStyle,
       goal,
       userName,
       timestamp,
     });
-    transitionTo('paywall');
+    transitionTo('potential');
+  };
+
+  const handleNotificationComplete = (enabled: boolean) => {
+    setNotificationsEnabled(enabled);
+    transitionTo('primingOne');
   };
 
   const handlePaywallPurchase = async (planId: 'weekly' | 'yearly') => {
@@ -180,7 +217,6 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
       await setPaywallState({ hasSeenPaywall: true, hasSkippedPaywall: false });
     } else {
       // Fallback - mark as paid if purchase callback was called
-      // (RevenueCat might have a slight delay in updating status)
       await setUserTier('paid');
       await setPaywallState({ hasSeenPaywall: true, hasSkippedPaywall: false });
     }
@@ -196,14 +232,6 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
 
   const handleComplete = async () => {
     try {
-      // Map playStyle to archetype
-      const archetypeMap: Record<string, string> = {
-        shark: 'shark',
-        analyst: 'strategist',
-        grinder: 'grinder',
-        student: 'student',
-      };
-
       // Map goal to primaryGoal
       const goalMap: Record<string, string> = {
         profit: 'profit',
@@ -213,11 +241,19 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
       };
 
       const identity: UserIdentity = {
-        archetype: archetypeMap[playStyle] as UserIdentity['archetype'],
+        archetype: null,
         experienceLevel: experienceLevel,
         primaryGoal: goalMap[goal] as UserIdentity['primaryGoal'],
         biggestChallenge: null,
         painPoint: painPoint,
+      };
+
+      // Save onboarding profile
+      const profile: OnboardingProfile = {
+        frequency,
+        goalTimeline,
+        referralSource,
+        notificationsEnabled,
       };
 
       // Save to local storage
@@ -225,6 +261,7 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
       await setUserTier('free');
       await setUserIdentity(identity);
       await setUserDisplayName(userName);
+      await setOnboardingProfile(profile);
 
       // Sync to Supabase (gracefully fails if offline)
       try {
@@ -236,7 +273,6 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error) {
-      // Log but don't crash - proceed to complete onboarding anyway
       console.warn('Error during onboarding completion:', error);
     }
 
@@ -247,16 +283,13 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
   const renderStep = () => {
     switch (step) {
       // PHASE 1: HOOK
-      case 'splash':
-        return <IntroScreen onNext={() => transitionTo('hook')} />;
-
       case 'hook':
         return <HookScreen onNext={() => transitionTo('hero')} />;
 
       case 'hero':
         return <HeroScreen onNext={() => transitionTo('painPoint')} />;
 
-      // PHASE 2: GET PERSONAL
+      // PHASE 2: IDENTIFY
       case 'painPoint':
         return <PainPointScreen onComplete={handlePainPointComplete} />;
 
@@ -268,35 +301,42 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
           />
         );
 
+      // PHASE 3: DEMO + QUESTIONS (interleaved)
       case 'chatDemo':
         return <ChatDemoScreen onNext={() => transitionTo('liveDemo')} />;
-
-      case 'liveDemo':
-        return <LiveDemoScreen onNext={() => transitionTo('analysisResult')} />;
-
-      case 'analysisResult':
-        return <AnalysisResultScreen onNext={() => transitionTo('sessionDemo')} />;
-
-      case 'sessionDemo':
-        return <SessionDemoScreen onNext={() => transitionTo('dailyReviewDemo')} />;
-
-      case 'dailyReviewDemo':
-        return <DailyReviewDemoScreen onNext={() => transitionTo('skillLevel')} />;
 
       case 'skillLevel':
         return <SkillLevelScreen onComplete={handleSkillLevelComplete} />;
 
-      // PHASE 3: IDENTITY (Quick tap cards, no dots)
-      case 'identity':
-        return <QuickIdentityScreen onComplete={handleIdentityComplete} />;
+      case 'liveDemo':
+        return <LiveDemoScreen onNext={() => transitionTo('frequency')} />;
 
+      case 'frequency':
+        return <FrequencyScreen onComplete={handleFrequencyComplete} />;
+
+      case 'analysisResult':
+        return <AnalysisResultScreen onNext={() => transitionTo('skillLevel')} />;
+
+      case 'dailyReviewDemo':
+        return <DailyReviewDemoScreen onNext={() => transitionTo('name')} />;
+
+      // PHASE 4: PERSONALIZE
       case 'name':
         return <NameInputScreen onComplete={handleNameComplete} />;
 
+      case 'referral':
+        return <ReferralScreen onComplete={handleReferralComplete} />;
+
+      case 'accomplish':
+        return <AccomplishScreen onComplete={handleAccomplishComplete} />;
+
+      case 'goalTimeline':
+        return <GoalTimelineScreen onComplete={handleGoalTimelineComplete} />;
+
+      // PHASE 5: COMMIT
       case 'goalSetting':
         return (
           <GoalSettingScreen
-            playStyle={playStyle}
             goal={goal}
             userName={userName}
             painPoint={painPoint}
@@ -304,10 +344,31 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
           />
         );
 
+      case 'potential':
+        return (
+          <PotentialScreen
+            userName={userName}
+            experienceLevel={experienceLevel}
+            frequency={frequency}
+            goal={goal}
+            goalTimeline={goalTimeline}
+            onNext={() => transitionTo('notifications')}
+          />
+        );
+
+      // PHASE 6: CONVERT
+      case 'notifications':
+        return <NotificationScreen onComplete={handleNotificationComplete} />;
+
+      case 'primingOne':
+        return <PrimingScreenOne onNext={() => transitionTo('primingTwo')} />;
+
+      case 'primingTwo':
+        return <PrimingScreenTwo onNext={() => transitionTo('paywall')} />;
+
       case 'paywall':
         return (
           <PaywallScreen
-            playStyle={playStyle}
             goal={goal}
             userName={userName}
             onPurchase={handlePaywallPurchase}
@@ -315,7 +376,6 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
           />
         );
 
-      // PHASE 4: CLOSE
       case 'whatYouGet':
         return <WhatYouGetScreen onComplete={handleComplete} />;
 
@@ -324,27 +384,6 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
     }
   };
 
-  // Hide progress bar on screens with hero images
-  const screensWithImages: OnboardingStep[] = [
-    'splash',
-    'hook',
-    'hero',
-    'painPoint',
-    'validation',
-    'chatDemo',
-    'liveDemo',
-    'analysisResult',
-    'sessionDemo',
-    'dailyReviewDemo',
-    'skillLevel',
-    'identity',
-    'name',
-    'goalSetting',
-    'paywall',
-    'whatYouGet',
-  ];
-  const showProgress = !screensWithImages.includes(step);
-
   return (
     <View style={styles.container}>
       <LinearGradient
@@ -352,25 +391,21 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
         locations={[0, 0.3, 0.7, 1]}
         style={styles.gradient}
       >
-        {/* Progress Bar - shows all steps with completed ones filled */}
-        {showProgress && (
-          <View style={styles.progressContainer}>
-            <View style={styles.segmentRow}>
-              {ALL_STEPS.map((s, index) => {
-                const currentIndex = ALL_STEPS.indexOf(step);
-                const isCompleted = index < currentIndex;
-                const isCurrent = index === currentIndex;
-                return (
-                  <View
-                    key={s}
-                    style={[
-                      styles.progressSegment,
-                      isCompleted && styles.progressSegmentCompleted,
-                      isCurrent && styles.progressSegmentCurrent,
-                    ]}
-                  />
-                );
-              })}
+        {/* Persistent thin progress bar */}
+        {(
+          <View style={[styles.progressContainer, { paddingTop: insets.top + 8 }]}>
+            <View style={styles.progressTrack}>
+              <Animated.View
+                style={[
+                  styles.progressFill,
+                  {
+                    width: progressAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ['0%', '100%'],
+                    }),
+                  },
+                ]}
+              />
             </View>
           </View>
         )}
@@ -455,26 +490,19 @@ const styles = StyleSheet.create({
   } as ViewStyle,
   progressContainer: {
     paddingHorizontal: 24,
-    paddingTop: 60,
-    paddingBottom: 8,
+    paddingBottom: 4,
     zIndex: 10,
   } as ViewStyle,
-  segmentRow: {
-    flexDirection: 'row',
-    gap: 6,
+  progressTrack: {
+    height: 3,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 1.5,
+    overflow: 'hidden',
   } as ViewStyle,
-  progressSegment: {
-    flex: 1,
-    height: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    borderRadius: 2,
-    minWidth: 20,
-  } as ViewStyle,
-  progressSegmentCompleted: {
-    backgroundColor: colors.accent.gold,
-  } as ViewStyle,
-  progressSegmentCurrent: {
-    backgroundColor: colors.accent.gold,
+  progressFill: {
+    height: '100%',
+    backgroundColor: colors.onboarding?.gold || colors.accent.gold,
+    borderRadius: 1.5,
   } as ViewStyle,
   content: {
     flex: 1,

@@ -38,7 +38,6 @@ export default function PaywallRoute() {
         style={[styles.gradient, { paddingTop: insets.top }]}
       >
         <PaywallScreen
-          playStyle=""
           goal=""
           userName={null}
           onPurchase={handlePurchase}

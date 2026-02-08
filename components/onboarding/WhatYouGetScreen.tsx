@@ -86,7 +86,7 @@ export function WhatYouGetScreen({ onComplete }: WhatYouGetScreenProps) {
         <Image
           source={{ uri: HERO_IMAGE_URL }}
           style={styles.heroImage}
-          resizeMode="contain"
+          resizeMode="cover"
         />
         <LinearGradient
           colors={['transparent', colors.background.primary]}
@@ -164,10 +164,10 @@ const styles = StyleSheet.create({
   } as ViewStyle,
   heroContainer: {
     position: 'absolute',
-    top: -70,
+    top: -80,
     left: 0,
     right: 0,
-    height: '65%',
+    height: '85%',
     overflow: 'hidden',
   } as ViewStyle,
   heroImage: {
