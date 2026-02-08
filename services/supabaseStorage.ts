@@ -18,6 +18,8 @@ interface User {
   biggest_challenge: string | null;
   tier: "free" | "paid";
   onboarding_complete: boolean;
+  expo_push_token: string | null;
+  push_token_updated_at: string | null;
   created_at: string;
 }
 

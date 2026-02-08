@@ -14,6 +14,8 @@ import {
   setupNotificationResponseListener,
   getInitialNotification,
   clearBadge,
+  registerExpoPushToken,
+  syncPushTokenToSupabase,
 } from "@/services/notificationService";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -62,6 +64,13 @@ function RootLayoutNav() {
 
     // Clear badge when app opens
     clearBadge();
+
+    // Register push token and sync to Supabase
+    registerExpoPushToken().then((token) => {
+      if (token) {
+        syncPushTokenToSupabase(token);
+      }
+    });
 
     return unsubscribe;
   }, [router]);

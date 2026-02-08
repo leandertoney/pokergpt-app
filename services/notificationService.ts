@@ -8,6 +8,8 @@ import {
   DEFAULT_NOTIFICATION_SETTINGS,
   NotificationData,
 } from '@/types/notifications';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { getOrCreateUser } from '@/services/supabaseStorage';
 
 const NOTIFICATION_SETTINGS_KEY = '@notification_settings';
 const DAILY_REMINDER_ID = 'daily-review-reminder';
@@ -273,6 +275,54 @@ export async function getInitialNotification(): Promise<NotificationData | null>
     return response.notification.request.content.data as NotificationData;
   }
   return null;
+}
+
+// ============================================
+// Push Token Registration
+// ============================================
+
+const EXPO_PROJECT_ID = '74438842-5df3-4dd3-96e1-35306d266aa5';
+
+export async function registerExpoPushToken(): Promise<string | null> {
+  if (!Device.isDevice) {
+    console.log('Push tokens require a physical device');
+    return null;
+  }
+
+  const permission = await checkNotificationPermissions();
+  if (permission !== 'granted') {
+    return null;
+  }
+
+  try {
+    const tokenData = await Notifications.getExpoPushTokenAsync({
+      projectId: EXPO_PROJECT_ID,
+    });
+    console.log('Expo push token:', tokenData.data);
+    return tokenData.data;
+  } catch (error) {
+    console.warn('Failed to get Expo push token:', error);
+    return null;
+  }
+}
+
+export async function syncPushTokenToSupabase(token: string): Promise<void> {
+  if (!isSupabaseConfigured() || !supabase) return;
+
+  try {
+    const user = await getOrCreateUser();
+    if (!user) return;
+
+    await supabase
+      .from('users')
+      .update({
+        expo_push_token: token,
+        push_token_updated_at: new Date().toISOString(),
+      })
+      .eq('id', user.id);
+  } catch {
+    // Silent - app works offline
+  }
 }
 
 // ============================================
