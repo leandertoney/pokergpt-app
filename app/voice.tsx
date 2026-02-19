@@ -16,14 +16,17 @@ import {
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { X, Search, Square, Send, AlertCircle } from 'lucide-react-native';
+import { X, Search, Square, Send, AlertCircle, Volume2, VolumeX } from 'lucide-react-native';
+import Slider from '@react-native-community/slider';
 import * as Haptics from 'expo-haptics';
 import { useRealtimeVoice } from '@/hooks/useRealtimeVoice';
+import { useVoiceSettings } from '@/hooks/useVoiceSettings';
 import { colors } from '@/constants/colors';
 import { VoiceWaveform, PulsingIndicator } from '@/components/VoiceWaveform';
 import { UpgradeModal } from '@/components/UpgradeModal';
 import { storeHand } from '@/services/supabaseStorage';
 import { canSaveHand } from '@/services/storageService';
+import { setAudioGain } from '@/utils/pcmAudio';
 import type { HandData, AnalysisResult } from '@/types/poker';
 import { MAX_FREE_HANDS } from '@/types/poker';
 
@@ -131,6 +134,20 @@ export default function VoiceScreen() {
 
   const hasApiKey = !!OPENAI_API_KEY;
 
+  // Load persisted voice settings (volume, gain)
+  const { settings: voiceSettings, updateSettings } = useVoiceSettings();
+  const [volume, setVolumeState] = useState(1.0);
+
+  // Apply saved audio gain on mount / when settings load
+  useEffect(() => {
+    if (voiceSettings.audioGain) {
+      setAudioGain(voiceSettings.audioGain);
+    }
+    if (voiceSettings.playbackVolume !== undefined) {
+      setVolumeState(voiceSettings.playbackVolume);
+    }
+  }, [voiceSettings.audioGain, voiceSettings.playbackVolume]);
+
   const {
     voiceState,
     isConnected,
@@ -141,8 +158,10 @@ export default function VoiceScreen() {
     disconnect,
     sendText,
     interrupt,
+    setVolume,
   } = useRealtimeVoice({
     openaiApiKey: OPENAI_API_KEY,
+    initialVolume: voiceSettings.playbackVolume,
     onUserTranscript: (text) => {
       console.log('[VoiceScreen] User said:', text);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -430,6 +449,31 @@ export default function VoiceScreen() {
           </View>
         )}
 
+        {/* Volume slider - visible when voice is active */}
+        {isVoiceActive && (
+          <View style={styles.volumeControl}>
+            <VolumeX size={14} color={colors.text.muted} />
+            <Slider
+              style={styles.volumeSlider}
+              minimumValue={0}
+              maximumValue={1}
+              step={0.05}
+              value={volume}
+              onValueChange={(val) => {
+                setVolumeState(val);
+                setVolume(val);
+              }}
+              onSlidingComplete={(val) => {
+                updateSettings({ playbackVolume: val });
+              }}
+              minimumTrackTintColor={colors.accent.gold}
+              maximumTrackTintColor={colors.background.tertiary}
+              thumbTintColor={colors.accent.gold}
+            />
+            <Volume2 size={14} color={colors.text.muted} />
+          </View>
+        )}
+
         {/* Error banner */}
         {errorMessage && (
           <View style={styles.errorBanner}>
@@ -645,6 +689,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 8,
+  } as ViewStyle,
+  volumeControl: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    gap: 8,
+    marginBottom: 4,
+    width: '100%',
+  } as ViewStyle,
+  volumeSlider: {
+    flex: 1,
+    height: 32,
   } as ViewStyle,
   statusText: {
     fontSize: 14,

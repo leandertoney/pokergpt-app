@@ -11,6 +11,8 @@ export interface VoiceSettings {
   elevenlabsVoiceId: string | null;
   elevenlabsStability: number;      // 0-1, default 0.5
   elevenlabsSimilarityBoost: number; // 0-1, default 0.75
+  playbackVolume: number;           // 0-1, expo-av volume level
+  audioGain: number;                // 1-15, PCM software amplification
 }
 
 export const DEFAULT_VOICE_SETTINGS: VoiceSettings = {
@@ -20,6 +22,8 @@ export const DEFAULT_VOICE_SETTINGS: VoiceSettings = {
   elevenlabsVoiceId: null,
   elevenlabsStability: 0.5,
   elevenlabsSimilarityBoost: 0.75,
+  playbackVolume: 1.0,
+  audioGain: 8.0,
 };
 
 export const OPENAI_VOICES: { id: OpenAIVoice; name: string; description: string }[] = [

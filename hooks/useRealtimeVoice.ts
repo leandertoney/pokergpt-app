@@ -25,6 +25,7 @@ export type RealtimeVoiceState =
 
 interface UseRealtimeVoiceOptions {
   openaiApiKey: string;
+  initialVolume?: number; // 0-1, applied when audio player initializes
   onUserTranscript?: (text: string) => void;
   onAITranscript?: (text: string, isFinal: boolean) => void;
   onError?: (error: any) => void;
@@ -106,6 +107,11 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions) {
   useEffect(() => {
     audioPlayerRef.current = new PCMAudioPlayer();
     audioRecorderRef.current = new PCMAudioRecorder();
+
+    // Apply saved volume if provided
+    if (options.initialVolume !== undefined) {
+      audioPlayerRef.current.setVolume(options.initialVolume);
+    }
 
     return () => {
       audioPlayerRef.current?.stop();

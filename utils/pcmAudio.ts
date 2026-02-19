@@ -52,7 +52,22 @@ async function waitForAudioSystemToSettle(ms: number = 100): Promise<void> {
  * Converts PCM16 to WAV format for playback through expo-av.
  */
 // Audio amplification gain - OpenAI's audio is quiet, boost it significantly
-const AUDIO_GAIN = 5.0;
+let AUDIO_GAIN = 8.0;
+
+/**
+ * Set the audio amplification gain at runtime
+ * @param gain Number between 1.0 and 15.0
+ */
+export function setAudioGain(gain: number): void {
+  AUDIO_GAIN = Math.max(1, Math.min(15, gain));
+}
+
+/**
+ * Get the current audio amplification gain
+ */
+export function getAudioGain(): number {
+  return AUDIO_GAIN;
+}
 
 export class PCMAudioPlayer {
   private sound: Audio.Sound | null = null;

@@ -113,9 +113,9 @@ export class OpenAIRealtimeService {
         },
         turn_detection: {
           type: 'server_vad',
-          threshold: 0.5,
-          prefix_padding_ms: 300,
-          silence_duration_ms: 1500,  // 1.5 second pause to detect end of speech
+          threshold: 0.65,            // Higher threshold filters background noise (casino, etc.)
+          prefix_padding_ms: 500,     // Capture more context before speech
+          silence_duration_ms: 2000,  // 2 second pause - more tolerance in noisy environments
         },
       },
     };
