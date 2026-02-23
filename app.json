@@ -3,7 +3,7 @@
     "name": "PokerGPT",
     "slug": "pokergpt",
     "owner": "leandertoney",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/images/pokergpt_logo.png",
     "scheme": "pokergpt",
@@ -17,7 +17,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.pokergpt.app",
-      "buildNumber": "15",
+      "buildNumber": "16",
       "icon": "./assets/images/pokergpt_logo.png",
       "infoPlist": {
         "UIBackgroundModes": [
