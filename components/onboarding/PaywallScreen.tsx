@@ -321,7 +321,8 @@ export function PaywallScreen({ goal, userName, onPurchase, onSkip }: PaywallScr
             activeOpacity={0.8}
           >
             <Text style={[styles.planName, { marginTop: 20 }]}>Weekly</Text>
-            <Text style={styles.planPrice}>{prices.weekly}</Text>
+            <Text style={styles.planPrice}>{prices.weekly.replace('/wk', '')}</Text>
+            <Text style={styles.planBillingPeriod}>per week</Text>
 
             {selectedPlan === 'weekly' && (
               <View style={styles.selectedIndicator}>
@@ -347,7 +348,9 @@ export function PaywallScreen({ goal, userName, onPurchase, onSkip }: PaywallScr
             )}
 
             <Text style={[styles.planName, { marginTop: 20 }]}>Yearly</Text>
-            <Text style={styles.planPrice}>{prices.yearlyPerWeek}</Text>
+            <Text style={styles.planPrice}>{prices.yearlyTotal.replace('/yr', '')}</Text>
+            <Text style={styles.planBillingPeriod}>per year</Text>
+            <Text style={styles.planPriceBreakdown}>{prices.yearlyPerWeek}</Text>
 
             {selectedPlan === 'yearly' && (
               <View style={styles.selectedIndicator}>
@@ -567,7 +570,19 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '700',
     color: '#fff',
-    marginBottom: 6,
+    marginBottom: 2,
+  } as TextStyle,
+  planBillingPeriod: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: 'rgba(255,255,255,0.5)',
+    marginBottom: 4,
+  } as TextStyle,
+  planPriceBreakdown: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: 'rgba(255,255,255,0.4)',
+    marginBottom: 2,
   } as TextStyle,
   selectedIndicator: {
     position: 'absolute',
