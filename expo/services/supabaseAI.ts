@@ -1,4 +1,5 @@
 import { isSupabaseConfigured } from "@/lib/supabase";
+import { withTimeout } from "@/utils/withTimeout";
 import type { HandData, AnalysisResult } from "@/types/poker";
 
 function getEdgeFunctionUrl(): string {
@@ -31,24 +32,33 @@ export async function parseHandWithAI(narrative: string): Promise<Partial<HandDa
     };
   }
 
+  const startTime = Date.now();
   try {
-    const response = await fetch(getEdgeFunctionUrl(), {
-      method: "POST",
-      headers: getHeaders(),
-      body: JSON.stringify({ action: "parseHand", narrative }),
-    });
+    const response = await withTimeout(
+      fetch(getEdgeFunctionUrl(), {
+        method: "POST",
+        headers: getHeaders(),
+        body: JSON.stringify({ action: "parseHand", narrative }),
+      }),
+      15000, // 15 second timeout for hand parsing
+      "Hand parsing"
+    );
 
     if (!response.ok) {
       throw new Error(`HTTP error: ${response.status}`);
     }
 
     const data = await response.json();
+    const duration = Date.now() - startTime;
+    console.log(`[PERF] parseHandWithAI completed in ${duration}ms`);
+
     return {
       ...data,
       originalNarrative: narrative,
     };
   } catch (error) {
-    console.error("Error parsing hand:", error);
+    const duration = Date.now() - startTime;
+    console.error(`[PERF] parseHandWithAI failed after ${duration}ms:`, error);
     return {
       isComplete: false,
       missingFields: [],
@@ -62,20 +72,30 @@ export async function analyzeHand(narrative: string): Promise<Partial<AnalysisRe
     throw new Error("Supabase not configured. Cannot analyze hand.");
   }
 
+  const startTime = Date.now();
   try {
-    const response = await fetch(getEdgeFunctionUrl(), {
-      method: "POST",
-      headers: getHeaders(),
-      body: JSON.stringify({ action: "analyzeHand", narrative }),
-    });
+    const response = await withTimeout(
+      fetch(getEdgeFunctionUrl(), {
+        method: "POST",
+        headers: getHeaders(),
+        body: JSON.stringify({ action: "analyzeHand", narrative }),
+      }),
+      20000, // 20 second timeout for hand analysis (more complex)
+      "Hand analysis"
+    );
 
     if (!response.ok) {
       throw new Error(`HTTP error: ${response.status}`);
     }
 
-    return await response.json();
+    const result = await response.json();
+    const duration = Date.now() - startTime;
+    console.log(`[PERF] analyzeHand completed in ${duration}ms`);
+
+    return result;
   } catch (error) {
-    console.error("Error analyzing hand:", error);
+    const duration = Date.now() - startTime;
+    console.error(`[PERF] analyzeHand failed after ${duration}ms:`, error);
     throw new Error("Failed to analyze hand");
   }
 }
@@ -97,28 +117,37 @@ export async function conversationalChat(
     };
   }
 
+  const startTime = Date.now();
   try {
-    const response = await fetch(getEdgeFunctionUrl(), {
-      method: "POST",
-      headers: getHeaders(),
-      body: JSON.stringify({
-        action: "conversationalChat",
-        messages,
-        currentHandData,
+    const response = await withTimeout(
+      fetch(getEdgeFunctionUrl(), {
+        method: "POST",
+        headers: getHeaders(),
+        body: JSON.stringify({
+          action: "conversationalChat",
+          messages,
+          currentHandData,
+        }),
       }),
-    });
+      18000, // 18 second timeout for chat responses
+      "Conversational chat"
+    );
 
     if (!response.ok) {
       throw new Error(`HTTP error: ${response.status}`);
     }
 
     const data = await response.json();
+    const duration = Date.now() - startTime;
+    console.log(`[PERF] conversationalChat completed in ${duration}ms`);
+
     return {
       response: data.response || "Tell me more about the hand.",
       handData: data.handData || currentHandData,
     };
   } catch (error) {
-    console.error("Error in conversational chat:", error);
+    const duration = Date.now() - startTime;
+    console.error(`[PERF] conversationalChat failed after ${duration}ms:`, error);
     return {
       response: "Could you tell me a bit more about that spot?",
       handData: currentHandData,
@@ -136,21 +165,30 @@ export async function generateText(
     return "Tell me more about the hand.";
   }
 
+  const startTime = Date.now();
   try {
-    const response = await fetch(getEdgeFunctionUrl(), {
-      method: "POST",
-      headers: getHeaders(),
-      body: JSON.stringify({ action: "generateText", prompt, systemPrompt }),
-    });
+    const response = await withTimeout(
+      fetch(getEdgeFunctionUrl(), {
+        method: "POST",
+        headers: getHeaders(),
+        body: JSON.stringify({ action: "generateText", prompt, systemPrompt }),
+      }),
+      18000, // 18 second timeout for text generation
+      "Text generation"
+    );
 
     if (!response.ok) {
       throw new Error(`HTTP error: ${response.status}`);
     }
 
     const data = await response.json();
+    const duration = Date.now() - startTime;
+    console.log(`[PERF] generateText completed in ${duration}ms`);
+
     return data.text || "Could you tell me more?";
   } catch (error) {
-    console.error("Error generating text:", error);
+    const duration = Date.now() - startTime;
+    console.error(`[PERF] generateText failed after ${duration}ms:`, error);
     return "Could you tell me a bit more about the hand?";
   }
 }

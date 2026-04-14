@@ -4,6 +4,7 @@ import { Audio } from 'expo-av';
 import * as FileSystem from 'expo-file-system/legacy';
 import { getVoiceSettings } from '@/services/storageService';
 import { speak } from '@/services/ttsService';
+import { withTimeout } from '@/utils/withTimeout';
 
 export type VoiceState = 'idle' | 'connecting' | 'listening' | 'processing' | 'speaking' | 'error';
 
@@ -316,6 +317,7 @@ async function transcribeWithWhisper(audioUri: string, apiKey: string): Promise<
     throw new Error('OpenAI API key is not set');
   }
 
+  const startTime = Date.now();
   try {
     // Create form data for the API
     const formData = new FormData();
@@ -328,13 +330,17 @@ async function transcribeWithWhisper(audioUri: string, apiKey: string): Promise<
     formData.append('language', 'en');
 
     console.log('[Whisper] Sending request...');
-    const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: formData,
-    });
+    const response = await withTimeout(
+      fetch('https://api.openai.com/v1/audio/transcriptions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: formData,
+      }),
+      15000, // 15 second timeout for voice transcription
+      'Whisper transcription'
+    );
 
     console.log('[Whisper] Response status:', response.status);
 
@@ -345,10 +351,13 @@ async function transcribeWithWhisper(audioUri: string, apiKey: string): Promise<
     }
 
     const data = await response.json();
+    const duration = Date.now() - startTime;
+    console.log(`[PERF] Whisper transcription completed in ${duration}ms`);
     console.log('[Whisper] Response data:', data);
     return data.text || '';
   } catch (error) {
-    console.error('[Whisper] Transcription failed:', error);
+    const duration = Date.now() - startTime;
+    console.error(`[PERF] Whisper transcription failed after ${duration}ms:`, error);
     throw error;
   }
 }

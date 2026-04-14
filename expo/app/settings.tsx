@@ -17,7 +17,6 @@ import { Stack, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
-  User,
   CreditCard,
   Bell,
   HelpCircle,
@@ -244,12 +243,6 @@ export default function SettingsScreen() {
           showsVerticalScrollIndicator={false}
         >
           <SettingsSection title="Account">
-            <SettingsItem
-              icon={<User size={22} color={colors.accent.gold} />}
-              title="Profile"
-              subtitle={isAuthenticated ? "Manage your account" : "Sign in to sync across devices"}
-              onPress={() => isAuthenticated ? router.push('/profile') : router.push('/auth/login')}
-            />
             <SettingsItem
               icon={<CreditCard size={22} color={colors.accent.gold} />}
               title="Subscription"

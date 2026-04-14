@@ -3,6 +3,7 @@
 
 import type { VoiceSettings, OpenAIVoice } from '@/types/voice';
 import { generateSpeech as elevenLabsGenerateSpeech } from './elevenLabsTTS';
+import { withTimeout } from '@/utils/withTimeout';
 
 export interface TTSResult {
   audioBase64: string;
@@ -32,33 +33,45 @@ async function generateOpenAISpeech(
 ): Promise<string> {
   console.log('[OpenAI TTS] Generating speech with voice:', voice);
 
-  const response = await fetch('https://api.openai.com/v1/audio/speech', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'tts-1',
-      input: text,
-      voice: voice,
-      speed: 1.0,
-      response_format: 'mp3',
-    }),
-  });
+  const startTime = Date.now();
+  try {
+    const response = await withTimeout(
+      fetch('https://api.openai.com/v1/audio/speech', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'tts-1',
+          input: text,
+          voice: voice,
+          speed: 1.0,
+          response_format: 'mp3',
+        }),
+      }),
+      15000, // 15 second timeout for TTS generation
+      'OpenAI TTS'
+    );
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error('[OpenAI TTS] API error:', response.status, errorText);
-    throw new Error(`OpenAI TTS API error: ${response.status}`);
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[OpenAI TTS] API error:', response.status, errorText);
+      throw new Error(`OpenAI TTS API error: ${response.status}`);
+    }
+
+    // Convert blob to base64
+    const audioBlob = await response.blob();
+    const base64 = await blobToBase64(audioBlob);
+
+    const duration = Date.now() - startTime;
+    console.log(`[PERF] OpenAI TTS completed in ${duration}ms`);
+    return base64;
+  } catch (error) {
+    const duration = Date.now() - startTime;
+    console.error(`[PERF] OpenAI TTS failed after ${duration}ms:`, error);
+    throw error;
   }
-
-  // Convert blob to base64
-  const audioBlob = await response.blob();
-  const base64 = await blobToBase64(audioBlob);
-
-  console.log('[OpenAI TTS] Speech generated successfully');
-  return base64;
 }
 
 /**

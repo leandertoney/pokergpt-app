@@ -12,6 +12,7 @@ import {
   Camera,
   ChevronRight,
   Trash2,
+  Settings,
 } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { resetOnboarding } from '@/components/Onboarding';
@@ -168,7 +169,7 @@ export default function ProfileScreen() {
             fontWeight: '600' as const,
             fontSize: 18,
           },
-          headerBackTitle: 'Settings',
+          headerBackTitle: '',
         }}
       />
 
@@ -216,6 +217,16 @@ export default function ProfileScreen() {
               icon={<Calendar size={20} color={colors.accent.primary} />}
               title="Member Since"
               value={user.memberSince}
+            />
+          </ProfileSection>
+
+          {/* Settings */}
+          <ProfileSection title="Preferences">
+            <ProfileItem
+              icon={<Settings size={20} color={colors.accent.primary} />}
+              title="Settings"
+              onPress={() => router.push('/settings')}
+              showChevron
             />
           </ProfileSection>
 

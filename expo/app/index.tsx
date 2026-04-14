@@ -3,7 +3,7 @@ import { View, StyleSheet, Text, TouchableOpacity, FlatList, Animated, KeyboardA
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { Settings, MessageCircle, Star } from 'lucide-react-native';
+import { MessageCircle, Star, User } from 'lucide-react-native';
 import { SpotifyHandCard } from '@/components/SpotifyHandCard';
 import { ChatCard } from '@/components/ChatCard';
 import { SessionCard } from '@/components/SessionCard';
@@ -617,8 +617,8 @@ Only return the JSON array, nothing else.`;
               resizeMode="contain"
             />
             <Text style={styles.headerTitle}>PokerPro AI</Text>
-            <TouchableOpacity onPress={() => router.push('/settings')}>
-              <Settings size={22} color={colors.text.muted} />
+            <TouchableOpacity onPress={() => router.push('/profile')}>
+              <User size={22} color={colors.text.muted} />
             </TouchableOpacity>
           </View>
           {isLoading ? (
