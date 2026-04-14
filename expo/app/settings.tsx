@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   ScrollView,
@@ -27,8 +27,12 @@ import {
   Volume2,
   Info,
   LogIn,
+  LogOut,
+  RefreshCw,
+  Trash2,
 } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
+import { resetOnboarding } from '@/components/Onboarding';
 import { colors } from '@/constants/colors';
 import * as Haptics from 'expo-haptics';
 import Constants from 'expo-constants';
@@ -88,13 +92,15 @@ function SettingsSection({ title, children }: { title: string; children: React.R
 export default function SettingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, signOut, deleteAccount } = useAuth();
 
   // Voice input preference (stored locally for now)
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus | null>(null);
   const [isLoadingSubscription, setIsLoadingSubscription] = useState(true);
   const [isRestoring, setIsRestoring] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const appVersion = Constants.expoConfig?.version || '1.0.0';
 
@@ -216,6 +222,81 @@ export default function SettingsScreen() {
     }
   };
 
+  const handleRestartOnboarding = useCallback(() => {
+    Alert.alert(
+      'Restart Onboarding',
+      'This will reset the app introduction. You\'ll see the welcome screens again next time you open the app. Continue?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Restart',
+          onPress: async () => {
+            setIsResetting(true);
+            try {
+              await resetOnboarding();
+              Alert.alert('Done', 'Onboarding will appear on your next app launch.', [
+                { text: 'OK' }
+              ]);
+            } catch (error) {
+              Alert.alert('Error', 'Failed to reset onboarding. Please try again.');
+            } finally {
+              setIsResetting(false);
+            }
+          },
+        },
+      ]
+    );
+  }, []);
+
+  const handleSignOut = useCallback(() => {
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: async () => {
+            await signOut();
+            // Router will automatically redirect to login via auth state change
+          },
+        },
+      ]
+    );
+  }, [signOut]);
+
+  const handleDeleteAccount = useCallback(() => {
+    Alert.alert(
+      'Delete Account',
+      'Are you sure you want to delete your account? This will permanently delete all your data including saved hands and chat history. This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete Account',
+          style: 'destructive',
+          onPress: async () => {
+            setIsDeleting(true);
+            try {
+              const { error } = await deleteAccount();
+              if (error) {
+                Alert.alert('Error', error.message || 'Failed to delete account. Please try again.');
+              } else {
+                Alert.alert('Account Deleted', 'Your account has been successfully deleted.', [
+                  { text: 'OK', onPress: () => router.replace('/auth/login') },
+                ]);
+              }
+            } catch (err) {
+              Alert.alert('Error', 'Something went wrong. Please try again.');
+            } finally {
+              setIsDeleting(false);
+            }
+          },
+        },
+      ]
+    );
+  }, [deleteAccount, router]);
+
   return (
     <View style={styles.container}>
       <Stack.Screen
@@ -284,6 +365,15 @@ export default function SettingsScreen() {
             />
           </SettingsSection>
 
+          <SettingsSection title="App">
+            <SettingsItem
+              icon={<RefreshCw size={22} color={colors.accent.gold} />}
+              title="Restart Onboarding"
+              subtitle="See welcome screens again"
+              onPress={handleRestartOnboarding}
+            />
+          </SettingsSection>
+
           <SettingsSection title="Support">
             <SettingsItem
               icon={<HelpCircle size={22} color={colors.accent.gold} />}
@@ -312,7 +402,22 @@ export default function SettingsScreen() {
             />
           </SettingsSection>
 
-          {!isAuthenticated && (
+          {isAuthenticated ? (
+            <SettingsSection title="Account">
+              <SettingsItem
+                icon={<LogOut size={22} color={colors.text.primary} />}
+                title="Sign Out"
+                onPress={handleSignOut}
+              />
+              <SettingsItem
+                icon={isDeleting ? <ActivityIndicator size="small" color={colors.utility.error} /> : <Trash2 size={22} color={colors.utility.error} />}
+                title={isDeleting ? "Deleting..." : "Delete Account"}
+                subtitle="Permanently delete all data"
+                onPress={isDeleting ? undefined : handleDeleteAccount}
+                showChevron={false}
+              />
+            </SettingsSection>
+          ) : (
             <SettingsSection title="">
               <TouchableOpacity style={styles.signInButton} onPress={() => router.push('/auth/login')}>
                 <LogIn size={20} color={colors.accent.gold} />
