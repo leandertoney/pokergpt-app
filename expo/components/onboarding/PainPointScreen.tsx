@@ -31,24 +31,24 @@ type PainPointOption = {
 
 const PAIN_POINT_OPTIONS: PainPointOption[] = [
   {
-    label: 'Tilt and emotional control',
+    label: 'Play with unshakeable confidence',
     value: 'tilt',
-    description: 'I make bad decisions when frustrated',
+    description: 'Stay calm and make great decisions every hand',
   },
   {
-    label: 'Finding my leaks',
+    label: 'Crush higher stakes',
     value: 'leaks',
-    description: "I'm losing but can't pinpoint why",
+    description: 'Move up and win bigger pots consistently',
   },
   {
-    label: 'Information overload',
+    label: 'Master poker strategy effortlessly',
     value: 'overwhelmed',
-    description: 'Strategy feels too complex',
+    description: 'Make complex concepts simple and actionable',
   },
   {
-    label: 'Inconsistent results',
+    label: 'Build a steady winrate',
     value: 'consistency',
-    description: 'I swing between winning and losing streaks',
+    description: 'Win consistently, session after session',
   },
 ];
 
@@ -124,8 +124,8 @@ export function PainPointScreen({ onComplete }: PainPointScreenProps) {
             },
           ]}
         >
-          <Text style={styles.headline}>What's your biggest struggle at the table?</Text>
-          <Text style={styles.subheadline}>Pick the one you feel most</Text>
+          <Text style={styles.headline}>What excites you most about poker?</Text>
+          <Text style={styles.subheadline}>Choose your #1 goal</Text>
         </Animated.View>
 
         {/* Individual Option Cards */}
@@ -214,12 +214,12 @@ const styles = StyleSheet.create({
   headline: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#fff',
+    color: '#FFFFFF',
     lineHeight: 36,
   } as TextStyle,
   subheadline: {
     fontSize: 15,
-    color: 'rgba(255,255,255,0.5)',
+    color: 'rgba(255,255,255,0.75)',
     marginTop: 8,
   } as TextStyle,
   optionsContainer: {
@@ -228,16 +228,24 @@ const styles = StyleSheet.create({
   optionCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(255,255,255,0.95)',
     borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderWidth: 2,
+    borderColor: 'rgba(232, 184, 74, 0.2)',
     paddingVertical: 16,
     paddingHorizontal: 18,
+    shadowColor: '#E8B84A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   } as ViewStyle,
   optionCardSelected: {
-    backgroundColor: 'rgba(212, 168, 75, 0.12)',
+    backgroundColor: 'rgba(232, 184, 74, 0.25)',
     borderColor: colors.onboarding.gold,
+    borderWidth: 2.5,
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   } as ViewStyle,
   optionText: {
     flex: 1,
@@ -245,14 +253,15 @@ const styles = StyleSheet.create({
   optionLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
+    color: '#000000',
   } as TextStyle,
   optionLabelSelected: {
-    color: colors.onboarding.gold,
+    color: '#000000',
+    fontWeight: '700',
   } as TextStyle,
   optionDescription: {
     fontSize: 13,
-    color: 'rgba(255,255,255,0.5)',
+    color: 'rgba(0,0,0,0.6)',
     marginTop: 3,
   } as TextStyle,
   checkCircle: {
@@ -260,7 +269,7 @@ const styles = StyleSheet.create({
     height: 26,
     borderRadius: 13,
     borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.25)',
+    borderColor: 'rgba(0,0,0,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 14,

@@ -35,15 +35,15 @@ type CommentData = {
 
 const COMMENTS: CommentData[] = [
   // Upper rows (over the hero image)
-  { text: "Lost 3 buy-ins chasing one hand 🤦", user: "tilted_tom", top: SH * 0.12, left: SW * 0.03, rotate: -3, fromX: -500, fromY: -80, delay: 500, maxWidth: SW * 0.48 },
-  { text: "I play great then punt it all", user: "grinder99", top: SH * 0.10, left: SW * 0.50, rotate: 2.5, fromX: 500, fromY: -40, delay: 650, maxWidth: SW * 0.46 },
-  { text: "Tilt costs me more than bad cards", user: "pokerlife22", top: SH * 0.23, left: SW * 0.05, rotate: -1.5, fromX: -500, fromY: 0, delay: 800, maxWidth: SW * 0.50 },
-  { text: "Know the math. Still can't fold.", user: "cant_fold_AK", top: SH * 0.26, left: SW * 0.48, rotate: 3, fromX: 500, fromY: 0, delay: 950, maxWidth: SW * 0.48 },
+  { text: "Up $3K this month! Best investment ever 🔥", user: "crushing_nl200", top: SH * 0.12, left: SW * 0.03, rotate: -3, fromX: -500, fromY: -80, delay: 500, maxWidth: SW * 0.48 },
+  { text: "Finally moved up to 2/5 with confidence!", user: "rising_star", top: SH * 0.10, left: SW * 0.50, rotate: 2.5, fromX: 500, fromY: -40, delay: 650, maxWidth: SW * 0.46 },
+  { text: "This changed my game completely ⭐", user: "poker_student", top: SH * 0.23, left: SW * 0.05, rotate: -1.5, fromX: -500, fromY: 0, delay: 800, maxWidth: SW * 0.50 },
+  { text: "Making better decisions every session 💪", user: "smart_player", top: SH * 0.26, left: SW * 0.48, rotate: 3, fromX: 500, fromY: 0, delay: 950, maxWidth: SW * 0.48 },
   // Lower rows (below headline)
-  { text: "Up $500, down $800. Every weekend.", user: "weekend_rec", top: SH * 0.50, left: SW * 0.04, rotate: -2, fromX: -500, fromY: 40, delay: 1100, maxWidth: SW * 0.52 },
-  { text: "Study for hours, nothing sticks", user: "eternal_fish", top: SH * 0.53, left: SW * 0.50, rotate: 1.5, fromX: 500, fromY: 0, delay: 1250, maxWidth: SW * 0.46 },
-  { text: "Why do I keep calling river raises??", user: "call_station", top: SH * 0.63, left: SW * 0.03, rotate: -2.5, fromX: -500, fromY: 80, delay: 1400, maxWidth: SW * 0.50 },
-  { text: "One bad beat and my session is over", user: "steamer_steve", top: SH * 0.65, left: SW * 0.46, rotate: 2, fromX: 500, fromY: 40, delay: 1550, maxWidth: SW * 0.50 },
+  { text: "Consistent wins for 3 months straight!", user: "steady_eddie", top: SH * 0.50, left: SW * 0.04, rotate: -2, fromX: -500, fromY: 40, delay: 1100, maxWidth: SW * 0.52 },
+  { text: "Everything I study actually makes sense now", user: "learning_fast", top: SH * 0.53, left: SW * 0.50, rotate: 1.5, fromX: 500, fromY: 0, delay: 1250, maxWidth: SW * 0.46 },
+  { text: "My win rate doubled in 6 weeks 📈", user: "profit_machine", top: SH * 0.63, left: SW * 0.03, rotate: -2.5, fromX: -500, fromY: 80, delay: 1400, maxWidth: SW * 0.50 },
+  { text: "Playing my best poker ever. No looking back!", user: "confident_pro", top: SH * 0.65, left: SW * 0.46, rotate: 2, fromX: 500, fromY: 40, delay: 1550, maxWidth: SW * 0.50 },
 ];
 
 type HeroScreenProps = {
@@ -193,7 +193,7 @@ export function HeroScreen({ onNext }: HeroScreenProps) {
           },
         ]}
       >
-        <Text style={styles.headline}>Every session,{'\n'}same story.</Text>
+        <Text style={styles.headline}>Join 10,000+{'\n'}winning players</Text>
       </Animated.View>
 
       {/* Closer - appears after comments */}
@@ -213,7 +213,7 @@ export function HeroScreen({ onNext }: HeroScreenProps) {
           },
         ]}
       >
-        <Text style={styles.closer}>You're not the problem.{'\n'}Your process is.</Text>
+        <Text style={styles.closer}>Your breakthrough{'\n'}starts right now.</Text>
       </Animated.View>
 
       {/* Continue Button */}
@@ -262,15 +262,15 @@ const styles = StyleSheet.create({
     height: '100%',
   } as ImageStyle,
   commentCard: {
-    backgroundColor: 'rgba(20, 20, 30, 0.88)',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
     borderRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    shadowColor: '#000',
+    borderColor: 'rgba(232, 184, 74, 0.3)',
+    shadowColor: '#E8B84A',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 5,
   } as ViewStyle,
@@ -287,13 +287,14 @@ const styles = StyleSheet.create({
   } as ViewStyle,
   username: {
     fontSize: 11,
-    color: 'rgba(255,255,255,0.35)',
+    color: 'rgba(0,0,0,0.45)',
     fontWeight: '600',
   } as TextStyle,
   commentText: {
     fontSize: 13,
-    color: 'rgba(255,255,255,0.85)',
+    color: '#000000',
     lineHeight: 18,
+    fontWeight: '500',
   } as TextStyle,
   headlineContainer: {
     position: 'absolute',
@@ -306,7 +307,7 @@ const styles = StyleSheet.create({
   headline: {
     fontSize: 34,
     fontWeight: '800',
-    color: '#fff',
+    color: '#FFFFFF',
     textAlign: 'center',
     lineHeight: 42,
     textShadowColor: 'rgba(0,0,0,0.9)',
@@ -322,14 +323,14 @@ const styles = StyleSheet.create({
     zIndex: 10,
   } as ViewStyle,
   closer: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 20,
+    fontWeight: '700',
     color: colors.onboarding.gold,
     textAlign: 'center',
-    lineHeight: 26,
-    textShadowColor: 'rgba(0,0,0,0.8)',
+    lineHeight: 28,
+    textShadowColor: 'rgba(232, 184, 74, 0.6)',
     textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 10,
+    textShadowRadius: 12,
   } as TextStyle,
   buttonContainer: {
     position: 'absolute',

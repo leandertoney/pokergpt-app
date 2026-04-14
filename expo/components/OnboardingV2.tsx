@@ -16,29 +16,21 @@ import { ValidationScreen } from './onboarding/ValidationScreen';
 import { HookScreen } from './onboarding/HookScreen';
 import { HeroScreen } from './onboarding/HeroScreen';
 import { LiveDemoScreen } from './onboarding/LiveDemoScreen';
-import { NameInputScreen } from './onboarding/NameInputScreen';
 import { WhatYouGetScreen } from './onboarding/WhatYouGetScreen';
 import { DailyReviewDemoScreen } from './onboarding/DailyReviewDemoScreen';
+import { SessionDemoScreen } from './onboarding/SessionDemoScreen';
 import { ChatDemoScreen } from './onboarding/ChatDemoScreen';
-import { GoalSettingScreen } from './onboarding/GoalSettingScreen';
 import { PaywallScreen } from './onboarding/PaywallScreen';
-import { SkillLevelScreen } from './onboarding/SkillLevelScreen';
 import { AnalysisResultScreen } from './onboarding/AnalysisResultScreen';
 import { PrimingScreenOne } from './onboarding/PrimingScreenOne';
 import { PrimingScreenTwo } from './onboarding/PrimingScreenTwo';
-import { FrequencyScreen } from './onboarding/FrequencyScreen';
-import { AccomplishScreen } from './onboarding/AccomplishScreen';
-import { GoalTimelineScreen } from './onboarding/GoalTimelineScreen';
-import { PotentialScreen } from './onboarding/PotentialScreen';
-import { NotificationScreen } from './onboarding/NotificationScreen';
-import { ReferralScreen } from './onboarding/ReferralScreen';
 
-import { setUserTier, setUserIdentity, setUserDisplayName, setPaywallState, setGoalConfirmation, setOnboardingProfile } from '@/services/storageService';
+import { setUserTier, setUserIdentity, setUserDisplayName, setPaywallState, setOnboardingProfile } from '@/services/storageService';
 import { updateUserIdentity as syncUserIdentityToSupabase, getOrCreateUser } from '@/services/supabaseStorage';
 import { checkSubscriptionStatus } from '@/services/revenueCat';
 import { withTimeout } from '@/utils/withTimeout';
 import { colors } from '@/constants/colors';
-import type { UserIdentity, ExperienceLevel, PainPoint, OnboardingProfile } from '@/types/poker';
+import type { UserIdentity, PainPoint, OnboardingProfile } from '@/types/poker';
 
 const ONBOARDING_COMPLETE_KEY = '@onboarding_complete';
 
@@ -51,9 +43,9 @@ type OnboardingStep =
   | 'chatDemo'
   | 'skillLevel'
   | 'liveDemo'
-  | 'frequency'
   | 'analysisResult'
   | 'dailyReviewDemo'
+  | 'sessionDemo'
   | 'name'
   | 'referral'
   | 'accomplish'
@@ -74,17 +66,12 @@ type OnboardingV2Props = {
 const ALL_STEPS: OnboardingStep[] = [
   // PHASE 1: HOOK
   'hook', 'hero',
-  // PHASE 2: IDENTIFY
+  // PHASE 2: IDENTIFY (1 question only)
   'painPoint', 'validation',
-  // PHASE 3: DEMO + QUESTIONS (interleaved)
-  'chatDemo', 'liveDemo', 'frequency',
-  'analysisResult', 'skillLevel', 'dailyReviewDemo',
-  // PHASE 4: PERSONALIZE
-  'name', 'referral', 'accomplish', 'goalTimeline',
-  // PHASE 5: COMMIT
-  'goalSetting', 'potential',
-  // PHASE 6: CONVERT
-  'notifications', 'primingOne', 'primingTwo', 'paywall', 'whatYouGet',
+  // PHASE 3: SHOW FEATURES (demos only, no questions)
+  'chatDemo', 'liveDemo', 'analysisResult', 'dailyReviewDemo', 'sessionDemo',
+  // PHASE 4: CONVERT
+  'primingOne', 'primingTwo', 'paywall', 'whatYouGet',
 ];
 
 // DEV ONLY: Set to any step name to jump straight there (e.g. 'paywall', 'primingTwo')
@@ -96,13 +83,6 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
   const [step, setStep] = useState<OnboardingStep>(DEV_START_STEP ?? 'hook');
   const [stepHistory, setStepHistory] = useState<OnboardingStep[]>([DEV_START_STEP ?? 'hook']);
   const [painPoint, setPainPoint] = useState<PainPoint | null>(null);
-  const [goal, setGoal] = useState<string>('profit');
-  const [userName, setUserName] = useState<string | null>(null);
-  const [experienceLevel, setExperienceLevel] = useState<ExperienceLevel>('intermediate');
-  const [frequency, setFrequency] = useState<string | null>(null);
-  const [goalTimeline, setGoalTimeline] = useState<string | null>(null);
-  const [referralSource, setReferralSource] = useState<string | null>(null);
-  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
 
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const slideAnim = useRef(new Animated.Value(0)).current;
@@ -162,50 +142,6 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
     transitionTo('chatDemo');
   };
 
-  const handleSkillLevelComplete = (level: ExperienceLevel) => {
-    setExperienceLevel(level);
-    transitionTo('dailyReviewDemo');
-  };
-
-  const handleFrequencyComplete = (selectedFrequency: string) => {
-    setFrequency(selectedFrequency);
-    transitionTo('analysisResult');
-  };
-
-  const handleNameComplete = (name: string | null) => {
-    setUserName(name);
-    transitionTo('referral');
-  };
-
-  const handleReferralComplete = (source: string) => {
-    setReferralSource(source);
-    transitionTo('accomplish');
-  };
-
-  const handleAccomplishComplete = (selectedGoal: string) => {
-    setGoal(selectedGoal);
-    transitionTo('goalTimeline');
-  };
-
-  const handleGoalTimelineComplete = (timeline: string) => {
-    setGoalTimeline(timeline);
-    transitionTo('goalSetting');
-  };
-
-  const handleGoalConfirmed = async (timestamp: number) => {
-    await setGoalConfirmation({
-      goal,
-      userName,
-      timestamp,
-    });
-    transitionTo('potential');
-  };
-
-  const handleNotificationComplete = (enabled: boolean) => {
-    setNotificationsEnabled(enabled);
-    transitionTo('primingOne');
-  };
-
   const handlePaywallPurchase = async (planId: 'weekly' | 'yearly') => {
     console.log('User purchased plan:', planId);
 
@@ -232,35 +168,35 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
 
   const handleComplete = async () => {
     try {
-      // Map goal to primaryGoal
-      const goalMap: Record<string, string> = {
-        profit: 'profit',
-        win: 'compete',
-        learn: 'improve',
-        confidence: 'fun',
+      // Map painPoint to primaryGoal
+      const painPointToGoalMap: Record<string, UserIdentity['primaryGoal']> = {
+        tilt: 'fun',
+        leaks: 'profit',
+        overwhelmed: 'improve',
+        consistency: 'profit',
       };
 
       const identity: UserIdentity = {
         archetype: null,
-        experienceLevel: experienceLevel,
-        primaryGoal: goalMap[goal] as UserIdentity['primaryGoal'],
+        experienceLevel: 'intermediate', // Default since we removed the question
+        primaryGoal: painPoint ? painPointToGoalMap[painPoint] : 'profit',
         biggestChallenge: null,
         painPoint: painPoint,
       };
 
-      // Save onboarding profile
+      // Save onboarding profile with minimal data
       const profile: OnboardingProfile = {
-        frequency,
-        goalTimeline,
-        referralSource,
-        notificationsEnabled,
+        frequency: null,
+        goalTimeline: null,
+        referralSource: null,
+        notificationsEnabled: false,
       };
 
       // Save to local storage
       await AsyncStorage.setItem(ONBOARDING_COMPLETE_KEY, 'true');
       await setUserTier('free');
       await setUserIdentity(identity);
-      await setUserDisplayName(userName);
+      await setUserDisplayName(null); // No name collected in streamlined flow
       await setOnboardingProfile(profile);
 
       // Sync to Supabase (gracefully fails if offline)
@@ -305,60 +241,17 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
       case 'chatDemo':
         return <ChatDemoScreen onNext={() => transitionTo('liveDemo')} />;
 
-      case 'skillLevel':
-        return <SkillLevelScreen onComplete={handleSkillLevelComplete} />;
-
       case 'liveDemo':
-        return <LiveDemoScreen onNext={() => transitionTo('frequency')} />;
-
-      case 'frequency':
-        return <FrequencyScreen onComplete={handleFrequencyComplete} />;
+        return <LiveDemoScreen onNext={() => transitionTo('analysisResult')} />;
 
       case 'analysisResult':
-        return <AnalysisResultScreen onNext={() => transitionTo('skillLevel')} />;
+        return <AnalysisResultScreen onNext={() => transitionTo('dailyReviewDemo')} />;
 
       case 'dailyReviewDemo':
-        return <DailyReviewDemoScreen onNext={() => transitionTo('name')} />;
+        return <DailyReviewDemoScreen onNext={() => transitionTo('sessionDemo')} />;
 
-      // PHASE 4: PERSONALIZE
-      case 'name':
-        return <NameInputScreen onComplete={handleNameComplete} />;
-
-      case 'referral':
-        return <ReferralScreen onComplete={handleReferralComplete} />;
-
-      case 'accomplish':
-        return <AccomplishScreen onComplete={handleAccomplishComplete} />;
-
-      case 'goalTimeline':
-        return <GoalTimelineScreen onComplete={handleGoalTimelineComplete} />;
-
-      // PHASE 5: COMMIT
-      case 'goalSetting':
-        return (
-          <GoalSettingScreen
-            goal={goal}
-            userName={userName}
-            painPoint={painPoint}
-            onComplete={handleGoalConfirmed}
-          />
-        );
-
-      case 'potential':
-        return (
-          <PotentialScreen
-            userName={userName}
-            experienceLevel={experienceLevel}
-            frequency={frequency}
-            goal={goal}
-            goalTimeline={goalTimeline}
-            onNext={() => transitionTo('notifications')}
-          />
-        );
-
-      // PHASE 6: CONVERT
-      case 'notifications':
-        return <NotificationScreen onComplete={handleNotificationComplete} />;
+      case 'sessionDemo':
+        return <SessionDemoScreen onNext={() => transitionTo('primingOne')} />;
 
       case 'primingOne':
         return <PrimingScreenOne onNext={() => transitionTo('primingTwo')} />;
@@ -369,8 +262,8 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
       case 'paywall':
         return (
           <PaywallScreen
-            goal={goal}
-            userName={userName}
+            goal={'profit'} // Default goal
+            userName={null} // No name collected in streamlined flow
             onPurchase={handlePaywallPurchase}
             onSkip={handlePaywallSkip}
           />

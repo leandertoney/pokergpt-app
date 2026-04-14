@@ -7,6 +7,10 @@
     "production": {
       "ios": {
         "ascAppId": "6757314859"
+      },
+      "android": {
+        "serviceAccountKeyPath": "./google-service-account.json",
+        "track": "production"
       }
     }
   },
@@ -30,6 +34,9 @@
       "distribution": "store",
       "ios": {
         "resourceClass": "m-medium"
+      },
+      "android": {
+        "buildType": "app-bundle"
       },
       "channel": "production"
     }

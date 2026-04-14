@@ -71,7 +71,7 @@ export default function PokerChatScreen() {
 
   // Handle special offer acceptance
   const handleSpecialOfferAccept = useCallback(async () => {
-    console.log('User accepted special offer - lifetime plan at $49');
+    console.log('User accepted special offer - yearly plan at $19.99');
     await setUserTier('paid');
     await markSpecialOfferShown();
     setShowSpecialOffer(false);

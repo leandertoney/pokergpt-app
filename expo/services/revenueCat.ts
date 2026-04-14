@@ -15,6 +15,7 @@ const REVENUECAT_ANDROID_KEY = 'goog_REPLACE_WITH_ANDROID_KEY'; // Add Android k
 export const PRODUCT_IDS = {
   WEEKLY: 'pokergpt_weekly',
   YEARLY: 'pokergpt_yearly',
+  SPECIAL: 'poker_pro_yearly_special',
 } as const;
 
 // Entitlement identifier - must match what you created in RevenueCat
@@ -23,7 +24,7 @@ export const ENTITLEMENTS = {
 } as const;
 
 // Package types for RevenueCat offerings
-export type PlanType = 'weekly' | 'yearly';
+export type PlanType = 'weekly' | 'yearly' | 'special';
 
 export interface SubscriptionStatus {
   isSubscribed: boolean;
@@ -122,9 +123,16 @@ class RevenueCatService {
       // RevenueCat uses $rc_weekly and $rc_annual as standard package identifiers
       if (planType === 'weekly') {
         return offering.weekly || null;
-      } else {
+      } else if (planType === 'yearly') {
         return offering.annual || null;
+      } else if (planType === 'special') {
+        // For special offer, look for a custom package identifier
+        // This should match the identifier you set in RevenueCat dashboard
+        return offering.availablePackages.find(
+          pkg => pkg.identifier === '$rc_special' || pkg.product.identifier === PRODUCT_IDS.SPECIAL
+        ) || null;
       }
+      return null;
     } catch (error) {
       console.error('Failed to get package for plan:', error);
       return null;

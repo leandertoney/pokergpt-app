@@ -190,7 +190,7 @@ export function HookScreen({ onNext }: HookScreenProps) {
 
         {/* Main Headline - Word by Word */}
         <View style={styles.headlineContainer}>
-          {/* Win MORE */}
+          {/* Play Smarter */}
           <View style={styles.headlineLine}>
             <Animated.Text
               style={[
@@ -208,7 +208,7 @@ export function HookScreen({ onNext }: HookScreenProps) {
                 },
               ]}
             >
-              Win{' '}
+              Play{' '}
             </Animated.Text>
             <Animated.Text
               style={[
@@ -232,11 +232,11 @@ export function HookScreen({ onNext }: HookScreenProps) {
                 },
               ]}
             >
-              MORE.
+              Smarter.
             </Animated.Text>
           </View>
 
-          {/* Tilt LESS */}
+          {/* Win More */}
           <View style={styles.headlineLine}>
             <Animated.Text
               style={[
@@ -254,14 +254,20 @@ export function HookScreen({ onNext }: HookScreenProps) {
                 },
               ]}
             >
-              Tilt{' '}
+              Win{' '}
             </Animated.Text>
             <Animated.Text
               style={[
-                styles.emphasisLess,
+                styles.emphasisMore,
                 {
                   opacity: lessAnim,
                   transform: [
+                    {
+                      scale: lessAnim.interpolate({
+                        inputRange: [0, 0.5, 1],
+                        outputRange: [0.3, 1.15, 1],
+                      }),
+                    },
                     {
                       translateY: lessAnim.interpolate({
                         inputRange: [0, 1],
@@ -272,7 +278,7 @@ export function HookScreen({ onNext }: HookScreenProps) {
                 },
               ]}
             >
-              LESS.
+              More.
             </Animated.Text>
           </View>
         </View>
@@ -284,7 +290,7 @@ export function HookScreen({ onNext }: HookScreenProps) {
             { opacity: subtextAnim },
           ]}
         >
-          Real-time poker AI that thinks{'\n'}with you at the table.
+          Your AI poker coach.{'\n'}Ready when you are. 24/7.
         </Animated.Text>
       </View>
 
@@ -378,16 +384,16 @@ const styles = StyleSheet.create({
   headline: {
     fontSize: 36,
     fontWeight: '700',
-    color: '#fff',
+    color: '#FFFFFF',
     lineHeight: 56,
   } as TextStyle,
   emphasisMore: {
     fontSize: 52,
     fontWeight: '900',
-    color: colors.onboarding.profit,
-    textShadowColor: 'rgba(34, 197, 94, 0.4)',
+    color: colors.onboarding.gold,
+    textShadowColor: 'rgba(232, 184, 74, 0.6)',
     textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 20,
+    textShadowRadius: 24,
   } as TextStyle,
   emphasisLess: {
     fontSize: 40,
@@ -397,7 +403,7 @@ const styles = StyleSheet.create({
   } as TextStyle,
   subtext: {
     fontSize: 17,
-    color: 'rgba(255,255,255,0.6)',
+    color: 'rgba(255,255,255,0.85)',
     textAlign: 'center',
     lineHeight: 24,
     marginTop: 24,

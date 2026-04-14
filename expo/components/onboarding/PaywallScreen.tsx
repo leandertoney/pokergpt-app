@@ -10,6 +10,7 @@ import {
   Linking,
   ScrollView,
   Image,
+  Modal,
   type ViewStyle,
   type TextStyle,
   type ImageStyle,
@@ -42,11 +43,14 @@ export function PaywallScreen({ goal, userName, onPurchase, onSkip }: PaywallScr
   const [selectedPlan, setSelectedPlan] = useState<'weekly' | 'yearly'>('yearly');
   const [isLoading, setIsLoading] = useState(false);
   const [isPurchasing, setIsPurchasing] = useState(false);
+  const [showLastChance, setShowLastChance] = useState(false);
   const [prices, setPrices] = useState({
     weekly: '$9.99/wk',
-    yearlyPerWeek: '$0.94/wk',
-    yearlyTotal: '$49/yr',
-    yearlyPerMonth: '$4.08/mo',
+    yearlyPerWeek: '$0.58/wk',
+    yearlyTotal: '$29.99/yr',
+    yearlyPerMonth: '$2.50/mo',
+    specialYearly: '$19.99/yr',
+    specialPerMonth: '$1.67/mo',
   });
 
   const headerAnim = useRef(new Animated.Value(0)).current;
@@ -62,16 +66,23 @@ export function PaywallScreen({ goal, userName, onPurchase, onSkip }: PaywallScr
         if (offerings) {
           const weeklyPrice = offerings.weekly?.product.priceString;
           const yearlyPrice = offerings.annual?.product.priceString;
-          const yearlyRaw = offerings.annual?.product.price ?? 49;
+          const yearlyRaw = offerings.annual?.product.price ?? 29.99;
           const perWeek = (yearlyRaw / 52).toFixed(2);
           const perMonth = (yearlyRaw / 12).toFixed(2);
           const currencySymbol = yearlyPrice?.match(/^[^0-9]*/)?.[0] || '$';
 
+          // Try to get special offer price
+          const specialPrice = offerings.special?.product.priceString;
+          const specialRaw = offerings.special?.product.price ?? 19.99;
+          const specialPerMonth = (specialRaw / 12).toFixed(2);
+
           setPrices({
             weekly: weeklyPrice ? `${weeklyPrice}/wk` : '$9.99/wk',
             yearlyPerWeek: `${currencySymbol}${perWeek}/wk`,
-            yearlyTotal: yearlyPrice ? `${yearlyPrice}/yr` : '$49/yr',
+            yearlyTotal: yearlyPrice ? `${yearlyPrice}/yr` : '$29.99/yr',
             yearlyPerMonth: `${currencySymbol}${perMonth}/mo`,
+            specialYearly: specialPrice ? `${specialPrice}/yr` : '$19.99/yr',
+            specialPerMonth: `${currencySymbol}${specialPerMonth}/mo`,
           });
         }
       } catch (error) {
@@ -179,6 +190,40 @@ export function PaywallScreen({ goal, userName, onPurchase, onSkip }: PaywallScr
 
   const handleSkip = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setShowLastChance(true);
+  };
+
+  const handleSpecialOffer = async () => {
+    if (isPurchasing) return;
+
+    setIsPurchasing(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    try {
+      // Try to purchase the special offer
+      const result = await purchasePackage('special' as PlanType);
+
+      if (result.success) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        setShowLastChance(false);
+        onPurchase('yearly'); // Treat as yearly purchase
+      } else if (result.error === 'cancelled') {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      } else {
+        Alert.alert('Purchase Failed', result.error || 'Please try again.');
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Something went wrong. Please try again.');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setIsPurchasing(false);
+    }
+  };
+
+  const handleFinalSkip = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setShowLastChance(false);
     onSkip();
   };
 
@@ -413,6 +458,18 @@ export function PaywallScreen({ goal, userName, onPurchase, onSkip }: PaywallScr
           </Text>
         </Animated.View>
 
+        {/* Continue Free Button */}
+        <Animated.View
+          style={[
+            styles.continueFreeContainer,
+            { opacity: buttonAnim },
+          ]}
+        >
+          <TouchableOpacity onPress={handleSkip} activeOpacity={0.7}>
+            <Text style={styles.continueFreeText}>Continue with limited features</Text>
+          </TouchableOpacity>
+        </Animated.View>
+
         {/* Footer Links */}
         <Animated.View
           style={[
@@ -436,14 +493,81 @@ export function PaywallScreen({ goal, userName, onPurchase, onSkip }: PaywallScr
             <Text style={styles.footerLink}>Privacy</Text>
           </TouchableOpacity>
         </Animated.View>
-
-        {/* DEV ONLY: Skip paywall */}
-        {__DEV__ && (
-          <TouchableOpacity onPress={handleSkip} style={styles.devSkip}>
-            <Text style={styles.devSkipText}>DEV SKIP</Text>
-          </TouchableOpacity>
-        )}
       </ScrollView>
+
+      {/* Last Chance Modal */}
+      <Modal
+        visible={showLastChance}
+        transparent
+        animationType="fade"
+        onRequestClose={handleFinalSkip}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            {/* Header */}
+            <Text style={styles.modalTitle}>Wait! Last Chance 🎉</Text>
+            <Text style={styles.modalSubtitle}>
+              Get everything for just {prices.specialYearly.replace('/yr', '')}
+            </Text>
+
+            {/* Price Comparison */}
+            <View style={styles.priceComparisonCard}>
+              <View style={styles.priceRow}>
+                <Text style={styles.normalPriceLabel}>Normal Price:</Text>
+                <Text style={styles.normalPriceStrikethrough}>{prices.yearlyTotal.replace('/yr', '')}</Text>
+              </View>
+              <View style={styles.priceRow}>
+                <Text style={styles.specialPriceLabel}>Your Price:</Text>
+                <Text style={styles.specialPrice}>{prices.specialYearly.replace('/yr', '')}</Text>
+              </View>
+              <View style={styles.savingsRow}>
+                <Text style={styles.savingsText}>Save $10 • Just {prices.specialPerMonth}/month</Text>
+              </View>
+            </View>
+
+            {/* Features */}
+            <View style={styles.modalFeaturesContainer}>
+              <View style={styles.modalFeatureRow}>
+                <Check size={18} color={colors.onboarding.gold} />
+                <Text style={styles.modalFeatureText}>Unlimited AI hand analysis</Text>
+              </View>
+              <View style={styles.modalFeatureRow}>
+                <Check size={18} color={colors.onboarding.gold} />
+                <Text style={styles.modalFeatureText}>Voice coaching mode</Text>
+              </View>
+              <View style={styles.modalFeatureRow}>
+                <Check size={18} color={colors.onboarding.gold} />
+                <Text style={styles.modalFeatureText}>Full year of access</Text>
+              </View>
+            </View>
+
+            {/* CTA Buttons */}
+            <TouchableOpacity
+              style={styles.modalCtaButton}
+              onPress={handleSpecialOffer}
+              disabled={isPurchasing}
+              activeOpacity={0.8}
+            >
+              {isPurchasing ? (
+                <ActivityIndicator color={colors.text.dark} />
+              ) : (
+                <Text style={styles.modalCtaButtonText}>
+                  Get Special Offer - {prices.specialYearly.replace('/yr', '')}
+                </Text>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.modalSkipButton}
+              onPress={handleFinalSkip}
+              disabled={isPurchasing}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.modalSkipButtonText}>No thanks, continue free</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -640,15 +764,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 10,
   } as TextStyle,
-  skipButton: {
-    marginTop: 12,
-    paddingVertical: 8,
+  continueFreeContainer: {
+    marginTop: 16,
     alignItems: 'center',
   } as ViewStyle,
-  skipButtonText: {
+  continueFreeText: {
     fontSize: 15,
     fontWeight: '500',
-    color: 'rgba(255,255,255,0.6)',
+    color: 'rgba(255,255,255,0.5)',
+    textDecorationLine: 'underline',
   } as TextStyle,
   footer: {
     flexDirection: 'row',
@@ -665,16 +789,6 @@ const styles = StyleSheet.create({
   footerDot: {
     fontSize: 14,
     color: 'rgba(255,255,255,0.3)',
-  } as TextStyle,
-  devSkip: {
-    marginTop: 12,
-    alignItems: 'center',
-    padding: 8,
-  } as ViewStyle,
-  devSkipText: {
-    fontSize: 12,
-    color: '#FF3B30',
-    fontWeight: '700',
   } as TextStyle,
   heroContainer: {
     position: 'absolute',
@@ -695,6 +809,126 @@ const styles = StyleSheet.create({
     right: 0,
     height: '70%',
   } as ViewStyle,
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  } as ViewStyle,
+  modalContent: {
+    width: '100%',
+    backgroundColor: colors.background.primary,
+    borderRadius: 24,
+    padding: 24,
+    borderWidth: 2,
+    borderColor: colors.onboarding.gold,
+    shadowColor: colors.onboarding.gold,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 10,
+  } as ViewStyle,
+  modalTitle: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginBottom: 8,
+  } as TextStyle,
+  modalSubtitle: {
+    fontSize: 17,
+    color: 'rgba(255,255,255,0.8)',
+    textAlign: 'center',
+    marginBottom: 24,
+  } as TextStyle,
+  priceComparisonCard: {
+    backgroundColor: 'rgba(232, 184, 74, 0.1)',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(232, 184, 74, 0.3)',
+  } as ViewStyle,
+  priceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  } as ViewStyle,
+  normalPriceLabel: {
+    fontSize: 15,
+    color: 'rgba(255,255,255,0.6)',
+  } as TextStyle,
+  normalPriceStrikethrough: {
+    fontSize: 18,
+    color: 'rgba(255,255,255,0.4)',
+    textDecorationLine: 'line-through',
+  } as TextStyle,
+  specialPriceLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  } as TextStyle,
+  specialPrice: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: colors.onboarding.gold,
+  } as TextStyle,
+  savingsRow: {
+    marginTop: 8,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(232, 184, 74, 0.2)',
+  } as ViewStyle,
+  savingsText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.onboarding.profit,
+    textAlign: 'center',
+  } as TextStyle,
+  modalFeaturesContainer: {
+    gap: 12,
+    marginBottom: 24,
+  } as ViewStyle,
+  modalFeatureRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  } as ViewStyle,
+  modalFeatureText: {
+    fontSize: 15,
+    color: '#FFFFFF',
+    flex: 1,
+  } as TextStyle,
+  modalCtaButton: {
+    backgroundColor: colors.onboarding.gold,
+    borderRadius: 14,
+    paddingVertical: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+    shadowColor: colors.onboarding.gold,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  } as ViewStyle,
+  modalCtaButtonText: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: colors.text.dark,
+  } as TextStyle,
+  modalSkipButton: {
+    paddingVertical: 14,
+    alignItems: 'center',
+  } as ViewStyle,
+  modalSkipButtonText: {
+    fontSize: 15,
+    color: 'rgba(255,255,255,0.5)',
+    fontWeight: '500',
+  } as TextStyle,
 });
 
 export default PaywallScreen;

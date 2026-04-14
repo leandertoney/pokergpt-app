@@ -18,7 +18,7 @@ type PrimingScreenTwoProps = {
 };
 
 export function PrimingScreenTwo({ onNext }: PrimingScreenTwoProps) {
-  const [yearlyPrice, setYearlyPrice] = useState<string>('$49 per year');
+  const [yearlyPrice, setYearlyPrice] = useState<string>('$29.99 per year');
 
   const iconAnim = useRef(new Animated.Value(0)).current;
   const headlineAnim = useRef(new Animated.Value(0)).current;

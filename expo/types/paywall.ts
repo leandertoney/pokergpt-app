@@ -46,11 +46,11 @@ export const PRICING_PLANS: PricingPlan[] = [
   {
     id: 'yearly',
     name: 'Yearly',
-    price: '$49',
+    price: '$29.99',
     perPeriod: '/year',
     badge: 'BEST VALUE',
-    savings: 'Save 91%',
-    monthlyEquivalent: '$4.08/month',
+    savings: 'Save 94%',
+    monthlyEquivalent: '$2.50/month',
     features: PREMIUM_FEATURES,
     isHighlighted: true,
   },
@@ -70,9 +70,9 @@ export const LIFETIME_PLAN: PricingPlan = {
 
 // Special offer pricing (for users who skip paywall)
 export const SPECIAL_OFFER = {
-  originalPrice: '$99',
-  discountedPrice: '$49',
-  discountPercent: 50,
+  originalPrice: '$29.99',
+  discountedPrice: '$19.99',
+  discountPercent: 33,
   planId: 'lifetime' as const,
 };
 
