@@ -25,7 +25,7 @@ type PrimingScreenOneProps = {
 };
 
 export function PrimingScreenOne({ onNext }: PrimingScreenOneProps) {
-  const [yearlyPrice, setYearlyPrice] = useState<string>('$49 per year');
+  const [yearlyPrice, setYearlyPrice] = useState<string>('$29.99 per year');
 
   const headlineAnim = useRef(new Animated.Value(0)).current;
   const phoneAnim = useRef(new Animated.Value(0)).current;
@@ -34,7 +34,7 @@ export function PrimingScreenOne({ onNext }: PrimingScreenOneProps) {
   const priceAnim = useRef(new Animated.Value(0)).current;
 
   const player = useVideoPlayer(
-    require('@/assets/videos/akutg_demo.mov'),
+    require('@/assets/videos/pokergpt_animation_1.mp4'),
     (p) => {
       p.loop = true;
       p.muted = true;

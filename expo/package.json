@@ -19,6 +19,7 @@
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/datetimepicker": "8.4.4",
     "@react-native-community/slider": "5.0.1",
+    "@rork-ai/toolkit-sdk": "latest",
     "@supabase/supabase-js": "^2.86.0",
     "@tanstack/react-query": "^5.83.0",
     "expo": "~54.0.32",
@@ -57,8 +58,8 @@
     "react-native-screens": "~4.16.0",
     "react-native-svg": "15.12.1",
     "react-native-web": "^0.21.0",
-    "zustand": "^5.0.2",
-    "@rork-ai/toolkit-sdk": "latest"
+    "zod": "^4.3.6",
+    "zustand": "^5.0.2"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
