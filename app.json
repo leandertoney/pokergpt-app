@@ -24,6 +24,7 @@
           "audio"
         ],
         "NSMicrophoneUsageDescription": "PokerPro AI uses the microphone for hands-free voice conversations with your AI poker coach. Speak naturally to discuss hands and get instant strategy advice.",
+        "NSCameraUsageDescription": "PokerPro AI does not use the camera. This permission is declared by the voice chat framework and is never requested.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
