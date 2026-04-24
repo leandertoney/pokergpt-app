@@ -32,7 +32,7 @@ export function SearchBottomBar({
 
   const handleSpeakPress = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    router.push('/poker-chat');
+    router.push('/voice');
   }, [router]);
 
   return (
