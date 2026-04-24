@@ -58,6 +58,7 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions) {
   const audioRecorderRef = useRef<PCMAudioRecorder | null>(null);
   const isActiveRef = useRef(false);
   const isDisconnectingRef = useRef(false);
+  const disconnectRef = useRef<(() => Promise<void>) | null>(null);
 
   // Buffer for accumulating user transcripts until turn is complete
   const transcriptBufferRef = useRef<string>('');
@@ -311,6 +312,12 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions) {
 
   // Connect to OpenAI Realtime
   const connect = useCallback(async () => {
+    // If we were in an error state, tear down stale connection first so retry works
+    if (voiceStateRef.current === 'error' && (isConnected || serviceRef.current)) {
+      console.log('[RealtimeVoice] Recovering from error state — disconnecting before retry');
+      await disconnectRef.current?.();
+    }
+
     if (isConnected || voiceStateRef.current === 'connecting') {
       console.log('[RealtimeVoice] Already connected or connecting');
       return;
@@ -387,6 +394,9 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions) {
     isDisconnectingRef.current = false;
     console.log('[RealtimeVoice] Disconnected');
   }, [updateState]);
+
+  // Keep ref in sync so connect() can call the latest disconnect without a circular dep
+  useEffect(() => { disconnectRef.current = disconnect; }, [disconnect]);
 
   // Toggle connection (tap to start/stop)
   const toggle = useCallback(async () => {

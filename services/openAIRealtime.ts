@@ -196,10 +196,16 @@ export class OpenAIRealtimeService {
           this.callbacks.onResponseDone?.(event.response);
           break;
 
-        case 'error':
+        case 'error': {
+          const benignCodes = ['response_cancel_not_active'];
+          if (benignCodes.includes(event.error?.code)) {
+            console.log('[OpenAIRealtime] Benign API error, ignoring:', event.error.code);
+            break;
+          }
           console.error('[OpenAIRealtime] API error:', JSON.stringify(event.error));
           this.callbacks.onError?.(event.error);
           break;
+        }
 
         default:
           console.log('[OpenAIRealtime] Unhandled event type:', event.type);
