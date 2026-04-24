@@ -109,13 +109,16 @@ export class OpenAIRealtimeService {
         input_audio_format: 'pcm16',
         output_audio_format: 'pcm16',
         input_audio_transcription: {
-          model: 'whisper-1',
+          model: 'gpt-4o-mini-transcribe',
+        },
+        input_audio_noise_reduction: {
+          type: 'near_field',
         },
         turn_detection: {
           type: 'server_vad',
-          threshold: 0.65,            // Higher threshold filters background noise (casino, etc.)
-          prefix_padding_ms: 500,     // Capture more context before speech
-          silence_duration_ms: 2000,  // 2 second pause - more tolerance in noisy environments
+          threshold: 0.65,
+          prefix_padding_ms: 500,
+          silence_duration_ms: 2000,
         },
       },
     };

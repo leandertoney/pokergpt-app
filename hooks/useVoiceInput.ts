@@ -326,7 +326,7 @@ async function transcribeWithWhisper(audioUri: string, apiKey: string): Promise<
       type: 'audio/m4a',
       name: 'audio.m4a',
     } as any);
-    formData.append('model', 'whisper-1');
+    formData.append('model', 'gpt-4o-mini-transcribe');
     formData.append('language', 'en');
 
     console.log('[Whisper] Sending request...');
