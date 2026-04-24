@@ -61,7 +61,8 @@
         {
           "color": "#6A0B0B"
         }
-      ]
+      ],
+      "@config-plugins/react-native-webrtc"
     ],
     "experiments": {
       "typedRoutes": true

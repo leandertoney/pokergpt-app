@@ -26,7 +26,6 @@ import { VoiceWaveform, PulsingIndicator } from '@/components/VoiceWaveform';
 import { UpgradeModal } from '@/components/UpgradeModal';
 import { storeHand } from '@/services/supabaseStorage';
 import { canSaveHand } from '@/services/storageService';
-import { setAudioGain } from '@/utils/pcmAudio';
 import type { HandData, AnalysisResult } from '@/types/poker';
 import { MAX_FREE_HANDS } from '@/types/poker';
 
@@ -138,15 +137,11 @@ export default function VoiceScreen() {
   const { settings: voiceSettings, updateSettings } = useVoiceSettings();
   const [volume, setVolumeState] = useState(1.0);
 
-  // Apply saved audio gain on mount / when settings load
   useEffect(() => {
-    if (voiceSettings.audioGain) {
-      setAudioGain(voiceSettings.audioGain);
-    }
     if (voiceSettings.playbackVolume !== undefined) {
       setVolumeState(voiceSettings.playbackVolume);
     }
-  }, [voiceSettings.audioGain, voiceSettings.playbackVolume]);
+  }, [voiceSettings.playbackVolume]);
 
   const {
     voiceState,
@@ -161,7 +156,7 @@ export default function VoiceScreen() {
     setVolume,
   } = useRealtimeVoice({
     openaiApiKey: OPENAI_API_KEY,
-    initialVolume: voiceSettings.playbackVolume,
+    voice: voiceSettings.openaiVoice,
     onUserTranscript: (text) => {
       console.log('[VoiceScreen] User said:', text);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
