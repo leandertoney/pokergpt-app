@@ -115,8 +115,10 @@ export class OpenAIRealtimeService {
           type: 'near_field',
         },
         turn_detection: {
-          type: 'semantic_vad',
-          eagerness: 'low',
+          type: 'server_vad',
+          threshold: 0.4,
+          prefix_padding_ms: 500,
+          silence_duration_ms: 1200,
         },
       },
     };
