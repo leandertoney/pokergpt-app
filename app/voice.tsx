@@ -437,7 +437,6 @@ export default function VoiceScreen() {
             <VoiceWaveform
               state={voiceState as any}
               size="large"
-              color={colors.accent.gold}
             />
           </View>
         )}

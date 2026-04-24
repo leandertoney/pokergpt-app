@@ -26,12 +26,23 @@ const SIZE_CONFIG = {
   large: { height: 60, barWidth: 6, gap: 6 },
 };
 
+// Per-state color so user can tell at a glance what the app is doing.
+// Gold = your mic is hot. Muted blue = AI is talking back. Dim gray = thinking.
+const STATE_COLORS: Record<VoiceState, string> = {
+  idle: colors.text.muted,
+  connecting: colors.text.muted,
+  listening: colors.accent.gold,
+  processing: colors.text.muted,
+  speaking: '#5BA4D9',
+};
+
 export function VoiceWaveform({
   state,
   size = 'medium',
-  color = colors.accent.gold,
+  color,
 }: VoiceWaveformProps) {
   const config = SIZE_CONFIG[size];
+  const effectiveColor = color ?? STATE_COLORS[state];
   const animatedValues = useRef(
     Array.from({ length: BAR_COUNT }, () => new Animated.Value(0.3))
   ).current;
@@ -141,7 +152,7 @@ export function VoiceWaveform({
             styles.bar,
             {
               width: config.barWidth,
-              backgroundColor: color,
+              backgroundColor: effectiveColor,
               transform: [{ scaleY: animVal }],
               opacity: state === 'idle' ? 0.4 : 1,
             },
