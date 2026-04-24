@@ -105,7 +105,7 @@ export class OpenAIRealtimeService {
       session: {
         modalities: ['text', 'audio'],
         instructions: VOICE_COACH_PROMPT,
-        voice: 'marin',
+        voice: 'cedar',
         input_audio_format: 'pcm16',
         output_audio_format: 'pcm16',
         input_audio_transcription: {
