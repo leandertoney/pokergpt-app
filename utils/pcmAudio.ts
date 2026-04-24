@@ -141,11 +141,11 @@ export class PCMAudioPlayer {
         this.sound = null;
       }
 
-      // Configure audio mode for playback — allowsRecordingIOS: false forces
-      // iOS audio session back to Playback category so output routes to the
-      // loud speaker instead of the earpiece.
+      // Keep allowsRecordingIOS true so the mic stays live across turns —
+      // switching to false tears down the recording session and the next
+      // listen cycle silently captures nothing. Volume is handled via PCM
+      // software gain (AUDIO_GAIN) instead of speaker routing.
       await Audio.setAudioModeAsync({
-        allowsRecordingIOS: false,
         playsInSilentModeIOS: true,
         staysActiveInBackground: false,
         interruptionModeIOS: InterruptionModeIOS.DuckOthers,
