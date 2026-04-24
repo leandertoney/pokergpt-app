@@ -730,13 +730,11 @@ Only return the JSON array, nothing else.`;
                 value={searchQuery}
                 onChangeText={(text) => {
                   setSearchQuery(text);
-                  // Clear AI results when typing to show instant text filter
                   if (aiSearchResults !== null) {
                     setAISearchResults(null);
                   }
                 }}
                 onSubmit={performAISearch}
-                openaiApiKey={OPENAI_API_KEY}
               />
             </View>
           )}

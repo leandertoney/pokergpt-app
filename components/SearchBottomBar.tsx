@@ -18,7 +18,6 @@ interface SearchBottomBarProps {
   onChangeText: (text: string) => void;
   onSubmit?: () => void;
   placeholder?: string;
-  openaiApiKey?: string;
 }
 
 export function SearchBottomBar({
@@ -26,23 +25,18 @@ export function SearchBottomBar({
   onChangeText,
   onSubmit,
   placeholder = 'Search or tap Speak',
-  openaiApiKey = '',
 }: SearchBottomBarProps) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const [isFocused, setIsFocused] = useState(false);
 
-  // Navigate to full voice screen
   const handleSpeakPress = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    router.push('/voice');
+    router.push('/poker-chat');
   }, [router]);
-
-  const hasApiKey = !!openaiApiKey;
 
   return (
     <View style={[styles.container, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-      {/* Search bar with Speak button inside */}
       <View style={[
         styles.searchBar,
         isFocused && styles.searchBarFocused,
@@ -64,14 +58,11 @@ export function SearchBottomBar({
           autoCapitalize="none"
           autoCorrect={false}
         />
-        {/* Speak button - navigates to voice screen */}
-        {hasApiKey && (
-          <SpeakButton
-            state="idle"
-            onPress={handleSpeakPress}
-            compact
-          />
-        )}
+        <SpeakButton
+          state="idle"
+          onPress={handleSpeakPress}
+          compact
+        />
       </View>
     </View>
   );

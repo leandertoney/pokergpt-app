@@ -32,7 +32,7 @@ import { withTimeout } from '@/utils/withTimeout';
 import { colors } from '@/constants/colors';
 import type { UserIdentity, PainPoint, OnboardingProfile } from '@/types/poker';
 
-const ONBOARDING_COMPLETE_KEY = '@onboarding_complete';
+const ONBOARDING_COMPLETE_KEY = '@onboarding_v2_complete';
 
 // All possible steps in the onboarding flow
 type OnboardingStep =
