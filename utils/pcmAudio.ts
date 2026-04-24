@@ -52,14 +52,14 @@ async function waitForAudioSystemToSettle(ms: number = 100): Promise<void> {
  * Converts PCM16 to WAV format for playback through expo-av.
  */
 // Audio amplification gain - OpenAI's audio is quiet, boost it significantly
-let AUDIO_GAIN = 8.0;
+let AUDIO_GAIN = 12.0;
 
 /**
  * Set the audio amplification gain at runtime
- * @param gain Number between 1.0 and 15.0
+ * @param gain Number between 1.0 and 20.0
  */
 export function setAudioGain(gain: number): void {
-  AUDIO_GAIN = Math.max(1, Math.min(15, gain));
+  AUDIO_GAIN = Math.max(1, Math.min(20, gain));
 }
 
 /**
@@ -141,8 +141,11 @@ export class PCMAudioPlayer {
         this.sound = null;
       }
 
-      // Configure audio mode for playback
+      // Configure audio mode for playback — allowsRecordingIOS: false forces
+      // iOS audio session back to Playback category so output routes to the
+      // loud speaker instead of the earpiece.
       await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
         playsInSilentModeIOS: true,
         staysActiveInBackground: false,
         interruptionModeIOS: InterruptionModeIOS.DuckOthers,
