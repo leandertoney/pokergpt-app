@@ -175,14 +175,13 @@ export default function VoiceScreen() {
       console.error('[VoiceScreen] Error:', error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
 
-      // Set user-friendly error message
-      const message = error?.message?.includes('Recording')
-        ? 'Microphone busy. Tap Speak to try again.'
-        : 'Connection error. Tap Speak to retry.';
-      setErrorMessage(message);
+      const rawMessage = typeof error === 'string'
+        ? error
+        : error?.message || error?.code || JSON.stringify(error)?.slice(0, 200) || 'Unknown error';
+      setErrorMessage(rawMessage);
 
-      // Clear error after 4 seconds
-      setTimeout(() => setErrorMessage(null), 4000);
+      // Hold longer so the user can read it
+      setTimeout(() => setErrorMessage(null), 12000);
     },
   });
 
