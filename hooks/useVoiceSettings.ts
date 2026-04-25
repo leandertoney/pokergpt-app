@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { VoiceSettings } from '@/types/voice';
-import { DEFAULT_VOICE_SETTINGS } from '@/types/voice';
+import { DEFAULT_VOICE_SETTINGS, migrateOpenAIVoice } from '@/types/voice';
 import { getVoiceSettings, setVoiceSettings, clearVoiceSettings } from '@/services/storageService';
 import { validateCredentials } from '@/services/elevenLabsTTS';
 import { isElevenLabsConfigured } from '@/services/ttsService';
@@ -15,7 +15,12 @@ export function useVoiceSettings() {
     const loadSettings = async () => {
       try {
         const loaded = await getVoiceSettings();
-        setSettingsState(loaded);
+        // Migrate voices that the Realtime API no longer accepts (e.g. nova).
+        const migratedVoice = migrateOpenAIVoice(loaded.openaiVoice);
+        if (migratedVoice !== loaded.openaiVoice) {
+          await setVoiceSettings({ openaiVoice: migratedVoice });
+        }
+        setSettingsState({ ...loaded, openaiVoice: migratedVoice });
       } catch (error) {
         console.error('Failed to load voice settings:', error);
       } finally {

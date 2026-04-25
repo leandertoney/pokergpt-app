@@ -2,7 +2,19 @@
 
 export type VoiceProvider = 'openai' | 'elevenlabs';
 
-export type OpenAIVoice = 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer';
+// Realtime API supported voices. Note: 'nova' / 'fable' are NOT supported here
+// (they exist in the standard TTS API only). Realtime adds 'marin' and 'cedar'.
+export type OpenAIVoice =
+  | 'alloy'
+  | 'ash'
+  | 'ballad'
+  | 'coral'
+  | 'echo'
+  | 'sage'
+  | 'shimmer'
+  | 'verse'
+  | 'marin'
+  | 'cedar';
 
 export interface VoiceSettings {
   provider: VoiceProvider;
@@ -17,7 +29,7 @@ export interface VoiceSettings {
 
 export const DEFAULT_VOICE_SETTINGS: VoiceSettings = {
   provider: 'openai',
-  openaiVoice: 'nova',
+  openaiVoice: 'cedar',
   elevenlabsApiKey: null,
   elevenlabsVoiceId: null,
   elevenlabsStability: 0.5,
@@ -27,10 +39,22 @@ export const DEFAULT_VOICE_SETTINGS: VoiceSettings = {
 };
 
 export const OPENAI_VOICES: { id: OpenAIVoice; name: string; description: string }[] = [
-  { id: 'onyx', name: 'Onyx', description: 'Deep, authoritative' },
+  { id: 'cedar', name: 'Cedar', description: 'Natural, conversational male' },
+  { id: 'marin', name: 'Marin', description: 'Natural, conversational female' },
   { id: 'alloy', name: 'Alloy', description: 'Neutral, balanced' },
+  { id: 'ash', name: 'Ash', description: 'Clear, articulate' },
+  { id: 'ballad', name: 'Ballad', description: 'Warm, melodic' },
+  { id: 'coral', name: 'Coral', description: 'Friendly, upbeat' },
   { id: 'echo', name: 'Echo', description: 'Warm, conversational' },
-  { id: 'fable', name: 'Fable', description: 'Expressive, storytelling' },
-  { id: 'nova', name: 'Nova', description: 'Friendly, upbeat' },
+  { id: 'sage', name: 'Sage', description: 'Calm, measured' },
   { id: 'shimmer', name: 'Shimmer', description: 'Clear, refined' },
+  { id: 'verse', name: 'Verse', description: 'Expressive, storytelling' },
 ];
+
+// Voices saved by older app versions that the Realtime API rejects — migrate
+// these to a supported voice on read so existing users don't hit invalid_value errors.
+const REMOVED_VOICES = new Set(['nova', 'fable', 'onyx']);
+export function migrateOpenAIVoice(saved: string | undefined | null): OpenAIVoice {
+  if (!saved || REMOVED_VOICES.has(saved)) return DEFAULT_VOICE_SETTINGS.openaiVoice;
+  return saved as OpenAIVoice;
+}
