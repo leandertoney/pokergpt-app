@@ -29,6 +29,20 @@ export class RealtimeWebRTCService {
   async connect(callbacks: RealtimeCallbacks, voice: string = 'cedar'): Promise<MediaStream> {
     this.callbacks = callbacks;
 
+    // Ask for mic FIRST so the iOS permission prompt doesn't race the SDP
+    // exchange (the prior race was the most likely cause of "Connection error
+    // tap to retry" on first launch — the second tap worked because permission
+    // was already granted).
+    try {
+      this.localStream = await mediaDevices.getUserMedia({
+        audio: true,
+        video: false,
+      }) as MediaStream;
+    } catch (e) {
+      console.error('[RealtimeWebRTC] getUserMedia failed:', e);
+      throw new Error('Microphone permission required');
+    }
+
     this.pc = new RTCPeerConnection({
       iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
     });
@@ -39,11 +53,6 @@ export class RealtimeWebRTCService {
         remoteStream.addTrack(track);
       });
     };
-
-    this.localStream = await mediaDevices.getUserMedia({
-      audio: true,
-      video: false,
-    }) as MediaStream;
 
     this.localStream.getTracks().forEach((track) => {
       this.pc?.addTrack(track, this.localStream!);
@@ -59,18 +68,25 @@ export class RealtimeWebRTCService {
     const offer = await this.pc.createOffer({});
     await this.pc.setLocalDescription(offer);
 
-    const sdpResponse = await fetch(REALTIME_SDP_URL, {
-      method: 'POST',
-      body: offer.sdp,
-      headers: {
-        Authorization: `Bearer ${this.apiKey}`,
-        'Content-Type': 'application/sdp',
-      },
-    });
+    let sdpResponse: Response;
+    try {
+      sdpResponse = await fetch(REALTIME_SDP_URL, {
+        method: 'POST',
+        body: offer.sdp,
+        headers: {
+          Authorization: `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/sdp',
+        },
+      });
+    } catch (e: any) {
+      console.error('[RealtimeWebRTC] SDP fetch network error:', e?.message || e);
+      throw new Error(`Network error reaching OpenAI Realtime: ${e?.message || 'unknown'}`);
+    }
 
     if (!sdpResponse.ok) {
       const err = await sdpResponse.text();
-      throw new Error(`Realtime SDP exchange failed: ${sdpResponse.status} ${err}`);
+      console.error('[RealtimeWebRTC] SDP exchange rejected:', sdpResponse.status, err);
+      throw new Error(`Realtime SDP exchange failed: ${sdpResponse.status} ${err.slice(0, 200)}`);
     }
 
     const answerSdp = await sdpResponse.text();

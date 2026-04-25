@@ -87,14 +87,17 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions) {
       console.log('[RealtimeVoice] Session created');
     },
     onSpeechStarted: () => {
+      // Clear stale live transcript from previous turn so the bubble doesn't ghost
+      setCurrentUserTranscript('');
       updateState('listening');
     },
     onSpeechStopped: () => {
       updateState('processing');
     },
     onUserTranscript: (text) => {
-      setCurrentUserTranscript(text);
       addMessage('user', text);
+      // Clear the live transcript so the persisted message bubble owns the display
+      setCurrentUserTranscript('');
       onUserTranscriptRef.current?.(text);
     },
     onTranscript: (text, isFinal) => {
@@ -103,6 +106,7 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions) {
       onAITranscriptRef.current?.(text, isFinal);
       if (isFinal) {
         addMessage('assistant', text);
+        setCurrentAITranscript('');
       }
     },
     onResponseDone: () => {
