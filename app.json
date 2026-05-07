@@ -29,6 +29,7 @@
       }
     },
     "android": {
+      "versionCode": 2,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/pokergpt_logo.png",
         "backgroundColor": "#6A0B0B"
