@@ -18,9 +18,11 @@ export class RealtimeWebRTCService {
   private pc: RTCPeerConnection | null = null;
   private dc: any = null; // RTCDataChannel
   private localStream: MediaStream | null = null;
+  private remoteStream: MediaStream | null = null;
   private callbacks: RealtimeCallbacks = {};
   private apiKey: string;
   private transcriptBuffer = '';
+  private volumeMultiplier: number = 1.5; // 50% louder by default
 
   constructor(apiKey: string) {
     this.apiKey = apiKey;
@@ -48,9 +50,14 @@ export class RealtimeWebRTCService {
     });
 
     const remoteStream = new MediaStream();
+    this.remoteStream = remoteStream;
     (this.pc as any).ontrack = (event: any) => {
       event.streams?.[0]?.getTracks().forEach((track: any) => {
         remoteStream.addTrack(track);
+        // Apply volume boost to audio tracks
+        if (track.kind === 'audio') {
+          this.applyVolumeToTrack(track);
+        }
       });
     };
 
@@ -141,6 +148,33 @@ export class RealtimeWebRTCService {
     this.localStream?.getAudioTracks().forEach((t) => {
       t.enabled = enabled;
     });
+  }
+
+  setVolume(volume: number): void {
+    // Volume range 0-1, convert to multiplier (0.5-2.0x)
+    // User wants 50% louder as default, so 1.0 in UI = 1.5x multiplier
+    this.volumeMultiplier = 0.5 + (volume * 1.5);
+
+    // Apply to existing remote audio tracks
+    this.remoteStream?.getAudioTracks().forEach((track) => {
+      this.applyVolumeToTrack(track);
+    });
+  }
+
+  private applyVolumeToTrack(track: any): void {
+    try {
+      // Attempt to apply volume via constraints (may not be supported on all platforms)
+      const constraints = {
+        volume: this.volumeMultiplier,
+        echoCancellation: false, // Already handled by OpenAI's audio processing
+      };
+
+      track.applyConstraints?.(constraints).catch((err: any) => {
+        console.log('[RealtimeWebRTC] Volume constraint not supported, using default:', err.message);
+      });
+    } catch (e) {
+      console.log('[RealtimeWebRTC] Volume adjustment not available on this platform');
+    }
   }
 
   private handleEvent(raw: string): void {

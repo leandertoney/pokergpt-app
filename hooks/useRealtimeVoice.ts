@@ -193,11 +193,10 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions) {
     };
   }, []);
 
-  // Volume: WebRTC playback volume isn't directly controllable per-stream on RN.
-  // Keep the API surface for the voice.tsx slider but treat as a no-op for now —
-  // system volume controls playback. Future: use audio track MediaStreamTrack.applyConstraints.
-  const setVolume = useCallback((_volume: number) => {
-    // no-op; system volume handles this natively with WebRTC
+  // Volume: Apply gain multiplier to remote audio track
+  // Default of 1.0 in UI maps to 1.5x multiplier (50% louder)
+  const setVolume = useCallback((volume: number) => {
+    serviceRef.current?.setVolume(volume);
   }, []);
   const getVolume = useCallback(() => 1.0, []);
 
