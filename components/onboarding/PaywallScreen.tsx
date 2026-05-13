@@ -27,6 +27,11 @@ import {
   restorePurchases,
   type PlanType,
 } from '@/services/revenueCat';
+import {
+  calculateMonthlyEquivalent,
+  calculateWeeklyEquivalent,
+  getBasePrice,
+} from '@/utils/priceFormatting';
 
 type PaywallScreenProps = {
   goal: string;
@@ -66,23 +71,20 @@ export function PaywallScreen({ goal, userName, onPurchase, onSkip }: PaywallScr
         if (offerings) {
           const weeklyPrice = offerings.weekly?.product.priceString;
           const yearlyPrice = offerings.annual?.product.priceString;
-          const yearlyRaw = offerings.annual?.product.price ?? 29.99;
-          const perWeek = (yearlyRaw / 52).toFixed(2);
-          const perMonth = (yearlyRaw / 12).toFixed(2);
-          const currencySymbol = yearlyPrice?.match(/^[^0-9]*/)?.[0] || '$';
-
-          // Try to get special offer price
           const specialPrice = offerings.special?.product.priceString;
-          const specialRaw = offerings.special?.product.price ?? 19.99;
-          const specialPerMonth = (specialRaw / 12).toFixed(2);
+
+          // Use utility functions for consistent currency formatting
+          const yearlyPerWeek = calculateWeeklyEquivalent(yearlyPrice);
+          const yearlyPerMonth = calculateMonthlyEquivalent(yearlyPrice);
+          const specialPerMonth = calculateMonthlyEquivalent(specialPrice);
 
           setPrices({
-            weekly: weeklyPrice ? `${weeklyPrice}/wk` : '$9.99/wk',
-            yearlyPerWeek: `${currencySymbol}${perWeek}/wk`,
-            yearlyTotal: yearlyPrice ? `${yearlyPrice}/yr` : '$29.99/yr',
-            yearlyPerMonth: `${currencySymbol}${perMonth}/mo`,
-            specialYearly: specialPrice ? `${specialPrice}/yr` : '$19.99/yr',
-            specialPerMonth: `${currencySymbol}${specialPerMonth}/mo`,
+            weekly: weeklyPrice || '$9.99',
+            yearlyPerWeek: yearlyPerWeek || '$0.58',
+            yearlyTotal: yearlyPrice || '$29.99',
+            yearlyPerMonth: yearlyPerMonth || '$2.50',
+            specialYearly: specialPrice || '$19.99',
+            specialPerMonth: specialPerMonth || '$1.67',
           });
         }
       } catch (error) {
@@ -237,8 +239,8 @@ export function PaywallScreen({ goal, userName, onPurchase, onSkip }: PaywallScr
 
   // Dynamic timeline Day 3 text based on selected plan
   const billingText = selectedPlan === 'yearly'
-    ? `Billing starts. You'll be charged ${prices.yearlyTotal.replace('/yr', '')} per year`
-    : `Billing starts. You'll be charged ${prices.weekly.replace('/wk', '')} per week`;
+    ? `Billing starts. You'll be charged ${prices.yearlyTotal} per year`
+    : `Billing starts. You'll be charged ${prices.weekly} per week`;
 
   return (
     <View style={styles.container}>
@@ -366,7 +368,7 @@ export function PaywallScreen({ goal, userName, onPurchase, onSkip }: PaywallScr
             activeOpacity={0.8}
           >
             <Text style={[styles.planName, { marginTop: 20 }]}>Weekly</Text>
-            <Text style={styles.planPrice}>{prices.weekly.replace('/wk', '')}</Text>
+            <Text style={styles.planPrice}>{prices.weekly}</Text>
             <Text style={styles.planBillingPeriod}>per week</Text>
 
             {selectedPlan === 'weekly' && (
@@ -393,9 +395,9 @@ export function PaywallScreen({ goal, userName, onPurchase, onSkip }: PaywallScr
             )}
 
             <Text style={[styles.planName, { marginTop: 20 }]}>Yearly</Text>
-            <Text style={styles.planPrice}>{prices.yearlyTotal.replace('/yr', '')}</Text>
+            <Text style={styles.planPrice}>{prices.yearlyTotal}</Text>
             <Text style={styles.planBillingPeriod}>per year</Text>
-            <Text style={styles.planPriceBreakdown}>{prices.yearlyPerWeek}</Text>
+            <Text style={styles.planPriceBreakdown}>{prices.yearlyPerWeek}/week</Text>
 
             {selectedPlan === 'yearly' && (
               <View style={styles.selectedIndicator}>
@@ -406,17 +408,42 @@ export function PaywallScreen({ goal, userName, onPurchase, onSkip }: PaywallScr
         </Animated.View>
 
         {/* No payment due now */}
-        <Animated.View
-          style={[
-            styles.reassuranceRow,
-            {
-              opacity: buttonAnim,
-            },
-          ]}
-        >
-          <Check size={18} color={colors.onboarding.gold} strokeWidth={3} />
-          <Text style={styles.reassuranceText}>No payment due now</Text>
-        </Animated.View>
+        {selectedPlan === 'yearly' && (
+          <Animated.View
+            style={[
+              styles.reassuranceRow,
+              {
+                opacity: buttonAnim,
+              },
+            ]}
+          >
+            <Check size={18} color={colors.onboarding.gold} strokeWidth={3} />
+            <Text style={styles.reassuranceText}>No payment due now</Text>
+          </Animated.View>
+        )}
+
+        {/* Trial Terms and Cancellation Instructions */}
+        {selectedPlan === 'yearly' && (
+          <Animated.View
+            style={[
+              styles.trialTermsCard,
+              {
+                opacity: buttonAnim,
+              },
+            ]}
+          >
+            <Text style={styles.trialTermsTitle}>Trial Terms</Text>
+            <Text style={styles.trialTermsText}>
+              • Your 3-day free trial starts today{'\n'}
+              • After 3 days, you'll be charged {prices.yearlyTotal} per year{'\n'}
+              • Subscription automatically renews yearly unless cancelled{'\n'}
+              • Cancel anytime in Google Play Store settings before trial ends to avoid charges
+            </Text>
+            <Text style={styles.trialTermsCancel}>
+              To cancel: Open Google Play Store → Menu → Subscriptions → PokerPro AI → Cancel Subscription
+            </Text>
+          </Animated.View>
+        )}
 
         {/* CTA Button */}
         <Animated.View
@@ -453,8 +480,8 @@ export function PaywallScreen({ goal, userName, onPurchase, onSkip }: PaywallScr
           {/* Below button - pricing info */}
           <Text style={styles.belowButtonText}>
             {selectedPlan === 'yearly'
-              ? `3 days free, then ${prices.yearlyTotal.replace('/yr', '')} per year (${prices.yearlyPerMonth})`
-              : prices.weekly.replace('/wk', ' per week')}
+              ? `3 days free, then ${prices.yearlyTotal} per year (${prices.yearlyPerMonth}/month)`
+              : `${prices.weekly} per week`}
           </Text>
         </Animated.View>
 
@@ -507,21 +534,21 @@ export function PaywallScreen({ goal, userName, onPurchase, onSkip }: PaywallScr
             {/* Header */}
             <Text style={styles.modalTitle}>Wait! Last Chance 🎉</Text>
             <Text style={styles.modalSubtitle}>
-              Get everything for just {prices.specialYearly.replace('/yr', '')}
+              Get everything for just {prices.specialYearly}
             </Text>
 
             {/* Price Comparison */}
             <View style={styles.priceComparisonCard}>
               <View style={styles.priceRow}>
                 <Text style={styles.normalPriceLabel}>Normal Price:</Text>
-                <Text style={styles.normalPriceStrikethrough}>{prices.yearlyTotal.replace('/yr', '')}</Text>
+                <Text style={styles.normalPriceStrikethrough}>{prices.yearlyTotal}</Text>
               </View>
               <View style={styles.priceRow}>
                 <Text style={styles.specialPriceLabel}>Your Price:</Text>
-                <Text style={styles.specialPrice}>{prices.specialYearly.replace('/yr', '')}</Text>
+                <Text style={styles.specialPrice}>{prices.specialYearly}</Text>
               </View>
               <View style={styles.savingsRow}>
-                <Text style={styles.savingsText}>Save $10 • Just {prices.specialPerMonth}/month</Text>
+                <Text style={styles.savingsText}>Just {prices.specialPerMonth}/month</Text>
               </View>
             </View>
 
@@ -552,7 +579,7 @@ export function PaywallScreen({ goal, userName, onPurchase, onSkip }: PaywallScr
                 <ActivityIndicator color={colors.text.dark} />
               ) : (
                 <Text style={styles.modalCtaButtonText}>
-                  Get Special Offer - {prices.specialYearly.replace('/yr', '')}
+                  Get Special Offer - {prices.specialYearly}
                 </Text>
               )}
             </TouchableOpacity>
@@ -725,12 +752,39 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    marginBottom: 16,
+    marginBottom: 12,
   } as ViewStyle,
   reassuranceText: {
     fontSize: 18,
     fontWeight: '600',
     color: 'rgba(255,255,255,0.7)',
+  } as TextStyle,
+  // Trial Terms
+  trialTermsCard: {
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  } as ViewStyle,
+  trialTermsTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.onboarding.gold,
+    marginBottom: 8,
+  } as TextStyle,
+  trialTermsText: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.7)',
+    lineHeight: 20,
+    marginBottom: 10,
+  } as TextStyle,
+  trialTermsCancel: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.5)',
+    lineHeight: 18,
+    fontStyle: 'italic',
   } as TextStyle,
   // CTA
   ctaContainer: {

@@ -16,6 +16,7 @@ import * as Haptics from 'expo-haptics';
 import { colors } from '@/constants/colors';
 import { getPriceForPlan } from '@/services/revenueCat';
 import { MockiPhoneFrame } from '@/components/MockiPhoneFrame';
+import { calculateMonthlyEquivalent } from '@/utils/priceFormatting';
 
 const { width: SW } = Dimensions.get('window');
 const PHONE_WIDTH = SW * 0.58;
@@ -25,7 +26,8 @@ type PrimingScreenOneProps = {
 };
 
 export function PrimingScreenOne({ onNext }: PrimingScreenOneProps) {
-  const [yearlyPrice, setYearlyPrice] = useState<string>('$29.99 per year');
+  const [yearlyPrice, setYearlyPrice] = useState<string>('$29.99');
+  const [monthlyEquiv, setMonthlyEquiv] = useState<string>('$2.50');
 
   const headlineAnim = useRef(new Animated.Value(0)).current;
   const phoneAnim = useRef(new Animated.Value(0)).current;
@@ -47,7 +49,9 @@ export function PrimingScreenOne({ onNext }: PrimingScreenOneProps) {
       try {
         const price = await getPriceForPlan('yearly');
         if (price) {
-          setYearlyPrice(`${price} per year`);
+          setYearlyPrice(price);
+          const monthly = calculateMonthlyEquivalent(price);
+          setMonthlyEquiv(monthly);
         }
       } catch {
         // Keep default price
@@ -217,7 +221,7 @@ export function PrimingScreenOne({ onNext }: PrimingScreenOneProps) {
         <Animated.Text
           style={[styles.anchorPrice, { opacity: priceAnim }]}
         >
-          Just {yearlyPrice} ($4.08/mo)
+          Just {yearlyPrice} per year ({monthlyEquiv}/month)
         </Animated.Text>
       </Animated.View>
     </View>

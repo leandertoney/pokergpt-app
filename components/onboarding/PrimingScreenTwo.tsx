@@ -12,13 +12,15 @@ import { Bell, Check } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { colors } from '@/constants/colors';
 import { getPriceForPlan } from '@/services/revenueCat';
+import { calculateMonthlyEquivalent } from '@/utils/priceFormatting';
 
 type PrimingScreenTwoProps = {
   onNext: () => void;
 };
 
 export function PrimingScreenTwo({ onNext }: PrimingScreenTwoProps) {
-  const [yearlyPrice, setYearlyPrice] = useState<string>('$29.99 per year');
+  const [yearlyPrice, setYearlyPrice] = useState<string>('$29.99');
+  const [monthlyEquiv, setMonthlyEquiv] = useState<string>('$2.50');
 
   const iconAnim = useRef(new Animated.Value(0)).current;
   const headlineAnim = useRef(new Animated.Value(0)).current;
@@ -31,7 +33,9 @@ export function PrimingScreenTwo({ onNext }: PrimingScreenTwoProps) {
       try {
         const price = await getPriceForPlan('yearly');
         if (price) {
-          setYearlyPrice(`${price} per year`);
+          setYearlyPrice(price);
+          const monthly = calculateMonthlyEquivalent(price);
+          setMonthlyEquiv(monthly);
         }
       } catch {
         // Keep default price
@@ -185,7 +189,7 @@ export function PrimingScreenTwo({ onNext }: PrimingScreenTwoProps) {
         <Animated.Text
           style={[styles.anchorPrice, { opacity: priceAnim }]}
         >
-          Just {yearlyPrice} ($4.08/mo)
+          Just {yearlyPrice} per year ({monthlyEquiv}/month)
         </Animated.Text>
       </Animated.View>
     </View>
