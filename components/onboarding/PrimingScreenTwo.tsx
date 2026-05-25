@@ -122,7 +122,7 @@ export function PrimingScreenTwo({ onNext }: PrimingScreenTwoProps) {
             },
           ]}
         >
-          We'll send you a reminder{'\n'}before your trial ends
+          Play smarter decisions{'\n'}in your next session
         </Animated.Text>
 
         {/* Bell Icon with notification counter badge - centered */}
@@ -176,7 +176,18 @@ export function PrimingScreenTwo({ onNext }: PrimingScreenTwoProps) {
           ]}
         >
           <Check size={18} color={colors.onboarding.gold} strokeWidth={3} />
-          <Text style={styles.reassuranceText}>No payment due</Text>
+          <Text style={styles.reassuranceText}>Know exactly when you're making mistakes</Text>
+        </Animated.View>
+        <Animated.View
+          style={[
+            styles.reassuranceRow,
+            {
+              opacity: reassuranceAnim,
+            },
+          ]}
+        >
+          <Check size={18} color={colors.onboarding.gold} strokeWidth={3} />
+          <Text style={styles.reassuranceText}>Free for 3 days, cancel anytime</Text>
         </Animated.View>
 
         <TouchableOpacity
@@ -184,7 +195,7 @@ export function PrimingScreenTwo({ onNext }: PrimingScreenTwoProps) {
           onPress={handleContinue}
           activeOpacity={0.85}
         >
-          <Text style={styles.ctaButtonText}>Continue for FREE</Text>
+          <Text style={styles.ctaButtonText}>Start Your Free Trial</Text>
         </TouchableOpacity>
 
         {/* Anchor Price */}

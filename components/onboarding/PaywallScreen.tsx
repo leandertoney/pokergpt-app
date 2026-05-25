@@ -328,7 +328,7 @@ export function PaywallScreen({ goal, userName, onPurchase, onSkip }: PaywallScr
             <View style={styles.timelineContent}>
               <Text style={styles.timelineDayLabel}>Today</Text>
               <Text style={styles.timelineDescription}>
-                Unlock all app features — AI coaching, voice mode, hand analysis
+                Start making better decisions at the table
               </Text>
             </View>
           </View>
@@ -342,7 +342,7 @@ export function PaywallScreen({ goal, userName, onPurchase, onSkip }: PaywallScr
             <View style={styles.timelineContent}>
               <Text style={styles.timelineDayLabel}>Day 2</Text>
               <Text style={styles.timelineDescription}>
-                We'll remind you your trial is ending soon
+                See your first improvements in real games
               </Text>
             </View>
           </View>
@@ -511,7 +511,7 @@ export function PaywallScreen({ goal, userName, onPurchase, onSkip }: PaywallScr
           ]}
         >
           <TouchableOpacity onPress={handleSkip} activeOpacity={0.7}>
-            <Text style={styles.continueFreeText}>Continue with limited features</Text>
+            <Text style={styles.continueFreeText}>Maybe later</Text>
           </TouchableOpacity>
         </Animated.View>
 
@@ -574,15 +574,15 @@ export function PaywallScreen({ goal, userName, onPurchase, onSkip }: PaywallScr
             <View style={styles.modalFeaturesContainer}>
               <View style={styles.modalFeatureRow}>
                 <Check size={18} color={colors.onboarding.gold} />
-                <Text style={styles.modalFeatureText}>Unlimited AI hand analysis</Text>
+                <Text style={styles.modalFeatureText}>Stop making costly mistakes</Text>
               </View>
               <View style={styles.modalFeatureRow}>
                 <Check size={18} color={colors.onboarding.gold} />
-                <Text style={styles.modalFeatureText}>Voice coaching mode</Text>
+                <Text style={styles.modalFeatureText}>Win more pots per session</Text>
               </View>
               <View style={styles.modalFeatureRow}>
                 <Check size={18} color={colors.onboarding.gold} />
-                <Text style={styles.modalFeatureText}>Full year of access</Text>
+                <Text style={styles.modalFeatureText}>Play with confidence</Text>
               </View>
             </View>
 

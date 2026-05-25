@@ -137,7 +137,7 @@ export function PrimingScreenOne({ onNext }: PrimingScreenOneProps) {
             },
           ]}
         >
-          We want you to{'\n'}try it free
+          Stop bleeding chips{'\n'}to avoidable mistakes
         </Animated.Text>
 
         {/* Video in Mock iPhone Frame */}
@@ -190,7 +190,16 @@ export function PrimingScreenOne({ onNext }: PrimingScreenOneProps) {
           ]}
         >
           <Check size={18} color={colors.onboarding.gold} strokeWidth={3} />
-          <Text style={styles.bodyText}>No payment due now</Text>
+          <Text style={styles.bodyText}>Get instant feedback on every decision</Text>
+        </Animated.View>
+        <Animated.View
+          style={[
+            styles.bodyRow,
+            { opacity: bodyAnim },
+          ]}
+        >
+          <Check size={18} color={colors.onboarding.gold} strokeWidth={3} />
+          <Text style={styles.bodyText}>No payment for 3 days</Text>
         </Animated.View>
       </View>
 
@@ -216,7 +225,7 @@ export function PrimingScreenOne({ onNext }: PrimingScreenOneProps) {
           onPress={handleContinue}
           activeOpacity={0.85}
         >
-          <Text style={styles.ctaButtonText}>Try for $0</Text>
+          <Text style={styles.ctaButtonText}>Start Winning More</Text>
         </TouchableOpacity>
 
         {/* Anchor Price */}
