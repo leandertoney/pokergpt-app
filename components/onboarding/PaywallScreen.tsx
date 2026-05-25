@@ -49,14 +49,22 @@ export function PaywallScreen({ goal, userName, onPurchase, onSkip }: PaywallScr
   const [isLoading, setIsLoading] = useState(false);
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [showLastChance, setShowLastChance] = useState(false);
-  const [prices, setPrices] = useState({
-    weekly: '$9.99/wk',
-    yearlyPerWeek: '$0.58/wk',
-    yearlyTotal: '$29.99/yr',
-    yearlyPerMonth: '$2.50/mo',
-    specialYearly: '$19.99/yr',
-    specialPerMonth: '$1.67/mo',
+  const [prices, setPrices] = useState<{
+    weekly: string | null;
+    yearlyPerWeek: string | null;
+    yearlyTotal: string | null;
+    yearlyPerMonth: string | null;
+    specialYearly: string | null;
+    specialPerMonth: string | null;
+  }>({
+    weekly: null,
+    yearlyPerWeek: null,
+    yearlyTotal: null,
+    yearlyPerMonth: null,
+    specialYearly: null,
+    specialPerMonth: null,
   });
+  const [priceError, setPriceError] = useState(false);
 
   const headerAnim = useRef(new Animated.Value(0)).current;
   const timelineAnim = useRef(new Animated.Value(0)).current;
@@ -73,22 +81,32 @@ export function PaywallScreen({ goal, userName, onPurchase, onSkip }: PaywallScr
           const yearlyPrice = offerings.annual?.product.priceString;
           const specialPrice = offerings.special?.product.priceString;
 
+          // Verify all required prices are available
+          if (!weeklyPrice || !yearlyPrice || !specialPrice) {
+            console.error('Missing price data from RevenueCat');
+            setPriceError(true);
+            return;
+          }
+
           // Use utility functions for consistent currency formatting
           const yearlyPerWeek = calculateWeeklyEquivalent(yearlyPrice);
           const yearlyPerMonth = calculateMonthlyEquivalent(yearlyPrice);
           const specialPerMonth = calculateMonthlyEquivalent(specialPrice);
 
           setPrices({
-            weekly: weeklyPrice || '$9.99',
-            yearlyPerWeek: yearlyPerWeek || '$0.58',
-            yearlyTotal: yearlyPrice || '$29.99',
-            yearlyPerMonth: yearlyPerMonth || '$2.50',
-            specialYearly: specialPrice || '$19.99',
-            specialPerMonth: specialPerMonth || '$1.67',
+            weekly: weeklyPrice,
+            yearlyPerWeek,
+            yearlyTotal: yearlyPrice,
+            yearlyPerMonth,
+            specialYearly: specialPrice,
+            specialPerMonth,
           });
+        } else {
+          setPriceError(true);
         }
       } catch (error) {
-        console.warn('Failed to fetch prices:', error);
+        console.error('Failed to fetch prices:', error);
+        setPriceError(true);
       }
     };
 
@@ -141,7 +159,7 @@ export function PaywallScreen({ goal, userName, onPurchase, onSkip }: PaywallScr
   };
 
   const handleGetStarted = async () => {
-    if (isPurchasing) return;
+    if (isPurchasing || !prices.weekly || !prices.yearlyTotal) return;
 
     setIsPurchasing(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -196,7 +214,7 @@ export function PaywallScreen({ goal, userName, onPurchase, onSkip }: PaywallScr
   };
 
   const handleSpecialOffer = async () => {
-    if (isPurchasing) return;
+    if (isPurchasing || !prices.specialYearly) return;
 
     setIsPurchasing(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -239,8 +257,8 @@ export function PaywallScreen({ goal, userName, onPurchase, onSkip }: PaywallScr
 
   // Dynamic timeline Day 3 text based on selected plan
   const billingText = selectedPlan === 'yearly'
-    ? `Billing starts. You'll be charged ${prices.yearlyTotal} per year`
-    : `Billing starts. You'll be charged ${prices.weekly} per week`;
+    ? `Billing starts. You'll be charged ${prices.yearlyTotal || '...'} per year`
+    : `Billing starts. You'll be charged ${prices.weekly || '...'} per week`;
 
   return (
     <View style={styles.container}>
@@ -368,7 +386,7 @@ export function PaywallScreen({ goal, userName, onPurchase, onSkip }: PaywallScr
             activeOpacity={0.8}
           >
             <Text style={[styles.planName, { marginTop: 20 }]}>Weekly</Text>
-            <Text style={styles.planPrice}>{prices.weekly}</Text>
+            <Text style={styles.planPrice}>{prices.weekly || '...'}</Text>
             <Text style={styles.planBillingPeriod}>per week</Text>
 
             {selectedPlan === 'weekly' && (
@@ -395,9 +413,9 @@ export function PaywallScreen({ goal, userName, onPurchase, onSkip }: PaywallScr
             )}
 
             <Text style={[styles.planName, { marginTop: 20 }]}>Yearly</Text>
-            <Text style={styles.planPrice}>{prices.yearlyTotal}</Text>
+            <Text style={styles.planPrice}>{prices.yearlyTotal || '...'}</Text>
             <Text style={styles.planBillingPeriod}>per year</Text>
-            <Text style={styles.planPriceBreakdown}>{prices.yearlyPerWeek}/week</Text>
+            <Text style={styles.planPriceBreakdown}>{prices.yearlyPerWeek || '...'}/week</Text>
 
             {selectedPlan === 'yearly' && (
               <View style={styles.selectedIndicator}>
@@ -435,7 +453,7 @@ export function PaywallScreen({ goal, userName, onPurchase, onSkip }: PaywallScr
             <Text style={styles.trialTermsTitle}>Trial Terms</Text>
             <Text style={styles.trialTermsText}>
               • Your 3-day free trial starts today{'\n'}
-              • After 3 days, you'll be charged {prices.yearlyTotal} per year{'\n'}
+              • After 3 days, you'll be charged {prices.yearlyTotal || '...'} per year{'\n'}
               • Subscription automatically renews yearly unless cancelled{'\n'}
               • Cancel anytime in Google Play Store settings before trial ends to avoid charges
             </Text>
@@ -480,8 +498,8 @@ export function PaywallScreen({ goal, userName, onPurchase, onSkip }: PaywallScr
           {/* Below button - pricing info */}
           <Text style={styles.belowButtonText}>
             {selectedPlan === 'yearly'
-              ? `3 days free, then ${prices.yearlyTotal} per year (${prices.yearlyPerMonth}/month)`
-              : `${prices.weekly} per week`}
+              ? `3 days free, then ${prices.yearlyTotal || '...'} per year (${prices.yearlyPerMonth || '...'}/month)`
+              : `${prices.weekly || '...'} per week`}
           </Text>
         </Animated.View>
 
@@ -534,21 +552,21 @@ export function PaywallScreen({ goal, userName, onPurchase, onSkip }: PaywallScr
             {/* Header */}
             <Text style={styles.modalTitle}>Wait! Last Chance 🎉</Text>
             <Text style={styles.modalSubtitle}>
-              Get everything for just {prices.specialYearly}
+              Get everything for just {prices.specialYearly || '...'}
             </Text>
 
             {/* Price Comparison */}
             <View style={styles.priceComparisonCard}>
               <View style={styles.priceRow}>
                 <Text style={styles.normalPriceLabel}>Normal Price:</Text>
-                <Text style={styles.normalPriceStrikethrough}>{prices.yearlyTotal}</Text>
+                <Text style={styles.normalPriceStrikethrough}>{prices.yearlyTotal || '...'}</Text>
               </View>
               <View style={styles.priceRow}>
                 <Text style={styles.specialPriceLabel}>Your Price:</Text>
-                <Text style={styles.specialPrice}>{prices.specialYearly}</Text>
+                <Text style={styles.specialPrice}>{prices.specialYearly || '...'}</Text>
               </View>
               <View style={styles.savingsRow}>
-                <Text style={styles.savingsText}>Just {prices.specialPerMonth}/month</Text>
+                <Text style={styles.savingsText}>Just {prices.specialPerMonth || '...'}/month</Text>
               </View>
             </View>
 
@@ -579,7 +597,7 @@ export function PaywallScreen({ goal, userName, onPurchase, onSkip }: PaywallScr
                 <ActivityIndicator color={colors.text.dark} />
               ) : (
                 <Text style={styles.modalCtaButtonText}>
-                  Get Special Offer - {prices.specialYearly}
+                  Get Special Offer - {prices.specialYearly || '...'}
                 </Text>
               )}
             </TouchableOpacity>

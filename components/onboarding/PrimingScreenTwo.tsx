@@ -19,8 +19,8 @@ type PrimingScreenTwoProps = {
 };
 
 export function PrimingScreenTwo({ onNext }: PrimingScreenTwoProps) {
-  const [yearlyPrice, setYearlyPrice] = useState<string>('$29.99');
-  const [monthlyEquiv, setMonthlyEquiv] = useState<string>('$2.50');
+  const [yearlyPrice, setYearlyPrice] = useState<string | null>(null);
+  const [monthlyEquiv, setMonthlyEquiv] = useState<string | null>(null);
 
   const iconAnim = useRef(new Animated.Value(0)).current;
   const headlineAnim = useRef(new Animated.Value(0)).current;
@@ -36,9 +36,11 @@ export function PrimingScreenTwo({ onNext }: PrimingScreenTwoProps) {
           setYearlyPrice(price);
           const monthly = calculateMonthlyEquivalent(price);
           setMonthlyEquiv(monthly);
+        } else {
+          console.error('No yearly price available from RevenueCat');
         }
-      } catch {
-        // Keep default price
+      } catch (error) {
+        console.error('Failed to fetch yearly price:', error);
       }
     };
     fetchPrice();
@@ -189,7 +191,7 @@ export function PrimingScreenTwo({ onNext }: PrimingScreenTwoProps) {
         <Animated.Text
           style={[styles.anchorPrice, { opacity: priceAnim }]}
         >
-          Just {yearlyPrice} per year ({monthlyEquiv}/month)
+          Just {yearlyPrice || '...'} per year ({monthlyEquiv || '...'}/month)
         </Animated.Text>
       </Animated.View>
     </View>
