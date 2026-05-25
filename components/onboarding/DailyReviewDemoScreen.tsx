@@ -176,7 +176,7 @@ export function DailyReviewDemoScreen({ onNext }: DailyReviewDemoScreenProps) {
           </View>
 
           {/* Headline - Now smaller and below the card */}
-          <Text style={styles.headline}>Practice one hand a day</Text>
+          <Text style={styles.headline}>Sharpen your edge daily</Text>
 
           <Text style={styles.description}>
             A new poker spot every day.{'\n'}

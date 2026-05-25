@@ -275,7 +275,7 @@ export function ChatDemoScreen({ onNext }: ChatDemoScreenProps) {
               },
             ]}
           >
-            Ask anything about poker
+            Stop second-guessing your decisions
           </Animated.Text>
 
           <Animated.Text

@@ -177,7 +177,7 @@ export function LiveDemoScreen({ onNext }: LiveDemoScreenProps) {
             },
           ]}
         >
-          Talk through your hand
+          Catch mistakes before they cost you
         </Animated.Text>
 
         <Animated.Text

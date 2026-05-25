@@ -207,7 +207,7 @@ export function SessionDemoScreen({ onNext }: SessionDemoScreenProps) {
             ],
           }}
         >
-          <Text style={styles.headline}>See where you stand</Text>
+          <Text style={styles.headline}>Track your wins as they grow</Text>
           <Text style={styles.subheadline}>Log your sessions and track profit over time. AI-powered insights surface patterns you'd miss on your own.</Text>
         </Animated.View>
 
