@@ -3,7 +3,7 @@
     "name": "PokerGPT",
     "slug": "pokergpt",
     "owner": "leandertoney",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "orientation": "portrait",
     "icon": "./assets/images/pokergpt_logo.png",
     "scheme": "pokergpt",
@@ -17,7 +17,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.pokergpt.app",
-      "buildNumber": "1",
+      "buildNumber": "2",
       "icon": "./assets/images/pokergpt_logo.png",
       "infoPlist": {
         "UIBackgroundModes": [
@@ -29,7 +29,7 @@
       }
     },
     "android": {
-      "versionCode": 4,
+      "versionCode": 6,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/pokergpt_logo.png",
         "backgroundColor": "#6A0B0B"
@@ -69,6 +69,16 @@
         "expo-updates",
         {
           "username": "leandertoney"
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 36,
+            "targetSdkVersion": 36,
+            "minSdkVersion": 24
+          }
         }
       ]
     ],
