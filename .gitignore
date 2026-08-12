@@ -42,3 +42,5 @@ _archive/
 _archive_*/
 .claude/
 *.aab
+# Play publishing service account key (never commit)
+google-service-account.json
