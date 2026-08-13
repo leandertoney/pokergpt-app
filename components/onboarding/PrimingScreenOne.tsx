@@ -228,12 +228,16 @@ export function PrimingScreenOne({ onNext }: PrimingScreenOneProps) {
           <Text style={styles.ctaButtonText}>Try for $0</Text>
         </TouchableOpacity>
 
-        {/* Anchor Price */}
-        <Animated.Text
-          style={[styles.anchorPrice, { opacity: priceAnim }]}
-        >
-          Just {yearlyPrice || '...'} per year ({monthlyEquiv || '...'}/month)
-        </Animated.Text>
+        {/* Anchor Price — omitted entirely when the store hasn't returned prices,
+            rather than rendering '...' where a price belongs (Play flagged that
+            placeholder state on the paywall as broken functionality). */}
+        {yearlyPrice && monthlyEquiv ? (
+          <Animated.Text
+            style={[styles.anchorPrice, { opacity: priceAnim }]}
+          >
+            Just {yearlyPrice} per year ({monthlyEquiv}/month)
+          </Animated.Text>
+        ) : null}
       </Animated.View>
     </View>
   );

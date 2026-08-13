@@ -25,6 +25,7 @@ import {
   getOfferings,
   purchasePackage,
   restorePurchases,
+  PRODUCT_IDS,
   type PlanType,
 } from '@/services/revenueCat';
 import {
@@ -79,7 +80,17 @@ export function PaywallScreen({ goal, userName, onPurchase, onSkip }: PaywallScr
         if (offerings) {
           const weeklyPrice = offerings.weekly?.product.priceString;
           const yearlyPrice = offerings.annual?.product.priceString;
-          const specialPrice = offerings.special?.product.priceString;
+          // There is no `offerings.special` — RevenueCat only exposes the standard
+          // package accessors ($rc_weekly/$rc_annual). The special offer has to be
+          // found in availablePackages, the same way getPackageForPlan('special')
+          // resolves it for the actual purchase. Reading `.special` returned
+          // undefined on every platform, which tripped the "missing price data"
+          // branch below even when the store was fully configured.
+          const specialPrice = offerings.availablePackages.find(
+            (pkg) =>
+              pkg.identifier === '$rc_special' ||
+              pkg.product.identifier === PRODUCT_IDS.SPECIAL
+          )?.product.priceString;
 
           // Verify all required prices are available
           if (!weeklyPrice || !yearlyPrice || !specialPrice) {
@@ -254,6 +265,33 @@ export function PaywallScreen({ goal, userName, onPurchase, onSkip }: PaywallScr
       console.warn('Failed to open URL:', error);
     }
   };
+
+  // Google Play "broken functionality": if the store returns no products, every
+  // price below falls back to '...' and the purchase buttons become dead controls
+  // showing no price. vc7 was rejected for exactly that. Rather than render a
+  // priced-looking paywall we can't transact, advance past it via the existing
+  // skip path — the user keeps the free tier and sees no broken UI.
+  useEffect(() => {
+    if (priceError) {
+      onSkip();
+    }
+  }, [priceError, onSkip]);
+
+  if (priceError) {
+    return null;
+  }
+
+  // Prices arrive asynchronously. Until they do, showing the paywall would render
+  // '...' in place of every price — the same dead-control state Play flagged — so
+  // hold on a spinner instead of a priced-looking screen with no prices.
+  const pricesReady = !!(prices.weekly && prices.yearlyTotal && prices.specialYearly);
+  if (!pricesReady) {
+    return (
+      <View style={[styles.container, styles.priceLoadingContainer]}>
+        <ActivityIndicator size="large" color={colors.text.primary} />
+      </View>
+    );
+  }
 
   // Dynamic timeline Day 3 text based on selected plan
   const billingText = selectedPlan === 'yearly'
@@ -620,6 +658,11 @@ export function PaywallScreen({ goal, userName, onPurchase, onSkip }: PaywallScr
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  } as ViewStyle,
+  priceLoadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.background.primary,
   } as ViewStyle,
   scrollContent: {
     flexGrow: 1,

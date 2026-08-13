@@ -9,7 +9,7 @@ import { withTimeout } from '@/utils/withTimeout';
 
 // RevenueCat API Keys from dashboard
 const REVENUECAT_IOS_KEY = 'appl_UpYGVTernIJdqPdLcHXQNtQwHgU';
-const REVENUECAT_ANDROID_KEY = 'goog_REPLACE_WITH_ANDROID_KEY'; // Add Android key when you set up Google Play
+const REVENUECAT_ANDROID_KEY = 'goog_IpBnRcxRbnspeIxHHUIaWvWLjys';
 
 // Product identifiers - must match what you create in App Store Connect / Google Play
 export const PRODUCT_IDS = {
