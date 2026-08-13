@@ -124,7 +124,14 @@ export function PaywallScreen({ goal, userName, onPurchase, onSkip }: PaywallScr
     fetchPrices();
   }, []);
 
+  // Gated on prices being loaded: the paywall renders a spinner until then, so
+  // running the entrance animations on mount would play them while nothing is
+  // visible and reveal the real content already half-animated.
+  const pricesLoaded = !!(prices.weekly && prices.yearlyTotal && prices.specialYearly);
+
   useEffect(() => {
+    if (!pricesLoaded) return;
+
     // Header entrance
     Animated.spring(headerAnim, {
       toValue: 1,
@@ -162,7 +169,7 @@ export function PaywallScreen({ goal, userName, onPurchase, onSkip }: PaywallScr
         useNativeDriver: true,
       }).start();
     }, 600);
-  }, []);
+  }, [pricesLoaded]);
 
   const handlePlanSelect = (plan: 'weekly' | 'yearly') => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -284,8 +291,7 @@ export function PaywallScreen({ goal, userName, onPurchase, onSkip }: PaywallScr
   // Prices arrive asynchronously. Until they do, showing the paywall would render
   // '...' in place of every price — the same dead-control state Play flagged — so
   // hold on a spinner instead of a priced-looking screen with no prices.
-  const pricesReady = !!(prices.weekly && prices.yearlyTotal && prices.specialYearly);
-  if (!pricesReady) {
+  if (!pricesLoaded) {
     return (
       <View style={[styles.container, styles.priceLoadingContainer]}>
         <ActivityIndicator size="large" color={colors.text.primary} />
