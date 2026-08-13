@@ -9,12 +9,13 @@ import {
   type ViewStyle,
   type TextStyle,
   type ImageStyle,
+  type ImageSourcePropType,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { colors } from '@/constants/colors';
 
-const HERO_IMAGE_URL = 'https://bollujxjsgahswigmyvq.supabase.co/storage/v1/object/public/assets/onboarding/identity_screen.png?v=2';
+const HERO_IMAGE = require('../../assets/images/onboarding/identity_screen.jpg');
 
 type ReferralScreenProps = {
   onComplete: (source: string) => void;
@@ -23,18 +24,26 @@ type ReferralScreenProps = {
 type Option = {
   label: string;
   value: string;
-  icon: string;
+  // Bundled asset module from require(), not a remote URL — see REFERRAL_ICONS.
+  icon: ImageSourcePropType;
 };
 
-const ICON_BASE = 'https://bollujxjsgahswigmyvq.supabase.co/storage/v1/object/public/assets/onboarding/referral';
+const REFERRAL_ICONS = {
+  tiktok: require('../../assets/images/onboarding/referral/tiktok.png'),
+  instagram: require('../../assets/images/onboarding/referral/instagram.png'),
+  youtube: require('../../assets/images/onboarding/referral/youtube.png'),
+  x: require('../../assets/images/onboarding/referral/x.png'),
+  appstore: require('../../assets/images/onboarding/referral/appstore.png'),
+  friend: require('../../assets/images/onboarding/referral/friend.png'),
+};
 
 const OPTIONS: Option[] = [
-  { label: 'TikTok', value: 'tiktok', icon: `${ICON_BASE}/tiktok.png?v=2` },
-  { label: 'Instagram', value: 'instagram', icon: `${ICON_BASE}/instagram.png?v=2` },
-  { label: 'YouTube', value: 'youtube', icon: `${ICON_BASE}/youtube.png?v=2` },
-  { label: 'X', value: 'x', icon: `${ICON_BASE}/x.png?v=2` },
-  { label: 'App Store', value: 'app_store', icon: `${ICON_BASE}/appstore.png?v=2` },
-  { label: 'A Friend', value: 'friend', icon: `${ICON_BASE}/friend.png?v=2` },
+  { label: 'TikTok', value: 'tiktok', icon: REFERRAL_ICONS.tiktok },
+  { label: 'Instagram', value: 'instagram', icon: REFERRAL_ICONS.instagram },
+  { label: 'YouTube', value: 'youtube', icon: REFERRAL_ICONS.youtube },
+  { label: 'X', value: 'x', icon: REFERRAL_ICONS.x },
+  { label: 'App Store', value: 'app_store', icon: REFERRAL_ICONS.appstore },
+  { label: 'A Friend', value: 'friend', icon: REFERRAL_ICONS.friend },
 ];
 
 export function ReferralScreen({ onComplete }: ReferralScreenProps) {
@@ -84,7 +93,7 @@ export function ReferralScreen({ onComplete }: ReferralScreenProps) {
       {/* Hero Image */}
       <View style={styles.heroContainer}>
         <Image
-          source={{ uri: HERO_IMAGE_URL }}
+          source={HERO_IMAGE}
           style={styles.heroImage}
           resizeMode="cover"
         />
@@ -144,7 +153,7 @@ export function ReferralScreen({ onComplete }: ReferralScreenProps) {
                   activeOpacity={0.7}
                 >
                   <Image
-                    source={{ uri: option.icon }}
+                    source={option.icon}
                     style={styles.iconImage}
                     resizeMode="contain"
                   />

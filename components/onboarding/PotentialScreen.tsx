@@ -15,7 +15,7 @@ import { TrendingUp, Zap } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { colors } from '@/constants/colors';
 
-const HERO_IMAGE_URL = 'https://bollujxjsgahswigmyvq.supabase.co/storage/v1/object/public/assets/onboarding/poker_potential.png?v=2';
+const HERO_IMAGE = require('../../assets/images/onboarding/poker_potential.jpg');
 
 type PotentialScreenProps = {
   userName: string | null;
@@ -151,7 +151,7 @@ export function PotentialScreen({ userName, experienceLevel, frequency, goal, go
       {/* Hero Image */}
       <View style={styles.heroContainer}>
         <Image
-          source={{ uri: HERO_IMAGE_URL }}
+          source={HERO_IMAGE}
           style={styles.heroImage}
           resizeMode="cover"
         />

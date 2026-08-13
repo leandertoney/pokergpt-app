@@ -17,7 +17,7 @@ import Svg, { Path, Circle, Defs, LinearGradient as SvgLinearGradient, Stop } fr
 import * as Haptics from 'expo-haptics';
 import { colors } from '@/constants/colors';
 
-const HERO_IMAGE_URL = 'https://bollujxjsgahswigmyvq.supabase.co/storage/v1/object/public/assets/onboarding/poker_journey.png?v=2';
+const HERO_IMAGE = require('../../assets/images/onboarding/poker_journey.jpg');
 
 type SessionDemoScreenProps = {
   onNext: () => void;
@@ -182,7 +182,7 @@ export function SessionDemoScreen({ onNext }: SessionDemoScreenProps) {
       {/* Hero Image */}
       <View style={styles.heroContainer}>
         <Image
-          source={{ uri: HERO_IMAGE_URL }}
+          source={HERO_IMAGE}
           style={styles.heroImage}
           resizeMode="cover"
         />

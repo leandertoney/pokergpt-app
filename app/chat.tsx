@@ -14,7 +14,7 @@ import { colors } from '@/constants/colors';
 import { MAX_FREE_HANDS } from '@/types/poker';
 
 const OPENAI_API_KEY = process.env.EXPO_PUBLIC_OPENAI_API_KEY || '';
-const BACKGROUND_IMAGE_URL = 'https://bollujxjsgahswigmyvq.supabase.co/storage/v1/object/public/assets/chat/poker_table_bg.png?v=2';
+const BACKGROUND_IMAGE = require('../assets/images/chat/poker_table_bg.jpg');
 
 export default function ChatScreen() {
   const {
@@ -142,7 +142,7 @@ export default function ChatScreen() {
       {/* Background Image */}
       <View style={styles.backgroundContainer}>
         <Image
-          source={{ uri: BACKGROUND_IMAGE_URL }}
+          source={BACKGROUND_IMAGE}
           style={styles.backgroundImage}
           resizeMode="cover"
         />

@@ -17,7 +17,7 @@ import Svg, { Path, Circle, Defs, LinearGradient, Stop, Line, Text as SvgText } 
 import * as Haptics from 'expo-haptics';
 import { colors } from '@/constants/colors';
 
-const HERO_IMAGE_URL = 'https://bollujxjsgahswigmyvq.supabase.co/storage/v1/object/public/assets/onboarding/comparison_page.png?v=2';
+const HERO_IMAGE = require('../../assets/images/onboarding/comparison_page.jpg');
 
 type ComparisonScreenProps = {
   onNext: () => void;
@@ -173,7 +173,7 @@ export function ComparisonScreen({ onNext }: ComparisonScreenProps) {
       {/* Hero Image */}
       <View style={styles.heroContainer}>
         <Image
-          source={{ uri: HERO_IMAGE_URL }}
+          source={HERO_IMAGE}
           style={styles.heroImage}
           resizeMode="cover"
         />

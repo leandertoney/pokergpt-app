@@ -22,7 +22,7 @@ import { shouldShowSpecialOffer, markSpecialOfferShown, setUserTier } from '@/se
 import { colors } from '@/constants/colors';
 import type { ChatMessage as ChatMessageType } from '@/services/pokerAI';
 
-const BACKGROUND_IMAGE_URL = 'https://bollujxjsgahswigmyvq.supabase.co/storage/v1/object/public/assets/chat/poker_table_bg.png?v=2';
+const BACKGROUND_IMAGE = require('../assets/images/chat/poker_table_bg.jpg');
 
 export default function PokerChatScreen() {
   const router = useRouter();
@@ -135,7 +135,7 @@ export default function PokerChatScreen() {
       {/* Background Image */}
       <View style={styles.backgroundContainer}>
         <Image
-          source={{ uri: BACKGROUND_IMAGE_URL }}
+          source={BACKGROUND_IMAGE}
           style={styles.backgroundImage}
           resizeMode="cover"
         />

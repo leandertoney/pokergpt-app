@@ -15,7 +15,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { colors } from '@/constants/colors';
 
-const HERO_IMAGE_URL = 'https://bollujxjsgahswigmyvq.supabase.co/storage/v1/object/public/assets/onboarding/talking_to_phone.png?v=2';
+const HERO_IMAGE = require('../../assets/images/onboarding/talking_to_phone.jpg');
 
 type ChatDemoScreenProps = {
   onNext: () => void;
@@ -230,7 +230,7 @@ export function ChatDemoScreen({ onNext }: ChatDemoScreenProps) {
       {/* Hero Image at Top */}
       <View style={styles.heroContainer}>
         <Image
-          source={{ uri: HERO_IMAGE_URL }}
+          source={HERO_IMAGE}
           style={styles.heroImage}
           resizeMode="cover"
         />

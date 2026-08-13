@@ -15,7 +15,7 @@ import * as Haptics from 'expo-haptics';
 import { colors } from '@/constants/colors';
 import { getOnboardingDemoHand } from '@/services/dailyReviewService';
 
-const HERO_IMAGE_URL = 'https://bollujxjsgahswigmyvq.supabase.co/storage/v1/object/public/assets/onboarding/training_hands.png?v=2';
+const HERO_IMAGE = require('../../assets/images/onboarding/training_hands.jpg');
 
 type DailyReviewDemoScreenProps = {
   onNext: () => void;
@@ -115,7 +115,7 @@ export function DailyReviewDemoScreen({ onNext }: DailyReviewDemoScreenProps) {
       {/* Hero Image */}
       <View style={styles.heroContainer}>
         <Image
-          source={{ uri: HERO_IMAGE_URL }}
+          source={HERO_IMAGE}
           style={styles.heroImage}
           resizeMode="cover"
         />

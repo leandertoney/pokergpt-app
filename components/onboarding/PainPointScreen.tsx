@@ -17,7 +17,7 @@ import { colors } from '@/constants/colors';
 import type { PainPoint } from '@/types/poker';
 
 // Placeholder - replace with real Supabase URL later
-const HERO_IMAGE_URL = 'https://bollujxjsgahswigmyvq.supabase.co/storage/v1/object/public/assets/onboarding/identity_screen.png?v=2';
+const HERO_IMAGE = require('../../assets/images/onboarding/identity_screen.jpg');
 
 type PainPointScreenProps = {
   onComplete: (painPoint: PainPoint) => void;
@@ -96,7 +96,7 @@ export function PainPointScreen({ onComplete }: PainPointScreenProps) {
       {/* Hero Image */}
       <View style={styles.heroContainer}>
         <Image
-          source={{ uri: HERO_IMAGE_URL }}
+          source={HERO_IMAGE}
           style={styles.heroImage}
           resizeMode="cover"
         />

@@ -18,7 +18,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { colors } from '@/constants/colors';
 
-const HERO_IMAGE_URL = 'https://bollujxjsgahswigmyvq.supabase.co/storage/v1/object/public/assets/onboarding/name_input.png?v=2';
+const HERO_IMAGE = require('../../assets/images/onboarding/name_input.jpg');
 
 type NameInputScreenProps = {
   onComplete: (name: string | null) => void;
@@ -87,7 +87,7 @@ export function NameInputScreen({ onComplete }: NameInputScreenProps) {
       {/* Hero Image */}
       <View style={styles.heroContainer}>
         <Image
-          source={{ uri: HERO_IMAGE_URL }}
+          source={HERO_IMAGE}
           style={styles.heroImage}
           resizeMode="cover"
         />

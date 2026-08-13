@@ -15,7 +15,7 @@ import * as Haptics from 'expo-haptics';
 import { VoiceOrb, type VoiceOrbState } from '@/components/VoiceOrb';
 import { colors } from '@/constants/colors';
 
-const HERO_IMAGE_URL = 'https://bollujxjsgahswigmyvq.supabase.co/storage/v1/object/public/assets/onboarding/speak_your_hand.png?v=2';
+const HERO_IMAGE = require('../../assets/images/onboarding/speak_your_hand.jpg');
 
 // Card display component - centered rank + suit design
 function MiniCard({ rank, suit, size = 'medium' }: { rank: string; suit: string; size?: 'small' | 'medium' }) {
@@ -148,7 +148,7 @@ export function LiveDemoScreen({ onNext }: LiveDemoScreenProps) {
       {/* Hero Image at Top */}
       <View style={styles.heroContainer}>
         <Image
-          source={{ uri: HERO_IMAGE_URL }}
+          source={HERO_IMAGE}
           style={styles.heroImage}
           resizeMode="cover"
         />

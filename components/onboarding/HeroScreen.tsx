@@ -15,7 +15,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { colors } from '@/constants/colors';
 
-const HERO_IMAGE_URL = 'https://bollujxjsgahswigmyvq.supabase.co/storage/v1/object/public/assets/onboarding/pocket_aces.png?v=2';
+const HERO_IMAGE = require('../../assets/images/onboarding/pocket_aces.jpg');
 
 const { width: SW, height: SH } = Dimensions.get('window');
 
@@ -121,7 +121,7 @@ export function HeroScreen({ onNext }: HeroScreenProps) {
       {/* Background image */}
       <View style={styles.heroContainer}>
         <Image
-          source={{ uri: HERO_IMAGE_URL }}
+          source={HERO_IMAGE}
           style={styles.heroImage}
           resizeMode="cover"
         />

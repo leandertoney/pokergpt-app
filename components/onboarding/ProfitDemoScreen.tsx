@@ -21,7 +21,7 @@ type ProfitDemoScreenProps = {
   onNext: () => void;
 };
 
-const HERO_IMAGE_URL = 'https://bollujxjsgahswigmyvq.supabase.co/storage/v1/object/public/assets/onboarding/studying_poker.png?v=2';
+const HERO_IMAGE = require('../../assets/images/onboarding/studying_poker.jpg');
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const GRAPH_WIDTH = SCREEN_WIDTH - 64;
 const GRAPH_HEIGHT = 140;
@@ -161,7 +161,7 @@ export function ProfitDemoScreen({ onNext }: ProfitDemoScreenProps) {
       {/* Hero Image */}
       <View style={styles.heroContainer}>
         <Image
-          source={{ uri: HERO_IMAGE_URL }}
+          source={HERO_IMAGE}
           style={styles.heroImage}
           resizeMode="cover"
         />

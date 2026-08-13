@@ -20,7 +20,7 @@ import { TRAINING_HANDS } from '@/data/trainingHands';
 import type { ExperienceLevel } from '@/types/poker';
 import type { TrainingHand } from '@/types/dailyReview';
 
-const HERO_IMAGE_URL = 'https://bollujxjsgahswigmyvq.supabase.co/storage/v1/object/public/assets/onboarding/skill_level.png?v=2';
+const HERO_IMAGE = require('../../assets/images/onboarding/skill_level.jpg');
 
 type SkillLevelScreenProps = {
   onComplete: (level: ExperienceLevel) => void;
@@ -142,7 +142,7 @@ export function SkillLevelScreen({ onComplete }: SkillLevelScreenProps) {
       {/* Full-screen Hero Image */}
       <View style={styles.heroContainer}>
         <Image
-          source={{ uri: HERO_IMAGE_URL }}
+          source={HERO_IMAGE}
           style={styles.heroImage}
           resizeMode="cover"
         />

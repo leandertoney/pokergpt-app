@@ -21,7 +21,7 @@ import * as Haptics from 'expo-haptics';
 import { colors } from '@/constants/colors';
 import type { PainPoint } from '@/types/poker';
 
-const HERO_IMAGE_URL = 'https://bollujxjsgahswigmyvq.supabase.co/storage/v1/object/public/assets/onboarding/goal_setting.png?v=2';
+const HERO_IMAGE = require('../../assets/images/onboarding/goal_setting.jpg');
 
 type GoalSettingScreenProps = {
   goal: string;
@@ -229,7 +229,7 @@ export function GoalSettingScreen({ goal, userName, painPoint, onComplete }: Goa
       {/* Hero Image */}
       <View style={styles.heroContainer}>
         <Image
-          source={{ uri: HERO_IMAGE_URL }}
+          source={HERO_IMAGE}
           style={styles.heroImage}
           resizeMode="cover"
         />
