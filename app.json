@@ -3,7 +3,7 @@
     "name": "PokerGPT",
     "slug": "pokergpt",
     "owner": "leandertoney",
-    "version": "1.0.5",
+    "version": "1.0.6",
     "orientation": "portrait",
     "icon": "./assets/images/pokergpt_logo.png",
     "scheme": "pokergpt",
@@ -29,7 +29,7 @@
       }
     },
     "android": {
-      "versionCode": 6,
+      "versionCode": 8,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/pokergpt_logo.png",
         "backgroundColor": "#6A0B0B"
