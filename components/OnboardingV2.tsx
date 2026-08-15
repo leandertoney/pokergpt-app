@@ -15,7 +15,6 @@ import { PainPointScreen } from './onboarding/PainPointScreen';
 import { HookScreen } from './onboarding/HookScreen';
 import { SkillLevelScreen } from './onboarding/SkillLevelScreen';
 import { AccomplishScreen } from './onboarding/AccomplishScreen';
-import { ProfileBuiltScreen } from './onboarding/ProfileBuiltScreen';
 import { ComparisonScreen } from './onboarding/ComparisonScreen';
 import { ChatDemoScreen } from './onboarding/ChatDemoScreen';
 import { GoalTimelineScreen } from './onboarding/GoalTimelineScreen';
@@ -37,7 +36,6 @@ type OnboardingStep =
   | 'painPoint'
   | 'skillLevel'
   | 'accomplish'
-  | 'profileBuilt'
   | 'comparison'
   | 'chatDemo'
   | 'goalTimeline'
@@ -58,7 +56,7 @@ const ALL_STEPS: OnboardingStep[] = [
   // PHASE 1: THEIR SITUATION — three questions, each one used later
   'hook', 'painPoint', 'skillLevel', 'accomplish',
   // PHASE 2: PAY IT BACK — results assembled from those answers
-  'profileBuilt', 'comparison', 'chatDemo',
+  'comparison', 'chatDemo',
   // PHASE 3: CLOSE ON THEIR GOAL
   'goalTimeline', 'potential', 'paywall',
 ];
@@ -73,7 +71,7 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
   const [stepHistory, setStepHistory] = useState<OnboardingStep[]>([DEV_START_STEP ?? 'hook']);
   const [painPoint, setPainPoint] = useState<PainPoint | null>(null);
   // Answers collected in phase 1 and consumed by phases 2 and 3. These are what
-  // make the flow outcome-based: profileBuilt, potential and the paywall are all
+  // make the flow outcome-based: comparison, potential and the paywall are all
   // rendered from these values rather than from hardcoded defaults.
   const [experienceLevel, setExperienceLevel] = useState<ExperienceLevel | null>(null);
   const [goal, setGoal] = useState<string | null>(null);
@@ -140,7 +138,7 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
 
   const handleAccomplishComplete = (selectedGoal: string) => {
     setGoal(selectedGoal);
-    transitionTo('profileBuilt');
+    transitionTo('comparison');
   };
 
   const handleGoalTimelineComplete = (timeline: string) => {
@@ -241,15 +239,6 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
         return <AccomplishScreen onComplete={handleAccomplishComplete} />;
 
       // PHASE 2: PAY IT BACK — results built from the answers above
-      case 'profileBuilt':
-        return (
-          <ProfileBuiltScreen
-            playStyle={experienceLevel ?? 'intermediate'}
-            goal={goal ?? 'profit'}
-            onNext={() => transitionTo('comparison')}
-          />
-        );
-
       case 'comparison':
         return <ComparisonScreen onNext={() => transitionTo('chatDemo')} />;
 
