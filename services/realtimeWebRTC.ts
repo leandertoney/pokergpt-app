@@ -1,5 +1,21 @@
-import { RTCPeerConnection, RTCSessionDescription, mediaDevices, MediaStream } from 'react-native-webrtc';
+import type { MediaStream, MediaStreamTrack, RTCPeerConnection } from 'react-native-webrtc';
 import { VOICE_COACH_PROMPT } from '@/constants/prompts';
+
+// Loaded lazily: react-native-webrtc has no JS fallback and throws on import in
+// Expo Go. This module is reached from app/voice.tsx, an Expo Router route that
+// loads at startup, so a top-level import crashes the entire app before it
+// renders. Every use below is inside a method, so deferring resolution costs
+// nothing — and connect() fails with a clear message instead of a native throw.
+function webrtc() {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    return require('react-native-webrtc');
+  } catch {
+    throw new Error(
+      'Voice chat needs a development build — react-native-webrtc is not available in Expo Go.'
+    );
+  }
+}
 
 const REALTIME_MODEL = 'gpt-4o-realtime-preview-2024-12-17';
 const REALTIME_SDP_URL = `https://api.openai.com/v1/realtime?model=${REALTIME_MODEL}`;
@@ -36,7 +52,7 @@ export class RealtimeWebRTCService {
     // tap to retry" on first launch — the second tap worked because permission
     // was already granted).
     try {
-      this.localStream = await mediaDevices.getUserMedia({
+      this.localStream = await webrtc().mediaDevices.getUserMedia({
         audio: true,
         video: false,
       }) as MediaStream;
@@ -45,13 +61,14 @@ export class RealtimeWebRTCService {
       throw new Error('Microphone permission required');
     }
 
-    this.pc = new RTCPeerConnection({
+    const pc: RTCPeerConnection = new (webrtc().RTCPeerConnection)({
       iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
     });
+    this.pc = pc;
 
-    const remoteStream = new MediaStream();
+    const remoteStream = new (webrtc().MediaStream)() as MediaStream;
     this.remoteStream = remoteStream;
-    (this.pc as any).ontrack = (event: any) => {
+    (pc as any).ontrack = (event: any) => {
       event.streams?.[0]?.getTracks().forEach((track: any) => {
         remoteStream.addTrack(track);
         // Apply volume boost to audio tracks
@@ -62,18 +79,18 @@ export class RealtimeWebRTCService {
     };
 
     this.localStream.getTracks().forEach((track) => {
-      this.pc?.addTrack(track, this.localStream!);
+      pc.addTrack(track, this.localStream!);
     });
 
-    this.dc = this.pc.createDataChannel('oai-events');
+    this.dc = pc.createDataChannel('oai-events');
     this.dc.onopen = () => {
       this.sendSessionUpdate(voice);
       this.callbacks.onSessionCreated?.();
     };
     this.dc.onmessage = (e: any) => this.handleEvent(e.data);
 
-    const offer = await this.pc.createOffer({});
-    await this.pc.setLocalDescription(offer);
+    const offer = await pc.createOffer({});
+    await pc.setLocalDescription(offer);
 
     let sdpResponse: Response;
     try {
@@ -97,7 +114,7 @@ export class RealtimeWebRTCService {
     }
 
     const answerSdp = await sdpResponse.text();
-    await this.pc.setRemoteDescription(new RTCSessionDescription({ type: 'answer', sdp: answerSdp }));
+    await pc.setRemoteDescription(new (webrtc().RTCSessionDescription)({ type: 'answer', sdp: answerSdp }));
 
     return remoteStream;
   }

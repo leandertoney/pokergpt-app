@@ -8,7 +8,20 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { RTCView, MediaStream } from 'react-native-webrtc';
+// react-native-webrtc is a native module with no JS fallback, so importing it
+// normally throws "native module doesn't exist" in Expo Go — and because
+// app/voice.tsx is an Expo Router route, that throw happens at startup and
+// takes the whole app down before any screen renders. Resolve it lazily so the
+// app boots in Expo Go; voice itself still requires a dev build to function.
+import type { MediaStream } from 'react-native-webrtc';
+
+let RTCViewImpl: any = null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  RTCViewImpl = require('react-native-webrtc').RTCView;
+} catch {
+  RTCViewImpl = null;
+}
 import {
   RealtimeWebRTCService,
   getRealtimeWebRTCService,
@@ -230,5 +243,7 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions) {
   };
 }
 
-// Re-export for screens that want to render the remote stream as an RTCView
-export { RTCView };
+// Re-export for screens that want to render the remote stream as an RTCView.
+// Null in Expo Go, where the native module is unavailable — callers should
+// guard on it rather than assume a component.
+export const RTCView = RTCViewImpl;
