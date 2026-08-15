@@ -17,7 +17,8 @@ import { SearchBottomBar } from '@/components/SearchBottomBar';
 import { FullResultCard } from '@/components/FullResultCard';
 import { LoadingIndicator } from '@/components/LoadingIndicator';
 import CardPicker from '@/components/CardPicker';
-import { OnboardingV2, checkOnboardingComplete } from '@/components/OnboardingV2';
+import { checkOnboardingComplete } from '@/components/OnboardingV2';
+import { OnboardingV3 } from '@/components/OnboardingV3';
 import { DailyReviewCard } from '@/components/DailyReviewCard';
 import { useHandHistory, type StoredHandEntryWithName } from '@/hooks/useHandHistory';
 import { useChatHistory } from '@/hooks/useChatHistory';
@@ -505,7 +506,7 @@ Only return the JSON array, nothing else.`;
   }
 
   if (showOnboarding) {
-    return <OnboardingV2 onComplete={() => setShowOnboarding(false)} />;
+    return <OnboardingV3 onComplete={() => setShowOnboarding(false)} />;
   }
 
   const renderHandsEmptyState = () => (
