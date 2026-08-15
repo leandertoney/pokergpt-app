@@ -1113,7 +1113,14 @@ export async function checkOnboardingComplete(isAuthenticated: boolean = false):
 
 export async function resetOnboarding(): Promise<void> {
   try {
-    await AsyncStorage.removeItem(ONBOARDING_COMPLETE_KEY);
+    // Clear BOTH keys. This file's ONBOARDING_COMPLETE_KEY is '@onboarding_complete',
+    // but the live flow is OnboardingV2, which writes '@onboarding_v2_complete'.
+    // Removing only the legacy key meant Settings → Restart Onboarding silently
+    // did nothing: the v2 flag survived, so onboarding never reappeared.
+    await AsyncStorage.multiRemove([
+      ONBOARDING_COMPLETE_KEY,
+      '@onboarding_v2_complete',
+    ]);
   } catch (error) {
     console.error('Error resetting onboarding:', error);
   }

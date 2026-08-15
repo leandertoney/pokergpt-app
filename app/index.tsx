@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { View, StyleSheet, Text, TouchableOpacity, FlatList, Animated, KeyboardAvoidingView, Platform, Image, type ViewStyle, type TextStyle, type ImageStyle } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { MessageCircle, Star, User } from 'lucide-react-native';
@@ -215,6 +215,24 @@ Only return the JSON array, nothing else.`;
     }
     checkOnboarding();
   }, [isAuthenticated]);
+
+  // Re-check whenever this screen regains focus. Settings → Restart Onboarding
+  // clears the stored flag and routes back here, but the effect above only
+  // depends on isAuthenticated, which does not change on navigation — so the
+  // flag was cleared while showOnboarding stayed false, and onboarding only
+  // appeared after a full app reload.
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      (async () => {
+        const complete = await checkOnboardingComplete(isAuthenticated);
+        if (!cancelled) setShowOnboarding(!complete);
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }, [isAuthenticated])
+  );
 
   // Safety net: never show loading screen for more than 12 seconds
   useEffect(() => {
