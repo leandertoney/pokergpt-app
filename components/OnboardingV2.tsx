@@ -12,66 +12,55 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Onboarding screens
 import { PainPointScreen } from './onboarding/PainPointScreen';
-import { ValidationScreen } from './onboarding/ValidationScreen';
 import { HookScreen } from './onboarding/HookScreen';
-import { HeroScreen } from './onboarding/HeroScreen';
-import { LiveDemoScreen } from './onboarding/LiveDemoScreen';
-import { WhatYouGetScreen } from './onboarding/WhatYouGetScreen';
-import { DailyReviewDemoScreen } from './onboarding/DailyReviewDemoScreen';
-import { SessionDemoScreen } from './onboarding/SessionDemoScreen';
+import { SkillLevelScreen } from './onboarding/SkillLevelScreen';
+import { AccomplishScreen } from './onboarding/AccomplishScreen';
+import { ProfileBuiltScreen } from './onboarding/ProfileBuiltScreen';
+import { ComparisonScreen } from './onboarding/ComparisonScreen';
 import { ChatDemoScreen } from './onboarding/ChatDemoScreen';
+import { GoalTimelineScreen } from './onboarding/GoalTimelineScreen';
+import { PotentialScreen } from './onboarding/PotentialScreen';
 import { PaywallScreen } from './onboarding/PaywallScreen';
-import { AnalysisResultScreen } from './onboarding/AnalysisResultScreen';
-import { PrimingScreenOne } from './onboarding/PrimingScreenOne';
-import { PrimingScreenTwo } from './onboarding/PrimingScreenTwo';
 
 import { setUserTier, setUserIdentity, setUserDisplayName, setPaywallState, setOnboardingProfile } from '@/services/storageService';
 import { updateUserIdentity as syncUserIdentityToSupabase, getOrCreateUser } from '@/services/supabaseStorage';
 import { checkSubscriptionStatus } from '@/services/revenueCat';
 import { withTimeout } from '@/utils/withTimeout';
 import { colors } from '@/constants/colors';
-import type { UserIdentity, PainPoint, OnboardingProfile } from '@/types/poker';
+import type { UserIdentity, PainPoint, OnboardingProfile, ExperienceLevel } from '@/types/poker';
 
 const ONBOARDING_COMPLETE_KEY = '@onboarding_v2_complete';
 
 // All possible steps in the onboarding flow
 type OnboardingStep =
   | 'hook'
-  | 'hero'
   | 'painPoint'
-  | 'validation'
-  | 'chatDemo'
   | 'skillLevel'
-  | 'liveDemo'
-  | 'analysisResult'
-  | 'dailyReviewDemo'
-  | 'sessionDemo'
-  | 'name'
-  | 'referral'
   | 'accomplish'
+  | 'profileBuilt'
+  | 'comparison'
+  | 'chatDemo'
   | 'goalTimeline'
-  | 'goalSetting'
   | 'potential'
-  | 'notifications'
-  | 'primingOne'
-  | 'primingTwo'
-  | 'paywall'
-  | 'whatYouGet';
+  | 'paywall';
 
 type OnboardingV2Props = {
   onComplete: () => void;
 };
 
-// All steps in order for progress calculation
+// All steps in order for progress calculation.
+//
+// Outcome-based sequence: every question states the outcome it buys, and each
+// phase ends by handing something back that was built from the user's answers.
+// The previous flow asked four questions and used none of them (the paywall was
+// hardcoded to goal='profit'), then ran five consecutive scripted demos.
 const ALL_STEPS: OnboardingStep[] = [
-  // PHASE 1: HOOK
-  'hook', 'hero',
-  // PHASE 2: IDENTIFY (1 question only)
-  'painPoint', 'validation',
-  // PHASE 3: SHOW FEATURES (demos only, no questions)
-  'chatDemo', 'liveDemo', 'analysisResult', 'dailyReviewDemo', 'sessionDemo',
-  // PHASE 4: CONVERT
-  'primingOne', 'primingTwo', 'paywall', 'whatYouGet',
+  // PHASE 1: THEIR SITUATION — three questions, each one used later
+  'hook', 'painPoint', 'skillLevel', 'accomplish',
+  // PHASE 2: PAY IT BACK — results assembled from those answers
+  'profileBuilt', 'comparison', 'chatDemo',
+  // PHASE 3: CLOSE ON THEIR GOAL
+  'goalTimeline', 'potential', 'paywall',
 ];
 
 // DEV ONLY: Set to any step name to jump straight there (e.g. 'paywall', 'primingTwo')
@@ -83,6 +72,12 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
   const [step, setStep] = useState<OnboardingStep>(DEV_START_STEP ?? 'hook');
   const [stepHistory, setStepHistory] = useState<OnboardingStep[]>([DEV_START_STEP ?? 'hook']);
   const [painPoint, setPainPoint] = useState<PainPoint | null>(null);
+  // Answers collected in phase 1 and consumed by phases 2 and 3. These are what
+  // make the flow outcome-based: profileBuilt, potential and the paywall are all
+  // rendered from these values rather than from hardcoded defaults.
+  const [experienceLevel, setExperienceLevel] = useState<ExperienceLevel | null>(null);
+  const [goal, setGoal] = useState<string | null>(null);
+  const [goalTimeline, setGoalTimeline] = useState<string | null>(null);
 
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const slideAnim = useRef(new Animated.Value(0)).current;
@@ -135,11 +130,22 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
 
   const handlePainPointComplete = (selectedPainPoint: PainPoint) => {
     setPainPoint(selectedPainPoint);
-    transitionTo('validation');
+    transitionTo('skillLevel');
   };
 
-  const handleValidationComplete = () => {
-    transitionTo('chatDemo');
+  const handleSkillLevelComplete = (level: ExperienceLevel) => {
+    setExperienceLevel(level);
+    transitionTo('accomplish');
+  };
+
+  const handleAccomplishComplete = (selectedGoal: string) => {
+    setGoal(selectedGoal);
+    transitionTo('profileBuilt');
+  };
+
+  const handleGoalTimelineComplete = (timeline: string) => {
+    setGoalTimeline(timeline);
+    transitionTo('potential');
   };
 
   const handlePaywallPurchase = async (planId: 'weekly' | 'yearly') => {
@@ -157,13 +163,16 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
       await setPaywallState({ hasSeenPaywall: true, hasSkippedPaywall: false });
     }
 
-    transitionTo('whatYouGet');
+    // The benefit summary used to live on a whatYouGet screen AFTER the paywall,
+    // where it was too late to inform the decision. It is folded into the paywall
+    // now, so purchasing or skipping ends onboarding directly.
+    await handleComplete();
   };
 
   const handlePaywallSkip = async () => {
     await setUserTier('free');
     await setPaywallState({ hasSeenPaywall: true, hasSkippedPaywall: true });
-    transitionTo('whatYouGet');
+    await handleComplete();
   };
 
   const handleComplete = async () => {
@@ -218,59 +227,61 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
 
   const renderStep = () => {
     switch (step) {
-      // PHASE 1: HOOK
+      // PHASE 1: THEIR SITUATION — three questions, every answer used later
       case 'hook':
-        return <HookScreen onNext={() => transitionTo('hero')} />;
+        return <HookScreen onNext={() => transitionTo('painPoint')} />;
 
-      case 'hero':
-        return <HeroScreen onNext={() => transitionTo('painPoint')} />;
-
-      // PHASE 2: IDENTIFY
       case 'painPoint':
         return <PainPointScreen onComplete={handlePainPointComplete} />;
 
-      case 'validation':
+      case 'skillLevel':
+        return <SkillLevelScreen onComplete={handleSkillLevelComplete} />;
+
+      case 'accomplish':
+        return <AccomplishScreen onComplete={handleAccomplishComplete} />;
+
+      // PHASE 2: PAY IT BACK — results built from the answers above
+      case 'profileBuilt':
         return (
-          <ValidationScreen
-            painPoint={painPoint!}
-            onNext={handleValidationComplete}
+          <ProfileBuiltScreen
+            playStyle={experienceLevel ?? 'intermediate'}
+            goal={goal ?? 'profit'}
+            onNext={() => transitionTo('comparison')}
           />
         );
 
-      // PHASE 3: DEMO + QUESTIONS (interleaved)
+      case 'comparison':
+        return <ComparisonScreen onNext={() => transitionTo('chatDemo')} />;
+
+      // The one demo worth keeping: they ask about a hand themselves.
       case 'chatDemo':
-        return <ChatDemoScreen onNext={() => transitionTo('liveDemo')} />;
+        return <ChatDemoScreen onNext={() => transitionTo('goalTimeline')} />;
 
-      case 'liveDemo':
-        return <LiveDemoScreen onNext={() => transitionTo('analysisResult')} />;
+      // PHASE 3: CLOSE ON THEIR GOAL
+      case 'goalTimeline':
+        return <GoalTimelineScreen onComplete={handleGoalTimelineComplete} />;
 
-      case 'analysisResult':
-        return <AnalysisResultScreen onNext={() => transitionTo('dailyReviewDemo')} />;
-
-      case 'dailyReviewDemo':
-        return <DailyReviewDemoScreen onNext={() => transitionTo('sessionDemo')} />;
-
-      case 'sessionDemo':
-        return <SessionDemoScreen onNext={() => transitionTo('primingOne')} />;
-
-      case 'primingOne':
-        return <PrimingScreenOne onNext={() => transitionTo('primingTwo')} />;
-
-      case 'primingTwo':
-        return <PrimingScreenTwo onNext={() => transitionTo('paywall')} />;
+      case 'potential':
+        return (
+          <PotentialScreen
+            userName={null}
+            experienceLevel={experienceLevel ?? 'intermediate'}
+            frequency={null}
+            goal={goal ?? 'profit'}
+            goalTimeline={goalTimeline}
+            onNext={() => transitionTo('paywall')}
+          />
+        );
 
       case 'paywall':
         return (
           <PaywallScreen
-            goal={'profit'} // Default goal
-            userName={null} // No name collected in streamlined flow
+            goal={goal ?? 'profit'}
+            userName={null}
             onPurchase={handlePaywallPurchase}
             onSkip={handlePaywallSkip}
           />
         );
-
-      case 'whatYouGet':
-        return <WhatYouGetScreen onComplete={handleComplete} />;
 
       default:
         return null;
