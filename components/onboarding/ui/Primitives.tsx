@@ -222,8 +222,12 @@ export function Screen({
         )}
       </View>
 
+      {/* ScrollView throws an Invariant Violation if justifyContent reaches its
+          `style` — it must live on contentContainerStyle. s.body carries
+          justifyContent for the View case, so the scrolling case gets a
+          layout-only style instead. */}
       <Body
-        style={s.body}
+        style={scroll ? s.bodyScroll : s.body}
         {...(scroll
           ? { contentContainerStyle: s.bodyScrollContent, showsVerticalScrollIndicator: false }
           : {})}
@@ -272,6 +276,7 @@ const s = StyleSheet.create({
   progressWrap: { flex: 1, paddingRight: spacing.base },
 
   body: { flex: 1, paddingHorizontal: spacing.roomy, justifyContent: 'center' },
+  bodyScroll: { flex: 1, paddingHorizontal: spacing.roomy },
   bodyScrollContent: { flexGrow: 1, justifyContent: 'center', paddingVertical: spacing.roomy },
 
   eyebrow: { ...type.eyebrow, color: colors.accent.gold, marginBottom: spacing.cozy },

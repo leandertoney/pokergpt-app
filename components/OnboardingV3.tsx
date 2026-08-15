@@ -11,8 +11,9 @@
  *  - 30 screens existed, 9 were reachable, 3 could not be exited at all.
  *
  * What this is instead:
- *  - One idea per screen, stated in plain language. Each value screen names a
- *    single thing the app does and what the user gets from it.
+ *  - One idea per screen. Each value screen leads with the OUTCOME as its
+ *    headline and proves it with an exaggerated mock of the real UI — it does
+ *    not describe the feature in prose first.
  *  - Nothing is time-gated. Every screen's button is live on arrival.
  *  - Three short questions, and every answer is used: it is echoed back on the
  *    plan screen and persisted at completion.
@@ -24,12 +25,13 @@
  * uses at the table.
  */
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 
-import { Screen, PrimaryButton, TextButton, Choice, Rise } from './onboarding/ui/Primitives';
+import { Screen, PrimaryButton, TextButton, Choice } from './onboarding/ui/Primitives';
+import { AnalyzeDemo, LiveDemo, ReviewDemo } from './onboarding/ui/Demos';
 import { PaywallScreen } from './onboarding/PaywallScreen';
 import { colors } from '@/constants/colors';
 import { spacing, radius, type as t } from '@/constants/theme';
@@ -100,6 +102,13 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
   const index = STEPS.indexOf(step);
   const progress = index / (STEPS.length - 1);
 
+  // The first screen is never a transition target, so tracking only inside go()
+  // left 'welcome' permanently at zero and made every later step look like 100%
+  // of a funnel that had no top.
+  useEffect(() => {
+    trackOnboardingEvent('welcome');
+  }, []);
+
   const go = useCallback((next: Step, props: Record<string, unknown> = {}) => {
     trackOnboardingEvent(next, props);
     setStep(next);
@@ -163,8 +172,7 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
     case 'welcome':
       return (
         <Screen
-          headline={'Play your best\nhand, every time.'}
-          support="A poker coach in your pocket. Ask it anything, get a straight answer."
+          headline={'Stop guessing\nat the table.'}
           footer={<PrimaryButton label="Get started" onPress={() => go('value_analyze')} />}
         >
           <Badge text="Built for real players" />
@@ -177,15 +185,10 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
         <Screen
           progress={progress}
           onBack={back}
-          eyebrow="What it does"
-          headline={'Tell it a hand.\nGet the right play.'}
-          support="Type it or say it. You will hear what to do and why."
+          headline={'Call or fold?\nKnow in seconds.'}
           footer={<PrimaryButton label="Next" onPress={() => go('value_live')} />}
         >
-          <ExampleCard
-            you="I had ace king. He raised big on the river."
-            coach="Call. His bet is too large for a bluff-heavy range, and you beat every worse ace."
-          />
+          <AnalyzeDemo />
         </Screen>
       );
 
@@ -194,14 +197,10 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
         <Screen
           progress={progress}
           onBack={back}
-          eyebrow="At the table"
-          headline={'Talk to it live,\nmid-hand.'}
-          support="Keep it in your ear at the table or use it at home to practice."
+          headline={'Ask out loud,\nmid-hand.'}
           footer={<PrimaryButton label="Next" onPress={() => go('value_review')} />}
         >
-          <BulletList
-            items={['Speak normally, no typing', 'Answers in a few seconds', 'Works while you play or practice']}
-          />
+          <LiveDemo />
         </Screen>
       );
 
@@ -210,12 +209,11 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
         <Screen
           progress={progress}
           onBack={back}
-          eyebrow="After you play"
-          headline={'See the leaks\ncosting you money.'}
-          support="Your hands get saved. The coach shows you what to fix first."
+          headline={'Find the leak\nbleeding your stack.'}
+          scroll
           footer={<PrimaryButton label="Next" onPress={() => go('q_play_where')} />}
         >
-          <BulletList items={['Every hand saved automatically', 'One clear thing to work on', 'Track it week to week']} />
+          <ReviewDemo />
         </Screen>
       );
 
@@ -339,33 +337,7 @@ function Badge({ text }: { text: string }) {
   );
 }
 
-function BulletList({ items }: { items: string[] }) {
-  return (
-    <View style={{ gap: spacing.cozy }}>
-      {items.map((it, i) => (
-        <Rise key={it} delay={i * 60}>
-          <View style={s.bulletRow}>
-            <View style={s.dot} />
-            <Text style={s.bulletText}>{it}</Text>
-          </View>
-        </Rise>
-      ))}
-    </View>
-  );
-}
 
-function ExampleCard({ you, coach }: { you: string; coach: string }) {
-  return (
-    <View style={{ gap: spacing.snug }}>
-      <View style={[s.bubble, s.bubbleYou]}>
-        <Text style={s.bubbleYouText}>{you}</Text>
-      </View>
-      <View style={[s.bubble, s.bubbleCoach]}>
-        <Text style={s.bubbleCoachText}>{coach}</Text>
-      </View>
-    </View>
-  );
-}
 
 function PlanRow({ label, value }: { label: string; value: string }) {
   return (
@@ -386,15 +358,7 @@ const s = StyleSheet.create({
   },
   badgeText: { ...t.caption, color: colors.text.secondary, fontWeight: '600' },
 
-  bulletRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.cozy },
-  dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.accent.gold },
-  bulletText: { ...t.body, color: colors.text.primary, flex: 1 },
 
-  bubble: { padding: spacing.base, borderRadius: radius.lg, maxWidth: '92%' },
-  bubbleYou: { backgroundColor: colors.background.tertiary, alignSelf: 'flex-end' },
-  bubbleYouText: { ...t.body, color: colors.text.primary },
-  bubbleCoach: { backgroundColor: colors.accent.gold, alignSelf: 'flex-start' },
-  bubbleCoachText: { ...t.body, color: colors.text.dark, fontWeight: '600' },
 
   planRow: {
     flexDirection: 'row',

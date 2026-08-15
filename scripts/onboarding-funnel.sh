@@ -17,8 +17,8 @@ cd "$(dirname "$0")/.."
 PROJECT_REF="bollujxjsgahswigmyvq"
 
 TOKEN="${SUPABASE_ACCESS_TOKEN:-}"
-if [ -z "$TOKEN" ] && [ -f "$HOME/CourtCrowd-Mobile-App/.env" ]; then
-  TOKEN="$(grep '^SUPABASE_ACCESS_TOKEN' "$HOME/CourtCrowd-Mobile-App/.env" | cut -d= -f2- || true)"
+if [ -z "$TOKEN" ] && [ -f .env ]; then
+  TOKEN="$(grep '^SUPABASE_ACCESS_TOKEN' .env | cut -d= -f2- || true)"
 fi
 if [ -z "$TOKEN" ]; then
   echo "error: SUPABASE_ACCESS_TOKEN is not set and no fallback .env was found." >&2
