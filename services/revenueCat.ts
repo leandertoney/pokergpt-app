@@ -113,6 +113,36 @@ class RevenueCatService {
   }
 
   /**
+   * Copy and configuration attached to the current Offering in the RevenueCat
+   * dashboard.
+   *
+   * This is what makes the paywall A/B testable without shipping a build.
+   * RevenueCat Experiments can serve different Offerings to different users,
+   * and each Offering carries its own metadata JSON — so headline, CTA label
+   * and trial framing can all be varied remotely against a custom paywall.
+   * Adopting RevenueCat's hosted Paywall UI is NOT required for this.
+   *
+   * Returns an empty object when RevenueCat is unavailable (Expo Go) or when
+   * no metadata is set, so callers always fall back to their own defaults.
+   */
+  async getPaywallCopy(): Promise<Record<string, string>> {
+    try {
+      const offering = await this.getOfferings();
+      const meta = (offering as any)?.metadata;
+      if (!meta || typeof meta !== 'object') return {};
+      // Flatten to strings; the dashboard allows nested JSON but the paywall
+      // only ever reads scalar copy values.
+      return Object.fromEntries(
+        Object.entries(meta)
+          .filter(([, v]) => typeof v === 'string' || typeof v === 'number')
+          .map(([k, v]) => [k, String(v)])
+      );
+    } catch {
+      return {};
+    }
+  }
+
+  /**
    * Get the package for a specific plan type
    */
   async getPackageForPlan(planType: PlanType): Promise<PurchasesPackage | null> {
@@ -290,6 +320,7 @@ export const revenueCat = new RevenueCatService();
 // Export individual functions for convenience
 export const initializeRevenueCat = () => revenueCat.initialize();
 export const getOfferings = () => revenueCat.getOfferings();
+export const getPaywallCopy = () => revenueCat.getPaywallCopy();
 export const getPriceForPlan = (planType: PlanType) => revenueCat.getPriceForPlan(planType);
 export const checkSubscriptionStatus = () => revenueCat.checkSubscriptionStatus();
 export const purchasePackage = (planType: PlanType) => revenueCat.purchasePackage(planType);

@@ -39,7 +39,7 @@ import {
   QuestionVisual,
   PlanVisual,
 } from './onboarding/ui/Visuals';
-import { PaywallScreen } from './onboarding/PaywallScreen';
+import { PaywallV2 } from './onboarding/PaywallV2';
 import { colors } from '@/constants/colors';
 import { spacing, radius, type as t } from '@/constants/theme';
 import { trackOnboardingEvent } from '@/services/onboardingAnalytics';
@@ -331,12 +331,7 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
 
     case 'paywall':
       return (
-        <PaywallScreen
-          goal={leak ?? 'profit'}
-          userName={null}
-          onPurchase={onPurchase}
-          onSkip={onSkipPaywall}
-        />
+        <PaywallV2 goal={leak} onPurchase={onPurchase} onSkip={onSkipPaywall} />
       );
   }
 }
