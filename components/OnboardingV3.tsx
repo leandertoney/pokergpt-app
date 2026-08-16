@@ -31,7 +31,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 
 import { Screen, PrimaryButton, TextButton, Choice } from './onboarding/ui/Primitives';
-import { AnalyzeDemo, LiveDemo, ReviewDemo } from './onboarding/ui/Demos';
 import { PaywallScreen } from './onboarding/PaywallScreen';
 import { colors } from '@/constants/colors';
 import { spacing, radius, type as t } from '@/constants/theme';
@@ -173,10 +172,9 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
       return (
         <Screen
           headline={'Stop guessing\nat the table.'}
+          support="A poker coach that answers in plain English."
           footer={<PrimaryButton label="Get started" onPress={() => go('value_analyze')} />}
-        >
-          <Badge text="Built for real players" />
-        </Screen>
+        />
       );
 
     // -- Three value screens. One idea each, no photos, no scripted waiting. --
@@ -186,10 +184,9 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
           progress={progress}
           onBack={back}
           headline={'Call or fold?\nKnow in seconds.'}
+          support="Tell it the hand. It tells you the play, and why."
           footer={<PrimaryButton label="Next" onPress={() => go('value_live')} />}
-        >
-          <AnalyzeDemo />
-        </Screen>
+        />
       );
 
     case 'value_live':
@@ -198,10 +195,9 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
           progress={progress}
           onBack={back}
           headline={'Ask out loud,\nmid-hand.'}
+          support="Talk to it at the table, or at home while you practice."
           footer={<PrimaryButton label="Next" onPress={() => go('value_review')} />}
-        >
-          <LiveDemo />
-        </Screen>
+        />
       );
 
     case 'value_review':
@@ -210,11 +206,9 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
           progress={progress}
           onBack={back}
           headline={'Find the leak\nbleeding your stack.'}
-          scroll
+          support="Every hand is saved. You get one thing to fix first."
           footer={<PrimaryButton label="Next" onPress={() => go('q_play_where')} />}
-        >
-          <ReviewDemo />
-        </Screen>
+        />
       );
 
     // -- Three short questions. Every answer is used on the plan screen. --
@@ -329,13 +323,6 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
 
 // -----------------------------------------------------------------------------
 
-function Badge({ text }: { text: string }) {
-  return (
-    <View style={s.badge}>
-      <Text style={s.badgeText}>{text}</Text>
-    </View>
-  );
-}
 
 
 
@@ -349,14 +336,6 @@ function PlanRow({ label, value }: { label: string; value: string }) {
 }
 
 const s = StyleSheet.create({
-  badge: {
-    alignSelf: 'flex-start',
-    backgroundColor: colors.background.tertiary,
-    paddingVertical: spacing.snug,
-    paddingHorizontal: spacing.cozy,
-    borderRadius: radius.pill,
-  },
-  badgeText: { ...t.caption, color: colors.text.secondary, fontWeight: '600' },
 
 
 

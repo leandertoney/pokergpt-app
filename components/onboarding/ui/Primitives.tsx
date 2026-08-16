@@ -52,9 +52,14 @@ export function Rise({
   children: React.ReactNode;
   style?: ViewStyle;
 }) {
-  const p = useSharedValue(0);
+  // Starts at 1, not 0. Previously this began fully transparent and depended on
+  // a worklet running to become visible, which meant any failure in the
+  // animation layer left the screen permanently blank with no error. Content is
+  // now visible by default and the entrance is a refinement on top of it.
+  const p = useSharedValue(1);
 
   useEffect(() => {
+    p.value = 0;
     p.value = withDelay(
       delay,
       withTiming(1, { duration: motion.base, easing: Easing.out(Easing.cubic) })
