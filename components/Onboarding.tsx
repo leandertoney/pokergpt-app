@@ -1117,9 +1117,12 @@ export async function resetOnboarding(): Promise<void> {
     // but the live flow is OnboardingV2, which writes '@onboarding_v2_complete'.
     // Removing only the legacy key meant Settings → Restart Onboarding silently
     // did nothing: the v2 flag survived, so onboarding never reappeared.
+    // Three separate things can make checkOnboardingComplete() return true, and
+    // a reset that misses any one of them looks like it silently did nothing.
     await AsyncStorage.multiRemove([
       ONBOARDING_COMPLETE_KEY,
       '@onboarding_v2_complete',
+      '@dev_skip_onboarding',
     ]);
   } catch (error) {
     console.error('Error resetting onboarding:', error);
