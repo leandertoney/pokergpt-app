@@ -180,7 +180,7 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
       return (
         <Screen
           headline={'Stop guessing\nat the table.'}
-          support="A poker coach that answers in plain English."
+          support="Know the right play, every hand."
           footer={<PrimaryButton label="Get started" onPress={() => go('value_analyze')} />}
         >
           <WelcomeVisual />
@@ -194,7 +194,7 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
           progress={progress}
           onBack={back}
           headline={'Call or fold?\nKnow in seconds.'}
-          support="Tell it the hand. It tells you the play, and why."
+          support="Say what happened. Get the play and the reason."
           footer={<PrimaryButton label="Next" onPress={() => go('value_live')} />}
         >
           <AnalyzeVisual />
@@ -207,7 +207,7 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
           progress={progress}
           onBack={back}
           headline={'Ask out loud,\nmid-hand.'}
-          support="Talk to it at the table, or at home while you practice."
+          support="Use it live at the table or at home."
           footer={<PrimaryButton label="Next" onPress={() => go('value_review')} />}
         >
           <LiveVisual />
@@ -307,7 +307,7 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
           onBack={back}
           eyebrow="Your plan"
           headline={leak ? `We will start with\n${leakLabel}.` : 'We will start with\nyour biggest leak.'}
-          support="Bring your next session to the coach and we will work on it hand by hand."
+          support="We start here on your next session."
           scroll
           footer={
             <PrimaryButton
