@@ -1,6 +1,12 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { useAudioRecorder, RecordingPresets, AudioModule, setAudioModeAsync } from 'expo-audio';
-import { Audio } from 'expo-av';
+import {
+  useAudioRecorder,
+  RecordingPresets,
+  AudioModule,
+  setAudioModeAsync,
+  createAudioPlayer,
+  type AudioPlayer,
+} from 'expo-audio';
 import * as FileSystem from 'expo-file-system/legacy';
 import { getVoiceSettings } from '@/services/storageService';
 import { speak } from '@/services/ttsService';
@@ -16,7 +22,9 @@ interface UseVoiceInputOptions {
   onError?: (error: any) => void;
 }
 
-let currentSound: Audio.Sound | null = null;
+// expo-av is deprecated and removed in SDK 54; playback moved to expo-audio,
+// which this file already used for recording.
+let currentSound: AudioPlayer | null = null;
 
 export function useVoiceInput(options: UseVoiceInputOptions) {
   const { openaiApiKey, onUserTranscript, onTranscript, onAIResponse, onError } = options;
@@ -53,8 +61,8 @@ export function useVoiceInput(options: UseVoiceInputOptions) {
   const stopSpeaking = async () => {
     if (currentSound) {
       try {
-        await currentSound.stopAsync();
-        await currentSound.unloadAsync();
+        currentSound.pause();
+        currentSound.remove();
         currentSound = null;
       } catch (e) {
         // Ignore cleanup errors
@@ -98,23 +106,36 @@ export function useVoiceInput(options: UseVoiceInputOptions) {
 
       console.log('[TTS] Audio saved, playing...');
 
-      // Play the audio
-      const { sound } = await Audio.Sound.createAsync(
-        { uri: tempFile },
-        { shouldPlay: true }
-      );
+      // Play the audio. expo-audio has no didJustFinish flag, so completion is
+      // derived: the player reports playing=false with currentTime at/after
+      // duration once it reaches the end.
+      const player = createAudioPlayer({ uri: tempFile });
+      currentSound = player;
+      player.play();
 
-      currentSound = sound;
+      return new Promise<void>((resolve) => {
+        let done = false;
+        const finish = () => {
+          if (done) return;
+          done = true;
+          console.log('[TTS] Playback finished');
+          try {
+            player.remove();
+          } catch {
+            // Already released.
+          }
+          if (currentSound === player) currentSound = null;
+          setVoiceState('idle');
+          resolve();
+        };
 
-      // Wait for playback to complete
-      return new Promise((resolve) => {
-        sound.setOnPlaybackStatusUpdate((status) => {
-          if (status.isLoaded && status.didJustFinish) {
-            console.log('[TTS] Playback finished');
-            sound.unloadAsync();
-            currentSound = null;
-            setVoiceState('idle');
-            resolve();
+        const sub = player.addListener('playbackStatusUpdate', (status) => {
+          if (!status.isLoaded) return;
+          const ended =
+            !status.playing && status.duration > 0 && status.currentTime >= status.duration - 0.05;
+          if (ended) {
+            sub.remove();
+            finish();
           }
         });
       });

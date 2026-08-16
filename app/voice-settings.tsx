@@ -28,7 +28,7 @@ import { colors } from '@/constants/colors';
 import { useVoiceSettings } from '@/hooks/useVoiceSettings';
 import * as Haptics from 'expo-haptics';
 import { speak } from '@/services/ttsService';
-import { Audio } from 'expo-av';
+import { createAudioPlayer } from 'expo-audio';
 import { setAudioModeAsync } from 'expo-audio';
 import * as FileSystem from 'expo-file-system/legacy';
 import type { VoiceProvider, OpenAIVoice } from '@/types/voice';
@@ -125,16 +125,27 @@ export default function VoiceSettingsScreen() {
       });
 
       console.log('[VoiceSettings] Creating sound...');
-      const { sound } = await Audio.Sound.createAsync(
-        { uri: tempFile },
-        { shouldPlay: true }
-      );
-
+      // expo-av is deprecated and removed in SDK 54. expo-audio exposes no
+      // didJustFinish, so completion is derived from playing=false once
+      // currentTime reaches duration.
+      const player = createAudioPlayer({ uri: tempFile });
       console.log('[VoiceSettings] Playing...');
-      sound.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded && status.didJustFinish) {
+      player.play();
+
+      let done = false;
+      const sub = player.addListener('playbackStatusUpdate', (status) => {
+        if (!status.isLoaded || done) return;
+        const ended =
+          !status.playing && status.duration > 0 && status.currentTime >= status.duration - 0.05;
+        if (ended) {
+          done = true;
           console.log('[VoiceSettings] Playback finished');
-          sound.unloadAsync();
+          sub.remove();
+          try {
+            player.remove();
+          } catch {
+            // Already released.
+          }
           setIsTesting(false);
         }
       });
