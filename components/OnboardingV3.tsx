@@ -31,6 +31,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 
 import { Screen, PrimaryButton, TextButton, Choice } from './onboarding/ui/Primitives';
+import {
+  WelcomeVisual,
+  AnalyzeVisual,
+  LiveVisual,
+  ReviewVisual,
+  QuestionVisual,
+  PlanVisual,
+} from './onboarding/ui/Visuals';
 import { PaywallScreen } from './onboarding/PaywallScreen';
 import { colors } from '@/constants/colors';
 import { spacing, radius, type as t } from '@/constants/theme';
@@ -174,7 +182,9 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
           headline={'Stop guessing\nat the table.'}
           support="A poker coach that answers in plain English."
           footer={<PrimaryButton label="Get started" onPress={() => go('value_analyze')} />}
-        />
+        >
+          <WelcomeVisual />
+        </Screen>
       );
 
     // -- Three value screens. One idea each, no photos, no scripted waiting. --
@@ -186,7 +196,9 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
           headline={'Call or fold?\nKnow in seconds.'}
           support="Tell it the hand. It tells you the play, and why."
           footer={<PrimaryButton label="Next" onPress={() => go('value_live')} />}
-        />
+        >
+          <AnalyzeVisual />
+        </Screen>
       );
 
     case 'value_live':
@@ -197,7 +209,9 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
           headline={'Ask out loud,\nmid-hand.'}
           support="Talk to it at the table, or at home while you practice."
           footer={<PrimaryButton label="Next" onPress={() => go('value_review')} />}
-        />
+        >
+          <LiveVisual />
+        </Screen>
       );
 
     case 'value_review':
@@ -208,7 +222,9 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
           headline={'Find the leak\nbleeding your stack.'}
           support="Every hand is saved. You get one thing to fix first."
           footer={<PrimaryButton label="Next" onPress={() => go('q_play_where')} />}
-        />
+        >
+          <ReviewVisual />
+        </Screen>
       );
 
     // -- Three short questions. Every answer is used on the plan screen. --
@@ -217,10 +233,10 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
         <Screen
           progress={progress}
           onBack={back}
-          eyebrow="Question 1 of 3"
           headline="Where do you play?"
           footer={<TextButton label="Skip" onPress={() => go('q_stakes')} />}
         >
+          <QuestionVisual n={1} />
           {WHERE.map((o) => (
             <Choice
               key={o.value}
@@ -240,10 +256,10 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
         <Screen
           progress={progress}
           onBack={back}
-          eyebrow="Question 2 of 3"
           headline="What do you play for?"
           footer={<TextButton label="Skip" onPress={() => go('q_leak')} />}
         >
+          <QuestionVisual n={2} />
           {STAKES.map((o) => (
             <Choice
               key={o.value}
@@ -263,11 +279,11 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
         <Screen
           progress={progress}
           onBack={back}
-          eyebrow="Question 3 of 3"
           headline="What costs you the most?"
           scroll
           footer={<TextButton label="Not sure yet" onPress={() => go('plan')} />}
         >
+          <QuestionVisual n={3} />
           {LEAKS.map((o) => (
             <Choice
               key={o.value}
@@ -303,9 +319,13 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
             />
           }
         >
-          <PlanRow label="You play" value={WHERE.find((w) => w.value === where)?.label ?? 'Anywhere'} />
-          <PlanRow label="Stakes" value={STAKES.find((s2) => s2.value === stakes)?.label ?? 'Any'} />
-          <PlanRow label="First fix" value={LEAKS.find((l) => l.value === leak)?.label ?? 'Your biggest leak'} />
+          <PlanVisual
+            items={[
+              { label: 'You play', value: WHERE.find((w) => w.value === where)?.label ?? 'Anywhere' },
+              { label: 'Stakes', value: STAKES.find((x) => x.value === stakes)?.label ?? 'Any' },
+              { label: 'First fix', value: LEAKS.find((l) => l.value === leak)?.label ?? 'Your biggest leak' },
+            ]}
+          />
         </Screen>
       );
 
@@ -326,28 +346,9 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
 
 
 
-function PlanRow({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={s.planRow}>
-      <Text style={s.planLabel}>{label}</Text>
-      <Text style={s.planValue}>{value}</Text>
-    </View>
-  );
-}
 
 const s = StyleSheet.create({
 
 
 
-  planRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: spacing.cozy,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.background.tertiary,
-    gap: spacing.base,
-  },
-  planLabel: { ...t.caption, color: colors.text.secondary },
-  planValue: { ...t.body, color: colors.text.primary, fontWeight: '700', flexShrink: 1, textAlign: 'right' },
 });
