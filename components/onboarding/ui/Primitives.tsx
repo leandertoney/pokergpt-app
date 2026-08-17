@@ -24,6 +24,7 @@ import {
   StyleSheet,
   ScrollView,
   type ViewStyle,
+  type TextStyle,
 } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -72,6 +73,82 @@ export function Rise({
   }));
 
   return <Animated.View style={[style, anim]}>{children}</Animated.View>;
+}
+
+// -----------------------------------------------------------------------------
+// Headline that reveals word by word, with chosen words emphasised in gold.
+//
+// Used on the screens where the copy IS the point — "Call or fold?" lands
+// differently when the reader watches it arrive than when it is simply present.
+// Deliberately not used everywhere: constant motion stops being emphasis.
+//
+// Nothing waits on this. The primary button is live from the first frame; the
+// whole reveal finishes in under half a second.
+// -----------------------------------------------------------------------------
+export function RevealHeadline({
+  text,
+  accent = [],
+  style,
+}: {
+  /** Use \n to force a line break. */
+  text: string;
+  /** Words (lowercased, punctuation-stripped) to paint in the accent colour. */
+  accent?: string[];
+  style?: TextStyle;
+}) {
+  const lines = text.split('\n');
+  let index = -1;
+
+  return (
+    <View>
+      {lines.map((line, li) => (
+        <View key={li} style={s.revealLine}>
+          {line.split(' ').map((word) => {
+            index += 1;
+            const bare = word.toLowerCase().replace(/[^a-z0-9$]/g, '');
+            return (
+              <RevealWord
+                key={`${li}-${index}`}
+                word={word}
+                delay={index * 90}
+                accent={accent.includes(bare)}
+                style={style}
+              />
+            );
+          })}
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function RevealWord({
+  word,
+  delay,
+  accent,
+  style,
+}: {
+  word: string;
+  delay: number;
+  accent: boolean;
+  style?: TextStyle;
+}) {
+  const p = useSharedValue(0);
+
+  useEffect(() => {
+    p.value = withDelay(delay, withTiming(1, { duration: 260, easing: Easing.out(Easing.cubic) }));
+  }, [delay, p]);
+
+  const anim = useAnimatedStyle(() => ({
+    opacity: p.value,
+    transform: [{ translateY: interpolate(p.value, [0, 1], [12, 0]) }],
+  }));
+
+  return (
+    <Animated.Text style={[type.title, style, accent && s.revealAccent, anim]}>
+      {word}
+    </Animated.Text>
+  );
 }
 
 // -----------------------------------------------------------------------------
@@ -203,6 +280,8 @@ export function Screen({
   progress,
   onBack,
   scroll,
+  reveal,
+  accent,
 }: {
   eyebrow?: string;
   headline: string;
@@ -212,6 +291,10 @@ export function Screen({
   progress?: number;
   onBack?: () => void;
   scroll?: boolean;
+  /** Animate the headline in word by word. Reserve for screens where the copy is the point. */
+  reveal?: boolean;
+  /** Words to paint gold inside a revealed headline. */
+  accent?: string[];
 }) {
   const insets = useSafeAreaInsets();
   const Body = scroll ? ScrollView : View;
@@ -243,9 +326,13 @@ export function Screen({
           </Rise>
         )}
 
-        <Rise delay={motion.stagger}>
-          <Text style={s.headline}>{headline}</Text>
-        </Rise>
+        {reveal ? (
+          <RevealHeadline text={headline} accent={accent} style={{ color: colors.text.primary }} />
+        ) : (
+          <Rise delay={motion.stagger}>
+            <Text style={s.headline}>{headline}</Text>
+          </Rise>
+        )}
 
         {!!support && (
           <Rise delay={motion.stagger * 2}>
@@ -280,14 +367,16 @@ const s = StyleSheet.create({
   headerSpacer: { width: 52 },
   progressWrap: { flex: 1, paddingRight: spacing.base },
 
-  body: { flex: 1, paddingHorizontal: spacing.roomy, justifyContent: 'center' },
+  body: { flex: 1, paddingHorizontal: spacing.roomy, justifyContent: 'center', paddingBottom: spacing.roomy },
   bodyScroll: { flex: 1, paddingHorizontal: spacing.roomy },
   bodyScrollContent: { flexGrow: 1, justifyContent: 'center', paddingVertical: spacing.roomy },
 
-  eyebrow: { ...type.eyebrow, color: colors.accent.gold, marginBottom: spacing.cozy },
+  eyebrow: { ...type.eyebrow, color: colors.accent.gold, marginBottom: spacing.base },
   headline: { ...type.title, color: colors.text.primary },
-  support: { ...type.subtitle, color: colors.text.secondary, marginTop: spacing.cozy },
-  content: { marginTop: spacing.roomy },
+  revealLine: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 9 },
+  revealAccent: { color: colors.accent.gold },
+  support: { ...type.subtitle, color: colors.text.secondary, marginTop: spacing.base },
+  content: { marginTop: spacing.loose },
 
   footer: { paddingHorizontal: spacing.roomy, paddingTop: spacing.cozy, gap: spacing.snug },
 
@@ -309,9 +398,9 @@ const s = StyleSheet.create({
     borderRadius: radius.lg,
     borderWidth: 2,
     borderColor: 'transparent',
-    paddingVertical: spacing.base,
+    paddingVertical: spacing.roomy,
     paddingHorizontal: spacing.base,
-    marginBottom: spacing.snug,
+    marginBottom: spacing.cozy,
   },
   choiceSelected: { borderColor: colors.accent.gold, backgroundColor: colors.background.shadow },
   choiceText: { gap: 2 },

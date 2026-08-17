@@ -126,10 +126,23 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
     if (i > 0) setStep(STEPS[i - 1]);
   }, [step]);
 
-  const leakLabel = useMemo(
-    () => LEAKS.find((l) => l.value === leak)?.label.replace(/^I /, '') ?? 'leaks',
-    [leak]
-  );
+  // The plan screen states the OUTCOME, not the diagnosis. "We will start with
+  // play scared" names the user's problem back at them; nobody wants to start
+  // there. These are the same four answers phrased as what they get instead.
+  const outcomeLabel = useMemo(() => {
+    switch (leak) {
+      case 'call_too_much':
+        return 'folding when you are beat';
+      case 'miss_value':
+        return 'getting paid on your big hands';
+      case 'tilt':
+        return 'staying steady after a bad beat';
+      case 'play_scared':
+        return 'betting with confidence';
+      default:
+        return 'your biggest leak';
+    }
+  }, [leak]);
 
   const finish = useCallback(async () => {
     try {
@@ -180,6 +193,8 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
       return (
         <Screen
           headline={'Stop guessing\nat the table.'}
+          reveal
+          accent={['guessing']}
           support="Know the right play, every hand."
           footer={<PrimaryButton label="Get started" onPress={() => go('value_analyze')} />}
         >
@@ -194,6 +209,8 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
           progress={progress}
           onBack={back}
           headline={'Call or fold?\nKnow in seconds.'}
+          reveal
+          accent={['call', 'fold']}
           support="Say what happened. Get the play and the reason."
           footer={<PrimaryButton label="Next" onPress={() => go('value_live')} />}
         >
@@ -207,6 +224,8 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
           progress={progress}
           onBack={back}
           headline={'Ask out loud,\nmid-hand.'}
+          reveal
+          accent={['loud', 'mid-hand']}
           support="Use it live at the table or at home."
           footer={<PrimaryButton label="Next" onPress={() => go('value_review')} />}
         >
@@ -219,7 +238,9 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
         <Screen
           progress={progress}
           onBack={back}
-          headline={'Find the leak\nbleeding your stack.'}
+          headline={'Plug the leak\ndraining your stack.'}
+          reveal
+          accent={['leak', 'draining']}
           support="Every hand is saved. You get one thing to fix first."
           footer={<PrimaryButton label="Next" onPress={() => go('q_play_where')} />}
         >
@@ -305,13 +326,19 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
         <Screen
           progress={progress}
           onBack={back}
-          eyebrow="Your plan"
-          headline={leak ? `We will start with\n${leakLabel}.` : 'We will start with\nyour biggest leak.'}
-          support="We start here on your next session."
+          eyebrow="Built for you"
+          headline={'Your plan\nis ready.'}
+          reveal
+          accent={['ready.']}
+          support={
+            leak
+              ? `Built around one thing: ${outcomeLabel}.`
+              : 'Built around the leak costing you the most.'
+          }
           scroll
           footer={
             <PrimaryButton
-              label="See my plan"
+              label="Start playing better"
               onPress={() => {
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                 go('paywall');
@@ -321,9 +348,9 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
         >
           <PlanVisual
             items={[
-              { label: 'You play', value: WHERE.find((w) => w.value === where)?.label ?? 'Anywhere' },
-              { label: 'Stakes', value: STAKES.find((x) => x.value === stakes)?.label ?? 'Any' },
-              { label: 'First fix', value: LEAKS.find((l) => l.value === leak)?.label ?? 'Your biggest leak' },
+              { label: 'Where you play', value: WHERE.find((w) => w.value === where)?.label ?? 'Anywhere' },
+              { label: 'Your stakes', value: STAKES.find((x) => x.value === stakes)?.label ?? 'Any' },
+              { label: 'What changes first', value: outcomeLabel },
             ]}
           />
         </Screen>

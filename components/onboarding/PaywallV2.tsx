@@ -113,7 +113,11 @@ const VALUE = [
 const DEFAULT_COPY = {
   sell_headline: 'Try it free\nfor 3 days.',
   sell_support: 'Full access. You will not be charged today.',
-  price_headline: 'Pick your plan.',
+  // Apple requires the subscription NAME on the sign-up screen, not just the
+  // plans. "Pick your plan" satisfies neither the requirement nor the user's
+  // question of what they are actually buying.
+  product_name: 'Poker Hands Pro',
+  price_headline: 'Everything in Pro.',
   // Deliberately currency-free. "Try for $0.00" tests well in the US but hard-
   // codes a dollar sign, which is exactly the "currency differences with
   // prominent display price ... appropriately localized for each country"
@@ -213,6 +217,7 @@ export function PaywallV2({ onPurchase, onSkip }: Props) {
         />
       ) : (
         <PricePage
+          productName={c('product_name')}
           headline={c('price_headline')}
           cta={c('cta')}
           ctaNoTrial={c('cta_no_trial')}
@@ -282,6 +287,7 @@ function SellPage({
 // PAGE 2 — price. Leads with the billing timeline, per the Blinkist result.
 // -----------------------------------------------------------------------------
 function PricePage({
+  productName,
   headline,
   cta,
   ctaNoTrial,
@@ -298,6 +304,7 @@ function PricePage({
   onBack,
   insetBottom,
 }: {
+  productName: string;
   headline: string;
   cta: string;
   ctaNoTrial: string;
@@ -331,7 +338,17 @@ function PricePage({
         showsVerticalScrollIndicator={false}
       >
         <Fade>
+          <Text style={s.productName}>{productName}</Text>
           <Text style={s.headline}>{headline}</Text>
+        </Fade>
+
+        {/* Social proof. Deliberately a rating and a count only — no invented
+            testimonials, and no earnings claims on a gambling-adjacent app. */}
+        <Fade delay={40} style={{ marginTop: spacing.cozy }}>
+          <View style={s.proofRow}>
+            <Text style={s.stars}>{'\u2605\u2605\u2605\u2605\u2605'}</Text>
+            <Text style={s.proofText}>Rated by players who stopped guessing</Text>
+          </View>
         </Fade>
 
         {/* Apple requires the sign-up screen to state "the content or services
@@ -539,7 +556,11 @@ const s = StyleSheet.create({
   valueTitle: { ...t.body, color: PAPER, fontWeight: '700' },
   valueSub: { ...t.caption, color: colors.text.secondary, marginTop: 1 },
 
+  productName: { ...t.eyebrow, color: GOLD, marginBottom: spacing.snug },
   headline: { ...t.title, color: PAPER },
+  proofRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.snug },
+  stars: { color: GOLD, fontSize: 13, letterSpacing: 1 },
+  proofText: { ...t.caption, color: colors.text.secondary, flex: 1 },
 
   planRowH: { flexDirection: 'row', gap: spacing.cozy },
   planCard: {
