@@ -33,6 +33,7 @@ import {
 } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { resetOnboarding } from '@/components/Onboarding';
+import { seedDemoData, clearDemoData } from '@/services/devSeed';
 import { colors } from '@/constants/colors';
 import * as Haptics from 'expo-haptics';
 import Constants from 'expo-constants';
@@ -222,6 +223,27 @@ export default function SettingsScreen() {
     }
   };
 
+  const handleSeedDemoData = useCallback(() => {
+    Alert.alert('Seed demo data', 'Replace hand history with demo hands for screenshots?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Seed',
+        onPress: async () => {
+          const n = await seedDemoData();
+          Alert.alert('Done', `${n} hands added. Pull to refresh the home screen.`);
+        },
+      },
+      {
+        text: 'Clear',
+        style: 'destructive',
+        onPress: async () => {
+          await clearDemoData();
+          Alert.alert('Cleared', 'Demo hands removed.');
+        },
+      },
+    ]);
+  }, []);
+
   const handleRestartOnboarding = useCallback(() => {
     Alert.alert(
       'Restart Onboarding',
@@ -371,6 +393,17 @@ export default function SettingsScreen() {
               subtitle="See welcome screens again"
               onPress={handleRestartOnboarding}
             />
+            {/* Development only — fills the app with realistic history so the
+                list, detail and search screens can be captured for the store
+                without waiting for real usage. Never rendered in production. */}
+            {__DEV__ && (
+              <SettingsItem
+                icon={<RefreshCw size={22} color={colors.accent.gold} />}
+                title="Seed demo data"
+                subtitle="Populate hands for screenshots"
+                onPress={handleSeedDemoData}
+              />
+            )}
           </SettingsSection>
 
           <SettingsSection title="Support">
