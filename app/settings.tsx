@@ -225,28 +225,27 @@ export default function SettingsScreen() {
   const handleRestartOnboarding = useCallback(() => {
     Alert.alert(
       'Restart Onboarding',
-      'This will reset the app introduction. You\'ll see the welcome screens again next time you open the app. Continue?',
+      'This will restart the app introduction immediately. Continue?',
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Restart',
+          text: 'Restart Now',
           onPress: async () => {
             setIsResetting(true);
             try {
               await resetOnboarding();
-              Alert.alert('Done', 'Onboarding will appear on your next app launch.', [
-                { text: 'OK' }
-              ]);
+              // Close settings and reload home to trigger onboarding
+              router.dismiss();
+              router.replace('/');
             } catch (error) {
               Alert.alert('Error', 'Failed to reset onboarding. Please try again.');
-            } finally {
               setIsResetting(false);
             }
           },
         },
       ]
     );
-  }, []);
+  }, [router]);
 
   const handleSignOut = useCallback(() => {
     Alert.alert(
