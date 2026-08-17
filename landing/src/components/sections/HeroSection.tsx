@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { AppStoreBadge } from '@/components/ui/AppStoreBadge';
 import { QRCode } from '@/components/ui/QRCode';
 import { PhoneMockup } from '@/components/ui/PhoneMockup';
+import { VoiceScreenMockup } from '@/components/mockups/VoiceScreenMockup';
 import { CONFIG } from '@/constants/config';
 
 export function HeroSection() {
@@ -111,7 +112,9 @@ export function HeroSection() {
             transition={{ duration: 0.8, delay: 0.3 }}
             className="flex justify-center lg:justify-end"
           >
-            <PhoneMockup />
+            <PhoneMockup>
+              <VoiceScreenMockup />
+            </PhoneMockup>
           </motion.div>
         </div>
       </div>

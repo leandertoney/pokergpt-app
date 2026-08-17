@@ -2,33 +2,28 @@ import { useRef } from 'react';
 import { motion, useInView } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
+import { HomeScreenMockup } from '@/components/mockups/HomeScreenMockup';
+import { VoiceScreenMockup } from '@/components/mockups/VoiceScreenMockup';
+import { AnalysisScreenMockup } from '@/components/mockups/AnalysisScreenMockup';
 
-// Placeholder screenshots - replace with actual app screenshots
 const screenshots = [
   {
     id: 1,
-    title: 'Chat Interface',
-    description: 'Natural conversation with your AI coach',
+    title: 'Home',
+    description: 'Quick access to voice coaching and recent hands',
+    Component: HomeScreenMockup,
   },
   {
     id: 2,
     title: 'Voice Mode',
-    description: 'Hands-free analysis while you play',
+    description: 'Hands-free, real-time conversation while you play',
+    Component: VoiceScreenMockup,
   },
   {
     id: 3,
-    title: 'Hand History',
-    description: 'Track and review all your hands',
-  },
-  {
-    id: 4,
-    title: 'Analysis Results',
-    description: 'Detailed breakdowns with optimal plays',
-  },
-  {
-    id: 5,
-    title: 'Session Tracking',
-    description: 'Organize hands by session',
+    title: 'Hand Analysis',
+    description: 'Verdict, EV, equity, and what to consider next',
+    Component: AnalysisScreenMockup,
   },
 ];
 
@@ -41,6 +36,7 @@ function ScreenshotCard({
 }) {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, amount: 0.3 });
+  const { Component } = screenshot;
 
   return (
     <motion.div
@@ -50,37 +46,17 @@ function ScreenshotCard({
       transition={{ duration: 0.5, delay: index * 0.1 }}
       className="flex-shrink-0 w-[260px] sm:w-[280px] group"
     >
-      {/* Phone frame */}
       <div className="relative bg-surface-darkGray rounded-[2.5rem] p-2 shadow-xl group-hover:shadow-glow-red transition-shadow duration-300">
         <div className="relative bg-black rounded-[2rem] overflow-hidden aspect-[9/19.5]">
-          {/* Dynamic island */}
           <div className="absolute top-2 left-1/2 -translate-x-1/2 w-20 h-6 bg-black rounded-full z-10" />
-
-          {/* Placeholder screen */}
-          <div className="w-full h-full bg-gradient-to-b from-brand-primary to-brand-shadow flex items-center justify-center">
-            <div className="text-center px-6">
-              <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-accent-red/20 flex items-center justify-center">
-                <svg
-                  className="w-7 h-7 text-accent-red"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                  />
-                </svg>
-              </div>
-              <p className="text-text-ivory text-sm font-medium mb-1">
-                {screenshot.title}
-              </p>
-              <p className="text-text-cream text-xs">{screenshot.description}</p>
-            </div>
+          <div className="w-full h-full">
+            <Component />
           </div>
         </div>
+      </div>
+      <div className="mt-4 px-2 text-center">
+        <p className="text-text-ivory text-sm font-medium mb-1">{screenshot.title}</p>
+        <p className="text-text-cream text-xs">{screenshot.description}</p>
       </div>
     </motion.div>
   );
@@ -154,11 +130,6 @@ export function ScreenshotsSection() {
           </div>
         </div>
 
-        {/* Note about screenshots */}
-        <p className="text-center text-text-muted text-sm mt-8 section-container">
-          Screenshots are placeholders. Replace with actual app screenshots in{' '}
-          <code className="text-accent-red">/landing/public/assets/images/</code>
-        </p>
       </div>
     </section>
   );
