@@ -257,7 +257,18 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
           progress={progress}
           onBack={back}
           headline="Where do you play?"
-          footer={<TextButton label="Skip" onPress={() => go('q_stakes')} />}
+          footer={
+            <>
+              <PrimaryButton label="Continue" onPress={() => go('q_stakes', { where })} />
+              <TextButton
+                label="Skip"
+                onPress={() => {
+                  setWhere(null);
+                  go('q_stakes', { skipped: true });
+                }}
+              />
+            </>
+          }
         >
           <QuestionVisual n={1} />
           {WHERE.map((o) => (
@@ -265,10 +276,7 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
               key={o.value}
               label={o.label}
               selected={where === o.value}
-              onPress={() => {
-                setWhere(o.value);
-                go('q_stakes', { where: o.value });
-              }}
+              onPress={() => setWhere(o.value)}
             />
           ))}
         </Screen>
@@ -280,7 +288,18 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
           progress={progress}
           onBack={back}
           headline="What do you play for?"
-          footer={<TextButton label="Skip" onPress={() => go('q_leak')} />}
+          footer={
+            <>
+              <PrimaryButton label="Continue" onPress={() => go('q_leak', { stakes })} />
+              <TextButton
+                label="Skip"
+                onPress={() => {
+                  setStakes(null);
+                  go('q_leak', { skipped: true });
+                }}
+              />
+            </>
+          }
         >
           <QuestionVisual n={2} />
           {STAKES.map((o) => (
@@ -288,10 +307,7 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
               key={o.value}
               label={o.label}
               selected={stakes === o.value}
-              onPress={() => {
-                setStakes(o.value);
-                go('q_leak', { stakes: o.value });
-              }}
+              onPress={() => setStakes(o.value)}
             />
           ))}
         </Screen>
@@ -304,7 +320,18 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
           onBack={back}
           headline="What costs you the most?"
           scroll
-          footer={<TextButton label="Not sure yet" onPress={() => go('building')} />}
+          footer={
+            <>
+              <PrimaryButton label="Continue" onPress={() => go('building', { leak })} />
+              <TextButton
+                label="Not sure yet"
+                onPress={() => {
+                  setLeak(null);
+                  go('building', { skipped: true });
+                }}
+              />
+            </>
+          }
         >
           <QuestionVisual n={3} />
           {LEAKS.map((o) => (
@@ -313,10 +340,7 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
               label={o.label}
               sublabel={o.sub}
               selected={leak === o.value}
-              onPress={() => {
-                setLeak(o.value);
-                go('building', { leak: o.value });
-              }}
+              onPress={() => setLeak(o.value)}
             />
           ))}
         </Screen>

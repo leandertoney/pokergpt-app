@@ -230,13 +230,14 @@ export function PaywallV2({ onPurchase, onSkip }: Props) {
       ) : (
         <PricePage
           productName={c('product_name')}
-          anchor={
-            // Only shown when it is arithmetically true: 30 days of the weekly
-            // plan costing more than a full year. At $9.99/wk vs $29.99/yr that
-            // is $42.96 vs $29.99.
-            amounts.weekly > 0 && amounts.yearly > 0 && amounts.weekly * 4.3 > amounts.yearly
-              ? `A month of weekly costs more than a whole year.`
-              : null
+          savingsPct={
+            // Straight same-period comparison: a year on the weekly plan
+            // (price x 52) against the yearly price. No prose claim about
+            // months versus years — just the discount, and only when the
+            // arithmetic supports it.
+            amounts.weekly > 0 && amounts.yearly > 0
+              ? Math.round((1 - amounts.yearly / (amounts.weekly * 52)) * 100)
+              : 0
           }
           headline={c('price_headline')}
           cta={c('cta')}
@@ -308,7 +309,7 @@ function SellPage({
 // -----------------------------------------------------------------------------
 function PricePage({
   productName,
-  anchor,
+  savingsPct,
   headline,
   cta,
   ctaNoTrial,
@@ -326,7 +327,7 @@ function PricePage({
   insetBottom,
 }: {
   productName: string;
-  anchor: string | null;
+  savingsPct: number;
   headline: string;
   cta: string;
   ctaNoTrial: string;
@@ -402,6 +403,7 @@ function PricePage({
               price={prices.yearly}
               per="per year"
               badge="3 DAYS FREE"
+              tag={savingsPct >= 5 ? `SAVE ${savingsPct}%` : undefined}
               selected={plan === 'yearly'}
               onPress={() => setPlan('yearly')}
             />
@@ -416,11 +418,6 @@ function PricePage({
           </View>
         </Fade>
 
-        {!!anchor && (
-          <Fade delay={180} style={{ marginTop: spacing.cozy }}>
-            <Text style={s.anchor}>{anchor}</Text>
-          </Fade>
-        )}
       </ScrollView>
 
       <View style={[s.footer, { paddingBottom: Math.max(insetBottom, spacing.base) }]}>
@@ -517,6 +514,7 @@ function PlanCard({
   price,
   per,
   badge,
+  tag,
   note,
   selected,
   onPress,
@@ -525,6 +523,7 @@ function PlanCard({
   price: string;
   per: string;
   badge?: string;
+  tag?: string;
   note?: string;
   selected: boolean;
   onPress: () => void;
@@ -533,7 +532,7 @@ function PlanCard({
     <Pressable
       accessibilityRole="button"
       accessibilityState={{ selected }}
-      accessibilityLabel={`${label}, ${price} ${per}${badge ? `, ${badge}` : ''}${note ? `, ${note}` : ''}`}
+      accessibilityLabel={`${label}, ${price} ${per}${badge ? `, ${badge}` : ''}${tag ? `, ${tag}` : ''}${note ? `, ${note}` : ''}`}
       onPress={() => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         onPress();
@@ -546,6 +545,11 @@ function PlanCard({
         </View>
       )}
       <Text style={[s.planCardLabel, selected && s.planCardLabelOn]}>{label}</Text>
+      {!!tag && (
+        <View style={s.saveTag}>
+          <Text style={s.saveTagText}>{tag}</Text>
+        </View>
+      )}
       <Text style={[s.planCardPrice, selected && s.planCardLabelOn]}>{price}</Text>
       <Text style={s.planCardPer}>{per}</Text>
       {!!note && <Text style={s.planCardNote}>{note}</Text>}
@@ -619,6 +623,14 @@ const s = StyleSheet.create({
     borderRadius: radius.pill,
   },
   badgeText: { ...t.eyebrow, fontSize: 8, color: INK },
+  saveTag: {
+    backgroundColor: colors.utility.success,
+    paddingHorizontal: spacing.snug,
+    paddingVertical: 2,
+    borderRadius: radius.pill,
+    marginTop: 2,
+  },
+  saveTagText: { ...t.eyebrow, fontSize: 8, color: PAPER },
   support: { ...t.subtitle, color: colors.text.secondary, marginTop: spacing.cozy },
 
 
@@ -645,7 +657,6 @@ const s = StyleSheet.create({
   dismiss: { paddingVertical: spacing.cozy, alignItems: 'center' },
   dismissText: { ...t.caption, color: colors.text.secondary, fontWeight: '600' },
 
-  anchor: { ...t.caption, color: GOLD, textAlign: 'center', fontWeight: '700' },
   reassure: { ...t.caption, color: PAPER, textAlign: 'center', fontWeight: '600' },
   fine: { ...t.fine, color: colors.text.secondary, textAlign: 'center' },
   legalRow: { flexDirection: 'row', justifyContent: 'center', gap: spacing.roomy, paddingTop: spacing.tight },
