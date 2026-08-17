@@ -226,26 +226,12 @@ function SellPage({
         <Fade delay={80}>
           <Text style={s.support}>{support}</Text>
         </Fade>
-        <Fade delay={140} style={{ marginTop: spacing.roomy, gap: spacing.cozy }}>
-          {VALUE.map((v) => (
-            <View key={v} style={s.valueRow}>
-              <View style={s.check}>
-                <Text style={s.checkMark}>✓</Text>
-              </View>
-              <Text style={s.valueText}>{v}</Text>
-            </View>
-          ))}
-        </Fade>
 
-        {/* The reminder promise. Removing the fear of a forgotten charge is the
-            single highest-leverage line on a trial paywall — Blinkist's test
-            moved trial signups +23% and cut complaints 55% by addressing it. */}
-        <Fade delay={210} style={{ marginTop: spacing.roomy }}>
-          <View style={s.reminder}>
-            <Text style={s.reminderText}>
-              We will remind you before day 3 so nothing charges by surprise.
-            </Text>
-          </View>
+        {/* Priming carries trust and urgency, not features. The onboarding
+            already demonstrated what the app does; repeating it here is what
+            made the previous version read as a feature dump. */}
+        <Fade delay={160} style={{ marginTop: spacing.loose }}>
+          <Timeline />
         </Fade>
       </View>
 
@@ -299,51 +285,42 @@ function PricePage({
         <Text style={s.backText}>Back</Text>
       </Pressable>
 
-      <ScrollView style={s.bodyScroll} contentContainerStyle={s.bodyScrollContent} showsVerticalScrollIndicator={false}>
+      <View style={s.body}>
         <Fade>
           <Text style={s.headline}>{headline}</Text>
         </Fade>
 
-        {/* What they get. After nine onboarding screens people have genuinely
-            forgotten the value, so the converting screen restates it rather
-            than relying on recall. */}
-        <Fade delay={70} style={{ marginTop: spacing.roomy, gap: spacing.cozy }}>
-          {VALUE.map((v) => (
-            <View key={v} style={s.valueRow}>
-              <View style={s.check}>
-                <Text style={s.checkMark}>✓</Text>
-              </View>
-              <Text style={s.valueText}>{v}</Text>
-            </View>
-          ))}
+        {/* Side-by-side so both plans read on one horizontal plane and the
+            comparison is a glance rather than a scroll. Prices sit INSIDE the
+            cards, which is what the Impulse and Duolingo paywalls do — the slot
+            directly above the CTA carries risk reversal, not a repeated price. */}
+        <Fade delay={90} style={{ marginTop: spacing.loose }}>
+          <View style={s.planRowH}>
+            <PlanCard
+              label="Yearly"
+              price={prices.yearly}
+              per="per year"
+              badge="3 DAYS FREE"
+              selected={plan === 'yearly'}
+              onPress={() => setPlan('yearly')}
+            />
+            <PlanCard
+              label="Weekly"
+              price={prices.weekly}
+              per="per week"
+              note="No free trial"
+              selected={plan === 'weekly'}
+              onPress={() => setPlan('weekly')}
+            />
+          </View>
         </Fade>
-
-        <Fade delay={140} style={{ marginTop: spacing.roomy, gap: spacing.snug }}>
-          <PlanRow
-            label="Yearly"
-            price={`${prices.yearly}/yr`}
-            note="3 days free"
-            selected={plan === 'yearly'}
-            onPress={() => setPlan('yearly')}
-          />
-          <PlanRow
-            label="Weekly"
-            price={`${prices.weekly}/wk`}
-            note="No free trial"
-            selected={plan === 'weekly'}
-            onPress={() => setPlan('weekly')}
-          />
-        </Fade>
-
-        {/* Billing terms stay on the same screen as the value and the price.
-            Burying them is what the Blinkist test punished; hiding the value
-            is not what it rewarded. */}
-        <Fade delay={210} style={{ marginTop: spacing.roomy }}>
-          <Timeline />
-        </Fade>
-      </ScrollView>
+      </View>
 
       <View style={[s.footer, { paddingBottom: Math.max(insetBottom, spacing.base) }]}>
+        {/* Risk reversal directly above the button — the slot Impulse and
+            Duolingo both use. The price is not repeated here; it lives inside
+            the selected plan card. */}
+        <Text style={s.reassure}>{plan === 'yearly' ? 'No payment due now' : 'Billed today, cancel any time'}</Text>
         <Cta label={busy ? '' : plan === 'yearly' ? cta : ctaNoTrial} onPress={onBuy} busy={busy} />
         <Text style={s.fine}>{plan === 'yearly' ? trialTerms : weeklyTerms}</Text>
         <Dismiss label={dismissLabel} onPress={onSkip} />
@@ -428,15 +405,19 @@ function Dismiss({ label, onPress }: { label: string; onPress: () => void }) {
   );
 }
 
-function PlanRow({
+function PlanCard({
   label,
   price,
+  per,
+  badge,
   note,
   selected,
   onPress,
 }: {
   label: string;
   price: string;
+  per: string;
+  badge?: string;
   note?: string;
   selected: boolean;
   onPress: () => void;
@@ -445,18 +426,22 @@ function PlanRow({
     <Pressable
       accessibilityRole="button"
       accessibilityState={{ selected }}
-      accessibilityLabel={`${label}, ${price}${note ? `, ${note}` : ''}`}
+      accessibilityLabel={`${label}, ${price} ${per}${badge ? `, ${badge}` : ''}${note ? `, ${note}` : ''}`}
       onPress={() => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         onPress();
       }}
-      style={[s.plan, selected && s.planOn]}
+      style={[s.planCard, selected && s.planCardOn]}
     >
-      <View style={{ flex: 1 }}>
-        <Text style={[s.planLabel, selected && s.planLabelOn]}>{label}</Text>
-        {!!note && <Text style={s.planNote}>{note}</Text>}
-      </View>
-      <Text style={[s.planPrice, selected && s.planLabelOn]}>{price}</Text>
+      {!!badge && (
+        <View style={s.badge}>
+          <Text style={s.badgeText}>{badge}</Text>
+        </View>
+      )}
+      <Text style={[s.planCardLabel, selected && s.planCardLabelOn]}>{label}</Text>
+      <Text style={[s.planCardPrice, selected && s.planCardLabelOn]}>{price}</Text>
+      <Text style={s.planCardPer}>{per}</Text>
+      {!!note && <Text style={s.planCardNote}>{note}</Text>}
     </Pressable>
   );
 }
@@ -466,26 +451,42 @@ const s = StyleSheet.create({
   center: { alignItems: 'center', justifyContent: 'center' },
   page: { flex: 1 },
   body: { flex: 1, paddingHorizontal: spacing.roomy, justifyContent: 'center' },
-  bodyScroll: { flex: 1, paddingHorizontal: spacing.roomy },
-  bodyScrollContent: { paddingBottom: spacing.roomy },
-  valueRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.cozy },
-  check: { width: 22, height: 22, borderRadius: 11, backgroundColor: GOLD, alignItems: 'center', justifyContent: 'center' },
-  checkMark: { color: INK, fontSize: 13, fontWeight: '900' },
-  valueText: { ...t.body, color: PAPER, flex: 1 },
-  reminder: {
-    backgroundColor: colors.background.tertiary,
-    borderRadius: radius.lg,
-    padding: spacing.base,
-    borderLeftWidth: 3,
-    borderLeftColor: GOLD,
-  },
-  reminderText: { ...t.body, color: PAPER },
   footer: { paddingHorizontal: spacing.roomy, gap: spacing.snug },
 
   back: { paddingHorizontal: spacing.roomy, paddingVertical: spacing.snug, alignSelf: 'flex-start' },
   backText: { ...t.caption, color: colors.text.secondary, fontWeight: '600' },
 
   headline: { ...t.title, color: PAPER },
+
+  planRowH: { flexDirection: 'row', gap: spacing.cozy },
+  planCard: {
+    flex: 1,
+    minHeight: 148,
+    paddingVertical: spacing.base,
+    paddingHorizontal: spacing.cozy,
+    borderRadius: radius.lg,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    backgroundColor: colors.background.tertiary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+  },
+  planCardOn: { borderColor: GOLD, backgroundColor: colors.background.shadow },
+  planCardLabel: { ...t.caption, color: colors.text.secondary, fontWeight: '700' },
+  planCardLabelOn: { color: GOLD },
+  planCardPrice: { ...t.heading, fontSize: 26, lineHeight: 30, color: PAPER, marginTop: spacing.tight },
+  planCardPer: { ...t.fine, color: colors.text.secondary },
+  planCardNote: { ...t.fine, color: colors.text.secondary, marginTop: spacing.tight, textAlign: 'center' },
+  badge: {
+    position: 'absolute',
+    top: -9,
+    backgroundColor: GOLD,
+    paddingHorizontal: spacing.snug,
+    paddingVertical: 2,
+    borderRadius: radius.pill,
+  },
+  badgeText: { ...t.eyebrow, fontSize: 8, color: INK },
   support: { ...t.subtitle, color: colors.text.secondary, marginTop: spacing.cozy },
 
 
@@ -497,21 +498,6 @@ const s = StyleSheet.create({
   tlDay: { ...t.caption, color: colors.text.secondary, fontWeight: '700' },
   tlText: { ...t.body, color: PAPER },
 
-  plan: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: spacing.base,
-    borderRadius: radius.lg,
-    borderWidth: 2,
-    borderColor: 'transparent',
-    backgroundColor: colors.background.tertiary,
-    gap: spacing.base,
-  },
-  planOn: { borderColor: GOLD, backgroundColor: colors.background.shadow },
-  planLabel: { ...t.heading, fontSize: 18, lineHeight: 24, color: PAPER },
-  planLabelOn: { color: GOLD },
-  planNote: { ...t.caption, color: colors.text.secondary },
-  planPrice: { ...t.heading, fontSize: 18, lineHeight: 24, color: PAPER },
 
   cta: {
     backgroundColor: GOLD,
@@ -527,6 +513,7 @@ const s = StyleSheet.create({
   dismiss: { paddingVertical: spacing.cozy, alignItems: 'center' },
   dismissText: { ...t.caption, color: colors.text.secondary, fontWeight: '600' },
 
+  reassure: { ...t.caption, color: PAPER, textAlign: 'center', fontWeight: '600' },
   fine: { ...t.fine, color: colors.text.secondary, textAlign: 'center' },
   legalRow: { flexDirection: 'row', justifyContent: 'center', gap: spacing.roomy, paddingTop: spacing.tight },
   legal: { ...t.fine, color: colors.text.secondary, textDecorationLine: 'underline' },
