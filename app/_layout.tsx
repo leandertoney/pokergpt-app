@@ -5,7 +5,6 @@ import * as Updates from "expo-updates";
 import React, { useEffect, useState, useCallback } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { StatusBar } from "expo-status-bar";
-import { Alert } from "react-native";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { PokerFlowProvider } from "@/hooks/usePokerFlow";
 import { SplashFlow } from "@/components/SplashFlow";
@@ -232,13 +231,6 @@ export default function RootLayout() {
         const update = await Updates.checkForUpdateAsync();
         console.log('✅ Update check result:', update);
 
-        // Show debug alert for testing
-        Alert.alert(
-          'Update Check',
-          `Runtime: ${currentInfo.runtimeVersion}\nUpdate ID: ${Updates.updateId?.slice(0, 8)}...\nEmbedded: ${currentInfo.isEmbeddedLaunch}\nAvailable: ${update.isAvailable}`,
-          [{ text: 'OK' }]
-        );
-
         if (update.isAvailable) {
           console.log('📥 Downloading update...');
           await Updates.fetchUpdateAsync();
@@ -248,9 +240,9 @@ export default function RootLayout() {
           console.log('✨ App is up to date!');
         }
       } catch (error) {
-        // Silently fail - updates will be applied next launch
+        // Silently fail — an update that cannot be fetched is applied on a
+        // later launch, and there is nothing the user can do about it now.
         console.error('❌ Update check failed:', error);
-        Alert.alert('Update Error', String(error));
       }
     }
 
