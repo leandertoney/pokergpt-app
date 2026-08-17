@@ -23,6 +23,7 @@ import {
   Pressable,
   StyleSheet,
   ScrollView,
+  TextInput,
   type ViewStyle,
   type TextStyle,
 } from 'react-native';
@@ -249,6 +250,40 @@ export function Choice({
 }
 
 // -----------------------------------------------------------------------------
+// Name field. Optional by design — it exists to personalise the analysis, not
+// to gate it, so there is no validation and an empty value is a valid answer.
+// -----------------------------------------------------------------------------
+export function NameField({
+  value,
+  onChange,
+  onSubmit,
+  placeholder = 'First name',
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onSubmit?: () => void;
+  placeholder?: string;
+}) {
+  return (
+    <TextInput
+      value={value}
+      onChangeText={onChange}
+      onSubmitEditing={onSubmit}
+      placeholder={placeholder}
+      placeholderTextColor={colors.text.secondary}
+      autoCapitalize="words"
+      autoCorrect={false}
+      autoComplete="given-name"
+      textContentType="givenName"
+      returnKeyType="done"
+      maxLength={24}
+      accessibilityLabel="Your first name, optional"
+      style={s.nameField}
+    />
+  );
+}
+
+// -----------------------------------------------------------------------------
 // Progress. A thin rule, not a segmented bar — it reports position without
 // implying "look how many are left".
 // -----------------------------------------------------------------------------
@@ -408,6 +443,16 @@ const s = StyleSheet.create({
   choiceLabelSelected: { color: colors.accent.gold },
   choiceSub: { ...type.caption, color: colors.text.secondary },
 
+  nameField: {
+    ...type.heading,
+    color: colors.text.primary,
+    backgroundColor: colors.background.tertiary,
+    borderRadius: radius.lg,
+    paddingVertical: spacing.base,
+    paddingHorizontal: spacing.base,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
   progressTrack: {
     height: 3,
     borderRadius: radius.pill,

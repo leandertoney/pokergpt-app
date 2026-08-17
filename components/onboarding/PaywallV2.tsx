@@ -117,7 +117,11 @@ const DEFAULT_COPY = {
   // plans. "Pick your plan" satisfies neither the requirement nor the user's
   // question of what they are actually buying.
   product_name: 'Poker Hands Pro',
-  price_headline: 'Start your\n30 days.',
+  // Deliberately not "Start your 30 days" — that reads as a 30-day plan, which
+  // is not one of the two options and invites confusion at the moment of
+  // purchase. The plan screen carries the 30-day horizon; the paywall names the
+  // product instead.
+  price_headline: 'Get everything\nin Pro.',
   // Deliberately currency-free. "Try for $0.00" tests well in the US but hard-
   // codes a dollar sign, which is exactly the "currency differences with
   // prominent display price ... appropriately localized for each country"

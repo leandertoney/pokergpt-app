@@ -30,7 +30,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 
-import { Screen, PrimaryButton, TextButton, Choice } from './onboarding/ui/Primitives';
+import { Screen, PrimaryButton, TextButton, Choice, NameField } from './onboarding/ui/Primitives';
 import { buildPlanAnalysis } from './onboarding/planAnalysis';
 import {
   AnalysisVisual,
@@ -46,7 +46,7 @@ import { PaywallV2 } from './onboarding/PaywallV2';
 import { colors } from '@/constants/colors';
 import { spacing, radius, type as t } from '@/constants/theme';
 import { trackOnboardingEvent } from '@/services/onboardingAnalytics';
-import { setUserTier, setUserIdentity, setPaywallState, setOnboardingProfile } from '@/services/storageService';
+import { setUserTier, setUserIdentity, setPaywallState, setOnboardingProfile, setUserDisplayName } from '@/services/storageService';
 import { checkSubscriptionStatus } from '@/services/revenueCat';
 import type { UserIdentity, OnboardingProfile, BiggestChallenge } from '@/types/poker';
 
@@ -107,9 +107,14 @@ const WHERE = [
 
 export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
   const [step, setStep] = useState<Step>('welcome');
-  const [where, setWhere] = useState<string | null>(null);
-  const [stakes, setStakes] = useState<string | null>(null);
-  const [leak, setLeak] = useState<string | null>(null);
+  // Pre-selected with the most common answer for each question. A user who taps
+  // Continue without changing anything still lands on a real analysis instead of
+  // the generic fallback, and anyone who disagrees just taps a different option.
+  // Skipping is still possible; these are defaults, not answers on their behalf.
+  const [where, setWhere] = useState<string | null>('live');
+  const [stakes, setStakes] = useState<string | null>('low');
+  const [leak, setLeak] = useState<string | null>('call_too_much');
+  const [name, setName] = useState<string | null>(null);
 
   const index = STEPS.indexOf(step);
   const progress = index / (STEPS.length - 1);
@@ -158,14 +163,17 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
       };
 
       await AsyncStorage.setItem(ONBOARDING_COMPLETE_KEY, 'true');
+      // Persist the name. The previous flow collected answers and threw them
+      // away at completion; anything asked for has to actually be kept.
+      if (name?.trim()) await setUserDisplayName(name.trim());
       await setUserIdentity(identity);
       await setOnboardingProfile(profile);
-      trackOnboardingEvent('onboarding_completed', { where, stakes, leak });
+      trackOnboardingEvent('onboarding_completed', { where, stakes, leak, named: !!name?.trim() });
     } catch (e) {
       console.warn('[onboarding] completion save failed', e);
     }
     onComplete();
-  }, [where, stakes, leak, onComplete]);
+  }, [where, stakes, leak, name, onComplete]);
 
   const onPurchase = useCallback(async () => {
     const status = await checkSubscriptionStatus();
@@ -319,7 +327,9 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
       return (
         <BuildingScreen
           stakesLabel={STAKES.find((x) => x.value === stakes)?.label ?? 'your stakes'}
-          onDone={() => go('plan')}
+          name={name}
+          setName={setName}
+          onDone={() => go('plan', { named: !!name })}
         />
       );
 
@@ -329,13 +339,13 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
           progress={progress}
           onBack={back}
           eyebrow="Your analysis"
-          headline={'Here is what\nwe found.'}
+          headline={name ? `Here is what\nwe found, ${name}.` : 'Here is what\nwe found.'}
           reveal
-          accent={['found.']}
+          accent={name ? [`${name.toLowerCase()}.`] : ['found.']}
           scroll
           footer={
             <PrimaryButton
-              label="Start playing better"
+              label="Unlock my plan"
               onPress={() => {
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                 go('paywall');
@@ -382,7 +392,17 @@ const s = StyleSheet.create({
  * Capped at 2.4s and it advances itself — nothing here can strand the user, and
  * there is no button to wait for.
  */
-function BuildingScreen({ stakesLabel, onDone }: { stakesLabel: string; onDone: () => void }) {
+function BuildingScreen({
+  stakesLabel,
+  name,
+  setName,
+  onDone,
+}: {
+  stakesLabel: string;
+  name: string | null;
+  setName: (v: string) => void;
+  onDone: () => void;
+}) {
   const steps = useMemo(
     () => [
       'Reading your answers',
@@ -393,20 +413,31 @@ function BuildingScreen({ stakesLabel, onDone }: { stakesLabel: string; onDone: 
   );
   const [step, setStep] = useState(0);
 
+  // The steps run on their own. The name field sits alongside them so asking
+  // costs no extra screen, and the button is live from the first frame — the
+  // processing beat never gates the user.
   useEffect(() => {
-    const a = setTimeout(() => setStep(1), 800);
-    const b = setTimeout(() => setStep(2), 1600);
-    const done = setTimeout(onDone, 2400);
+    const a = setTimeout(() => setStep(1), 900);
+    const b = setTimeout(() => setStep(2), 1800);
     return () => {
       clearTimeout(a);
       clearTimeout(b);
-      clearTimeout(done);
     };
-  }, [onDone]);
+  }, []);
 
   return (
-    <Screen headline={'Customizing\nyour plan.'} reveal accent={['Customizing']}>
-      <BuildingSteps steps={steps} active={step} />
+    <Screen
+      headline={'Customizing\nyour plan.'}
+      reveal
+      accent={['Customizing']}
+      support="What should we call you?"
+      scroll
+      footer={<PrimaryButton label="See my analysis" onPress={onDone} />}
+    >
+      <View style={{ gap: spacing.roomy }}>
+        <NameField value={name ?? ''} onChange={setName} onSubmit={onDone} />
+        <BuildingSteps steps={steps} active={step} />
+      </View>
     </Screen>
   );
 }
