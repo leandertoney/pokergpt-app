@@ -3,9 +3,16 @@
  *
  * Design decisions and the evidence behind them:
  *
- *  - MULTI-PAGE. Superwall measured 12.41% vs 9.07% for multi-page versus
- *    single-page onboarding paywalls across 40M+ opens — a 37% lift — and only
- *    ~24% of apps do it. Page one sells, page two prices.
+ *  - PROGRESSIVE, TWO PAGES. Page one states what you get, offers the free
+ *    trial and promises a reminder before it ends. Page two is a plain,
+ *    conventional two-option paywall. Superwall measured 12.41% vs 9.07% for
+ *    multi-page versus single-page onboarding paywalls across 40M+ opens.
+ *
+ *  - THE TWO PLANS ARE NOT EQUIVALENT, and the screen says so. In App Store
+ *    Connect only pokergpt_yearly ($29.99/yr) carries the 3-day introductory
+ *    offer; pokergpt_weekly ($9.99/wk) has none. Presenting both under one
+ *    "Try for $0.00" button would be false for the weekly plan, so the CTA and
+ *    the terms line both change with the selection.
  *
  *  - VALUE, PRICE AND TERMS TOGETHER on the converting screen. After nine
  *    onboarding screens people have genuinely forgotten what the app does, so
@@ -74,10 +81,11 @@ const VALUE = [
 
 /** Local defaults. Any key can be overridden from the RevenueCat dashboard. */
 const DEFAULT_COPY = {
-  sell_headline: 'Every hand,\nplayed right.',
-  sell_support: 'Your coach is ready. Bring it your next session.',
-  price_headline: 'Try it free\nfor 3 days.',
+  sell_headline: 'Try it free\nfor 3 days.',
+  sell_support: 'Full access. You will not be charged today.',
+  price_headline: 'Pick your plan.',
   cta: 'Try for $0.00',
+  cta_no_trial: 'Subscribe',
   dismiss: 'Not now',
 };
 
@@ -172,6 +180,9 @@ export function PaywallV2({ onPurchase, onSkip }: Props) {
         <PricePage
           headline={c('price_headline')}
           cta={c('cta')}
+          ctaNoTrial={c('cta_no_trial')}
+          trialTerms={`3 days free, then ${prices.yearly} per year. Cancel any time before day 3.`}
+          weeklyTerms={`${prices.weekly} per week, billed today. Cancel any time.`}
           dismissLabel={c('dismiss')}
           plan={plan}
           setPlan={setPlan}
@@ -215,8 +226,26 @@ function SellPage({
         <Fade delay={80}>
           <Text style={s.support}>{support}</Text>
         </Fade>
-        <Fade delay={160} style={{ marginTop: spacing.loose }}>
-          <StreakVisual />
+        <Fade delay={140} style={{ marginTop: spacing.roomy, gap: spacing.cozy }}>
+          {VALUE.map((v) => (
+            <View key={v} style={s.valueRow}>
+              <View style={s.check}>
+                <Text style={s.checkMark}>✓</Text>
+              </View>
+              <Text style={s.valueText}>{v}</Text>
+            </View>
+          ))}
+        </Fade>
+
+        {/* The reminder promise. Removing the fear of a forgotten charge is the
+            single highest-leverage line on a trial paywall — Blinkist's test
+            moved trial signups +23% and cut complaints 55% by addressing it. */}
+        <Fade delay={210} style={{ marginTop: spacing.roomy }}>
+          <View style={s.reminder}>
+            <Text style={s.reminderText}>
+              We will remind you before day 3 so nothing charges by surprise.
+            </Text>
+          </View>
         </Fade>
       </View>
 
@@ -234,6 +263,9 @@ function SellPage({
 function PricePage({
   headline,
   cta,
+  ctaNoTrial,
+  trialTerms,
+  weeklyTerms,
   dismissLabel,
   plan,
   setPlan,
@@ -247,6 +279,9 @@ function PricePage({
 }: {
   headline: string;
   cta: string;
+  ctaNoTrial: string;
+  trialTerms: string;
+  weeklyTerms: string;
   dismissLabel: string;
   plan: PlanType;
   setPlan: (p: PlanType) => void;
@@ -286,14 +321,15 @@ function PricePage({
         <Fade delay={140} style={{ marginTop: spacing.roomy, gap: spacing.snug }}>
           <PlanRow
             label="Yearly"
-            price={prices.yearly}
-            note="Best value"
+            price={`${prices.yearly}/yr`}
+            note="3 days free"
             selected={plan === 'yearly'}
             onPress={() => setPlan('yearly')}
           />
           <PlanRow
             label="Weekly"
-            price={prices.weekly}
+            price={`${prices.weekly}/wk`}
+            note="No free trial"
             selected={plan === 'weekly'}
             onPress={() => setPlan('weekly')}
           />
@@ -308,8 +344,8 @@ function PricePage({
       </ScrollView>
 
       <View style={[s.footer, { paddingBottom: Math.max(insetBottom, spacing.base) }]}>
-        <Cta label={busy ? '' : cta} onPress={onBuy} busy={busy} />
-        <Text style={s.fine}>No charge today. Cancel any time before day 3.</Text>
+        <Cta label={busy ? '' : plan === 'yearly' ? cta : ctaNoTrial} onPress={onBuy} busy={busy} />
+        <Text style={s.fine}>{plan === 'yearly' ? trialTerms : weeklyTerms}</Text>
         <Dismiss label={dismissLabel} onPress={onSkip} />
         <View style={s.legalRow}>
           <Pressable onPress={onRestore} hitSlop={8}>
@@ -331,28 +367,7 @@ function PricePage({
 // Visuals
 // -----------------------------------------------------------------------------
 
-/** A rising row of bars — "every hand, played right". */
-function StreakVisual() {
-  return (
-    <View style={s.streakRow}>
-      {[0.3, 0.45, 0.4, 0.62, 0.75, 0.7, 0.92, 1].map((h, i) => (
-        <StreakBar key={i} h={h} i={i} last={i === 7} />
-      ))}
-    </View>
-  );
-}
 
-function StreakBar({ h, i, last }: { h: number; i: number; last: boolean }) {
-  const g = useSharedValue(0);
-  useEffect(() => {
-    g.value = withDelay(i * 70, withSpring(1, motion.springy));
-  }, [i, g]);
-  const st = useAnimatedStyle(() => ({
-    height: 130 * h * g.value,
-    opacity: interpolate(g.value, [0, 1], [0, 1]),
-  }));
-  return <Animated.View style={[s.streakBar, last && s.streakBarLast, st]} />;
-}
 
 /** The billing timeline. Addresses the fear instead of listing features. */
 const STEPS = [
@@ -457,6 +472,14 @@ const s = StyleSheet.create({
   check: { width: 22, height: 22, borderRadius: 11, backgroundColor: GOLD, alignItems: 'center', justifyContent: 'center' },
   checkMark: { color: INK, fontSize: 13, fontWeight: '900' },
   valueText: { ...t.body, color: PAPER, flex: 1 },
+  reminder: {
+    backgroundColor: colors.background.tertiary,
+    borderRadius: radius.lg,
+    padding: spacing.base,
+    borderLeftWidth: 3,
+    borderLeftColor: GOLD,
+  },
+  reminderText: { ...t.body, color: PAPER },
   footer: { paddingHorizontal: spacing.roomy, gap: spacing.snug },
 
   back: { paddingHorizontal: spacing.roomy, paddingVertical: spacing.snug, alignSelf: 'flex-start' },
@@ -465,9 +488,6 @@ const s = StyleSheet.create({
   headline: { ...t.title, color: PAPER },
   support: { ...t.subtitle, color: colors.text.secondary, marginTop: spacing.cozy },
 
-  streakRow: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.snug, height: 140 },
-  streakBar: { flex: 1, borderRadius: radius.sm, backgroundColor: GOLD, opacity: 0.45 },
-  streakBarLast: { opacity: 1, ...elevation.card },
 
   tlRow: { flexDirection: 'row', gap: spacing.cozy },
   tlLeft: { alignItems: 'center', width: 16 },
