@@ -25,8 +25,10 @@
  *  - NO DARK PATTERNS. The dismiss control is a plain, visible "Not now". The
  *    same test found hidden exits backfire through reactance.
  *
- *  - "Try for $0.00" rather than "Start free trial" — consistently reported to
- *    outperform by emphasising that nothing is charged today.
+ *  - The CTA carries no currency symbol. "Try for $0.00" is widely reported to
+ *    outperform, but it hardcodes a dollar sign and this app has a Play
+ *    rejection on exactly that ("currency ... appropriately localized for each
+ *    country"). The risk-reversal line above the button does that job instead.
  *
  *  - Copy is remotely overridable via RevenueCat Offering metadata
  *    (getPaywallCopy), so headline, CTA and trial framing can be A/B tested by
@@ -71,12 +73,40 @@ const GOLD = colors.accent.gold;
 const INK = colors.text.dark;
 const PAPER = colors.text.primary;
 
-/** What the subscription actually buys. Restated on the converting screen. */
+/**
+ * What the subscription includes.
+ *
+ * Apple requires this on the sign-up screen: "the following details must be
+ * included in your subscription's sign-up screen: Subscription name and
+ * duration, and the content or services provided during the subscription
+ * period." A paywall with only plan cards and a button fails that as written,
+ * and this app has already been rejected on paywall grounds.
+ *
+ * Written as outcomes the player wants, not features the app has. No earnings
+ * claims — "Up $3K this month" was cut from onboarding as a review risk on a
+ * gambling-adjacent app, and the same rule applies here.
+ */
 const VALUE = [
-  'Every hand analyzed, instantly',
-  'Ask out loud while you play',
-  'Your leaks tracked over time',
-  'Unlimited hands, no caps',
+  {
+    glyph: '\u2666',
+    title: 'Stop punting stacks on bad calls',
+    sub: 'Know whether to call or fold before you act',
+  },
+  {
+    glyph: '\u25CF',
+    title: 'Answers mid-hand, in seconds',
+    sub: 'Ask out loud at the table or while you practice',
+  },
+  {
+    glyph: '\u25B2',
+    title: 'Find the leak costing you the most',
+    sub: 'Every hand saved and reviewed while it is fresh',
+  },
+  {
+    glyph: '\u221E',
+    title: 'Unlimited hands, no caps',
+    sub: 'Bring a whole session, not one spot',
+  },
 ];
 
 /** Local defaults. Any key can be overridden from the RevenueCat dashboard. */
@@ -84,7 +114,12 @@ const DEFAULT_COPY = {
   sell_headline: 'Try it free\nfor 3 days.',
   sell_support: 'Full access. You will not be charged today.',
   price_headline: 'Pick your plan.',
-  cta: 'Try for $0.00',
+  // Deliberately currency-free. "Try for $0.00" tests well in the US but hard-
+  // codes a dollar sign, which is exactly the "currency differences with
+  // prominent display price ... appropriately localized for each country"
+  // violation this app was rejected for on Play. Every price shown on this
+  // screen comes from the store product instead.
+  cta: 'Start my free trial',
   cta_no_trial: 'Subscribe',
   dismiss: 'Not now',
 };
@@ -281,13 +316,40 @@ function PricePage({
 }) {
   return (
     <View style={s.page}>
-      <Pressable onPress={onBack} hitSlop={12} style={s.back}>
-        <Text style={s.backText}>Back</Text>
-      </Pressable>
+      <View style={s.topBar}>
+        <Pressable onPress={onBack} hitSlop={12}>
+          <Text style={s.backText}>Back</Text>
+        </Pressable>
+        <Pressable onPress={onRestore} hitSlop={12}>
+          <Text style={s.backText}>Restore</Text>
+        </Pressable>
+      </View>
 
-      <View style={s.body}>
+      <ScrollView
+        style={s.bodyScroll}
+        contentContainerStyle={s.bodyScrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         <Fade>
           <Text style={s.headline}>{headline}</Text>
+        </Fade>
+
+        {/* Apple requires the sign-up screen to state "the content or services
+            provided during the subscription period" — a paywall with only plan
+            cards and a button fails that as written. Framed as outcomes rather
+            than features, which is also what converts. */}
+        <Fade delay={70} style={{ marginTop: spacing.roomy, gap: spacing.base }}>
+          {VALUE.map((v) => (
+            <View key={v.title} style={s.valueRow}>
+              <View style={s.valueIcon}>
+                <Text style={s.valueGlyph}>{v.glyph}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.valueTitle}>{v.title}</Text>
+                <Text style={s.valueSub}>{v.sub}</Text>
+              </View>
+            </View>
+          ))}
         </Fade>
 
         {/* Side-by-side so both plans read on one horizontal plane and the
@@ -314,7 +376,7 @@ function PricePage({
             />
           </View>
         </Fade>
-      </View>
+      </ScrollView>
 
       <View style={[s.footer, { paddingBottom: Math.max(insetBottom, spacing.base) }]}>
         {/* Risk reversal directly above the button — the slot Impulse and
@@ -455,6 +517,27 @@ const s = StyleSheet.create({
 
   back: { paddingHorizontal: spacing.roomy, paddingVertical: spacing.snug, alignSelf: 'flex-start' },
   backText: { ...t.caption, color: colors.text.secondary, fontWeight: '600' },
+  topBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.roomy,
+    paddingVertical: spacing.snug,
+  },
+  bodyScroll: { flex: 1, paddingHorizontal: spacing.roomy },
+  bodyScrollContent: { flexGrow: 1, justifyContent: 'center', paddingVertical: spacing.base },
+
+  valueRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.base },
+  valueIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: radius.md,
+    backgroundColor: colors.background.tertiary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  valueGlyph: { color: GOLD, fontSize: 17, fontWeight: '900' },
+  valueTitle: { ...t.body, color: PAPER, fontWeight: '700' },
+  valueSub: { ...t.caption, color: colors.text.secondary, marginTop: 1 },
 
   headline: { ...t.title, color: PAPER },
 
