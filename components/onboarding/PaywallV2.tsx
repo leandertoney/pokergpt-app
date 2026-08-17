@@ -7,10 +7,13 @@
  *    single-page onboarding paywalls across 40M+ opens — a 37% lift — and only
  *    ~24% of apps do it. Page one sells, page two prices.
  *
- *  - NO FEATURE LIST. Blinkist's "honest paywall" test won +23% trial signups
- *    and cut support complaints 55% by deleting feature bullets and instead
- *    addressing the real fear: being charged unexpectedly. Page two leads with
- *    the billing timeline, not a list of what you get.
+ *  - VALUE, PRICE AND TERMS TOGETHER on the converting screen. After nine
+ *    onboarding screens people have genuinely forgotten what the app does, so
+ *    page two restates it rather than relying on recall. Blinkist's "honest
+ *    paywall" test (+23% trial signups, -55% complaints) is often read as
+ *    "delete the feature list", but what it actually punished was burying the
+ *    billing terms behind a dark pattern. The terms sit in plain sight here,
+ *    on the same screen as the value and the price.
  *
  *  - NO DARK PATTERNS. The dismiss control is a plain, visible "Not now". The
  *    same test found hidden exits backfire through reactance.
@@ -29,7 +32,7 @@
  */
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Alert, Linking, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, Alert, Linking, Pressable, ScrollView } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -60,6 +63,14 @@ const PRIVACY_URL = 'https://universoleappstudios.com/pokergpt/privacy';
 const GOLD = colors.accent.gold;
 const INK = colors.text.dark;
 const PAPER = colors.text.primary;
+
+/** What the subscription actually buys. Restated on the converting screen. */
+const VALUE = [
+  'Every hand analyzed, instantly',
+  'Ask out loud while you play',
+  'Your leaks tracked over time',
+  'Unlimited hands, no caps',
+];
 
 /** Local defaults. Any key can be overridden from the RevenueCat dashboard. */
 const DEFAULT_COPY = {
@@ -253,16 +264,26 @@ function PricePage({
         <Text style={s.backText}>Back</Text>
       </Pressable>
 
-      <View style={s.body}>
+      <ScrollView style={s.bodyScroll} contentContainerStyle={s.bodyScrollContent} showsVerticalScrollIndicator={false}>
         <Fade>
           <Text style={s.headline}>{headline}</Text>
         </Fade>
 
-        <Fade delay={80} style={{ marginTop: spacing.roomy }}>
-          <Timeline />
+        {/* What they get. After nine onboarding screens people have genuinely
+            forgotten the value, so the converting screen restates it rather
+            than relying on recall. */}
+        <Fade delay={70} style={{ marginTop: spacing.roomy, gap: spacing.cozy }}>
+          {VALUE.map((v) => (
+            <View key={v} style={s.valueRow}>
+              <View style={s.check}>
+                <Text style={s.checkMark}>✓</Text>
+              </View>
+              <Text style={s.valueText}>{v}</Text>
+            </View>
+          ))}
         </Fade>
 
-        <Fade delay={160} style={{ marginTop: spacing.roomy, gap: spacing.snug }}>
+        <Fade delay={140} style={{ marginTop: spacing.roomy, gap: spacing.snug }}>
           <PlanRow
             label="Yearly"
             price={prices.yearly}
@@ -277,7 +298,14 @@ function PricePage({
             onPress={() => setPlan('weekly')}
           />
         </Fade>
-      </View>
+
+        {/* Billing terms stay on the same screen as the value and the price.
+            Burying them is what the Blinkist test punished; hiding the value
+            is not what it rewarded. */}
+        <Fade delay={210} style={{ marginTop: spacing.roomy }}>
+          <Timeline />
+        </Fade>
+      </ScrollView>
 
       <View style={[s.footer, { paddingBottom: Math.max(insetBottom, spacing.base) }]}>
         <Cta label={busy ? '' : cta} onPress={onBuy} busy={busy} />
@@ -423,6 +451,12 @@ const s = StyleSheet.create({
   center: { alignItems: 'center', justifyContent: 'center' },
   page: { flex: 1 },
   body: { flex: 1, paddingHorizontal: spacing.roomy, justifyContent: 'center' },
+  bodyScroll: { flex: 1, paddingHorizontal: spacing.roomy },
+  bodyScrollContent: { paddingBottom: spacing.roomy },
+  valueRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.cozy },
+  check: { width: 22, height: 22, borderRadius: 11, backgroundColor: GOLD, alignItems: 'center', justifyContent: 'center' },
+  checkMark: { color: INK, fontSize: 13, fontWeight: '900' },
+  valueText: { ...t.body, color: PAPER, flex: 1 },
   footer: { paddingHorizontal: spacing.roomy, gap: spacing.snug },
 
   back: { paddingHorizontal: spacing.roomy, paddingVertical: spacing.snug, alignSelf: 'flex-start' },
