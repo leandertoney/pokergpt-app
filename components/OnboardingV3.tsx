@@ -31,7 +31,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 
 import { Screen, PrimaryButton, TextButton, Choice } from './onboarding/ui/Primitives';
+import { buildPlanAnalysis } from './onboarding/planAnalysis';
 import {
+  AnalysisVisual,
+  BuildingSteps,
   WelcomeVisual,
   AnalyzeVisual,
   LiveVisual,
@@ -57,6 +60,7 @@ type Step =
   | 'q_play_where'
   | 'q_stakes'
   | 'q_leak'
+  | 'building'
   | 'plan'
   | 'paywall';
 
@@ -68,6 +72,7 @@ const STEPS: Step[] = [
   'q_play_where',
   'q_stakes',
   'q_leak',
+  'building',
   'plan',
   'paywall',
 ];
@@ -126,23 +131,12 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
     if (i > 0) setStep(STEPS[i - 1]);
   }, [step]);
 
-  // The plan screen states the OUTCOME, not the diagnosis. "We will start with
-  // play scared" names the user's problem back at them; nobody wants to start
-  // there. These are the same four answers phrased as what they get instead.
-  const outcomeLabel = useMemo(() => {
-    switch (leak) {
-      case 'call_too_much':
-        return 'folding when you are beat';
-      case 'miss_value':
-        return 'getting paid on your big hands';
-      case 'tilt':
-        return 'staying steady after a bad beat';
-      case 'play_scared':
-        return 'betting with confidence';
-      default:
-        return 'your biggest leak';
-    }
-  }, [leak]);
+  // A synthesised read of the three answers, not a receipt of the taps. 48
+  // combinations produce genuinely different text — see planAnalysis.ts.
+  const analysis = useMemo(
+    () => buildPlanAnalysis(where as any, stakes as any, leak as any),
+    [where, stakes, leak]
+  );
 
   const finish = useCallback(async () => {
     try {
@@ -302,7 +296,7 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
           onBack={back}
           headline="What costs you the most?"
           scroll
-          footer={<TextButton label="Not sure yet" onPress={() => go('plan')} />}
+          footer={<TextButton label="Not sure yet" onPress={() => go('building')} />}
         >
           <QuestionVisual n={3} />
           {LEAKS.map((o) => (
@@ -313,7 +307,7 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
               selected={leak === o.value}
               onPress={() => {
                 setLeak(o.value);
-                go('plan', { leak: o.value });
+                go('building', { leak: o.value });
               }}
             />
           ))}
@@ -321,20 +315,23 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
       );
 
     // -- The payback. Their answers, read back to them. --
+    case 'building':
+      return (
+        <BuildingScreen
+          stakesLabel={STAKES.find((x) => x.value === stakes)?.label ?? 'your stakes'}
+          onDone={() => go('plan')}
+        />
+      );
+
     case 'plan':
       return (
         <Screen
           progress={progress}
           onBack={back}
-          eyebrow="Built for you"
-          headline={'Your plan\nis ready.'}
+          eyebrow="Your analysis"
+          headline={'Here is what\nwe found.'}
           reveal
-          accent={['ready.']}
-          support={
-            leak
-              ? `Built around one thing: ${outcomeLabel}.`
-              : 'Built around the leak costing you the most.'
-          }
+          accent={['found.']}
           scroll
           footer={
             <PrimaryButton
@@ -346,12 +343,11 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
             />
           }
         >
-          <PlanVisual
-            items={[
-              { label: 'Where you play', value: WHERE.find((w) => w.value === where)?.label ?? 'Anywhere' },
-              { label: 'Your stakes', value: STAKES.find((x) => x.value === stakes)?.label ?? 'Any' },
-              { label: 'What changes first', value: outcomeLabel },
-            ]}
+          <AnalysisVisual
+            profile={analysis.profile}
+            diagnosis={analysis.diagnosis}
+            outcome={analysis.outcome}
+            thirtyDay={analysis.thirtyDay}
           />
         </Screen>
       );
@@ -374,3 +370,43 @@ const s = StyleSheet.create({
 
 
 });
+
+/**
+ * The "customizing your plan" beat.
+ *
+ * A short processing moment before the analysis. Every high-converting flow
+ * researched (Cal AI, RISE, Opal) has one: it makes the output feel earned
+ * rather than instant, and it is where the app says out loud that it is reading
+ * *their* answers rather than showing everyone the same page.
+ *
+ * Capped at 2.4s and it advances itself — nothing here can strand the user, and
+ * there is no button to wait for.
+ */
+function BuildingScreen({ stakesLabel, onDone }: { stakesLabel: string; onDone: () => void }) {
+  const steps = useMemo(
+    () => [
+      'Reading your answers',
+      `Comparing players at ${stakesLabel.toLowerCase()}`,
+      'Building your plan',
+    ],
+    [stakesLabel]
+  );
+  const [step, setStep] = useState(0);
+
+  useEffect(() => {
+    const a = setTimeout(() => setStep(1), 800);
+    const b = setTimeout(() => setStep(2), 1600);
+    const done = setTimeout(onDone, 2400);
+    return () => {
+      clearTimeout(a);
+      clearTimeout(b);
+      clearTimeout(done);
+    };
+  }, [onDone]);
+
+  return (
+    <Screen headline={'Customizing\nyour plan.'} reveal accent={['Customizing']}>
+      <BuildingSteps steps={steps} active={step} />
+    </Screen>
+  );
+}

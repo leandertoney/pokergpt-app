@@ -117,7 +117,7 @@ const DEFAULT_COPY = {
   // plans. "Pick your plan" satisfies neither the requirement nor the user's
   // question of what they are actually buying.
   product_name: 'Poker Hands Pro',
-  price_headline: 'Everything in Pro.',
+  price_headline: 'Start your\n30 days.',
   // Deliberately currency-free. "Try for $0.00" tests well in the US but hard-
   // codes a dollar sign, which is exactly the "currency differences with
   // prominent display price ... appropriately localized for each country"
@@ -139,6 +139,7 @@ export function PaywallV2({ onPurchase, onSkip }: Props) {
   const [page, setPage] = useState<'sell' | 'price'>('sell');
   const [plan, setPlan] = useState<PlanType>('yearly');
   const [prices, setPrices] = useState<{ weekly?: string; yearly?: string }>({});
+  const [amounts, setAmounts] = useState<{ weekly: number; yearly: number }>({ weekly: 0, yearly: 0 });
   const [copy, setCopy] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [unavailable, setUnavailable] = useState(false);
@@ -152,6 +153,13 @@ export function PaywallV2({ onPurchase, onSkip }: Props) {
 
       const weekly = offering?.weekly?.product.priceString;
       const yearly = offering?.annual?.product.priceString;
+      // Numeric values, used only to decide whether the anchor line is TRUE.
+      // Never rendered — every price shown comes from priceString so it stays
+      // localized (the Play "currency ... appropriately localized" rejection).
+      setAmounts({
+        weekly: offering?.weekly?.product.price ?? 0,
+        yearly: offering?.annual?.product.price ?? 0,
+      });
 
       if (!weekly || !yearly) {
         // No purchasable products — never render priced-looking dead controls.
@@ -218,6 +226,14 @@ export function PaywallV2({ onPurchase, onSkip }: Props) {
       ) : (
         <PricePage
           productName={c('product_name')}
+          anchor={
+            // Only shown when it is arithmetically true: 30 days of the weekly
+            // plan costing more than a full year. At $9.99/wk vs $29.99/yr that
+            // is $42.96 vs $29.99.
+            amounts.weekly > 0 && amounts.yearly > 0 && amounts.weekly * 4.3 > amounts.yearly
+              ? `A month of weekly costs more than a whole year.`
+              : null
+          }
           headline={c('price_headline')}
           cta={c('cta')}
           ctaNoTrial={c('cta_no_trial')}
@@ -288,6 +304,7 @@ function SellPage({
 // -----------------------------------------------------------------------------
 function PricePage({
   productName,
+  anchor,
   headline,
   cta,
   ctaNoTrial,
@@ -305,6 +322,7 @@ function PricePage({
   insetBottom,
 }: {
   productName: string;
+  anchor: string | null;
   headline: string;
   cta: string;
   ctaNoTrial: string;
@@ -393,6 +411,12 @@ function PricePage({
             />
           </View>
         </Fade>
+
+        {!!anchor && (
+          <Fade delay={180} style={{ marginTop: spacing.cozy }}>
+            <Text style={s.anchor}>{anchor}</Text>
+          </Fade>
+        )}
       </ScrollView>
 
       <View style={[s.footer, { paddingBottom: Math.max(insetBottom, spacing.base) }]}>
@@ -617,6 +641,7 @@ const s = StyleSheet.create({
   dismiss: { paddingVertical: spacing.cozy, alignItems: 'center' },
   dismissText: { ...t.caption, color: colors.text.secondary, fontWeight: '600' },
 
+  anchor: { ...t.caption, color: GOLD, textAlign: 'center', fontWeight: '700' },
   reassure: { ...t.caption, color: PAPER, textAlign: 'center', fontWeight: '600' },
   fine: { ...t.fine, color: colors.text.secondary, textAlign: 'center' },
   legalRow: { flexDirection: 'row', justifyContent: 'center', gap: spacing.roomy, paddingTop: spacing.tight },

@@ -227,6 +227,81 @@ export function QuestionVisual({ n, total = 3 }: { n: number; total?: number }) 
 }
 
 // -----------------------------------------------------------------------------
+// BUILDING — the processing beat. Steps tick over as the plan is "built".
+// -----------------------------------------------------------------------------
+export function BuildingSteps({ steps, active }: { steps: string[]; active: number }) {
+  return (
+    <View style={{ gap: spacing.base }}>
+      {steps.map((label, i) => (
+        <View key={label} style={s.buildRow}>
+          <View style={[s.buildDot, i <= active && s.buildDotOn]}>
+            {i < active && <Text style={s.buildTick}>✓</Text>}
+          </View>
+          <Text style={[s.buildText, i <= active && s.buildTextOn]}>{label}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+// -----------------------------------------------------------------------------
+// ANALYSIS — the synthesised read of their three answers.
+//
+// Replaces the label/value receipt. Each block is a different kind of sentence
+// (who you are, what it costs, what changes) so the 48 answer combinations
+// produce visibly different text rather than the same rows with words swapped.
+// -----------------------------------------------------------------------------
+export function AnalysisVisual({
+  profile,
+  diagnosis,
+  outcome,
+  thirtyDay,
+}: {
+  profile: string;
+  diagnosis: string;
+  outcome: string;
+  thirtyDay: string;
+}) {
+  return (
+    <View style={{ gap: spacing.base }}>
+      <AnalysisBlock index={0} label="Your game" text={profile} />
+      <AnalysisBlock index={1} label="What it is costing you" text={diagnosis} accent />
+      <AnalysisBlock index={2} label="What changes first" text={outcome} />
+      <AnalysisBlock index={3} label="Your next 30 days" text={thirtyDay} />
+    </View>
+  );
+}
+
+function AnalysisBlock({
+  index,
+  label,
+  text,
+  accent,
+}: {
+  index: number;
+  label: string;
+  text: string;
+  accent?: boolean;
+}) {
+  const a = useSharedValue(0);
+  useEffect(() => {
+    a.value = withDelay(index * 220, withSpring(1, motion.springy));
+  }, [index, a]);
+
+  const st = useAnimatedStyle(() => ({
+    opacity: a.value,
+    transform: [{ translateY: interpolate(a.value, [0, 1], [14, 0]) }],
+  }));
+
+  return (
+    <Animated.View style={[s.analysisBlock, accent && s.analysisBlockAccent, st]}>
+      <Text style={s.analysisLabel}>{label}</Text>
+      <Text style={s.analysisText}>{text}</Text>
+    </Animated.View>
+  );
+}
+
+// -----------------------------------------------------------------------------
 // PLAN — a checklist that ticks itself in.
 // -----------------------------------------------------------------------------
 export function PlanVisual({ items }: { items: { label: string; value: string }[] }) {
@@ -314,6 +389,26 @@ const s = StyleSheet.create({
   pip: { width: 22, height: 4, borderRadius: radius.pill, backgroundColor: CARD },
   pipOn: { backgroundColor: GOLD },
   pipText: { ...t.caption, color: colors.text.secondary, marginLeft: spacing.tight },
+
+  buildRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.cozy },
+  buildDot: {
+    width: 24, height: 24, borderRadius: 12,
+    backgroundColor: CARD, alignItems: 'center', justifyContent: 'center',
+  },
+  buildDotOn: { backgroundColor: GOLD },
+  buildTick: { color: INK, fontSize: 12, fontWeight: '900' },
+  buildText: { ...t.body, color: colors.text.secondary, flex: 1 },
+  buildTextOn: { color: PAPER, fontWeight: '600' },
+
+  analysisBlock: {
+    backgroundColor: CARD,
+    borderRadius: radius.lg,
+    padding: spacing.base,
+    gap: spacing.tight,
+  },
+  analysisBlockAccent: { borderLeftWidth: 3, borderLeftColor: GOLD },
+  analysisLabel: { ...t.eyebrow, fontSize: 10, color: colors.text.secondary },
+  analysisText: { ...t.body, color: PAPER },
 
   planRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.cozy },
   tick: { width: 30, height: 30, borderRadius: 15, backgroundColor: GOLD, alignItems: 'center', justifyContent: 'center' },
