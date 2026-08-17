@@ -1,5 +1,5 @@
-import React, { useCallback } from 'react';
-import { View, ScrollView, StyleSheet, Text, TouchableOpacity, Alert, type ViewStyle, type TextStyle } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { View, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, type ViewStyle, type TextStyle } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -7,11 +7,12 @@ import {
   User,
   Mail,
   Calendar,
-  Camera,
   ChevronRight,
   Settings,
 } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
+import { getUserDisplayName, setUserDisplayName } from '@/services/storageService';
+import { supabase } from '@/lib/supabase';
 import { colors } from '@/constants/colors';
 
 interface ProfileItemProps {
@@ -60,20 +61,45 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { user: authUser } = useAuth();
 
+  // The name is editable. Onboarding already captures it and writes it to
+  // local storage, so the profile reads the same value rather than showing a
+  // hardcoded placeholder the user cannot change.
+  const [displayName, setDisplayName] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState('');
+
+  useEffect(() => {
+    getUserDisplayName().then(setDisplayName);
+  }, []);
+
+  const saveName = useCallback(async () => {
+    const next = draft.trim();
+    setEditing(false);
+    if (!next || next === displayName) return;
+
+    setDisplayName(next);
+    await setUserDisplayName(next);
+
+    // Mirror to the account when there is one, so the name survives a reinstall.
+    // Local storage is the source of truth for signed-out users.
+    try {
+      if (authUser && supabase) {
+        await supabase.auth.updateUser({ data: { full_name: next } });
+      }
+    } catch (e) {
+      console.warn('[profile] could not sync name to account', e);
+    }
+  }, [draft, displayName, authUser]);
+
   // Get user data from auth context
   const user = {
-    name: authUser?.user_metadata?.full_name || 'Poker Player',
+    name: displayName || authUser?.user_metadata?.full_name || 'Poker Player',
     email: authUser?.email || 'Not signed in',
     memberSince: authUser?.created_at
       ? new Date(authUser.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
       : 'Unknown',
     avatarUrl: authUser?.user_metadata?.avatar_url || null,
   };
-
-  const handleEditAvatar = useCallback(() => {
-    // TODO: Implement avatar editing (camera/gallery picker)
-    Alert.alert('Coming Soon', 'Profile photo editing will be available soon.');
-  }, []);
 
   return (
     <View style={styles.container}>
@@ -103,30 +129,55 @@ export default function ProfileScreen() {
         >
           {/* Avatar Section */}
           <View style={styles.avatarSection}>
-            <TouchableOpacity onPress={handleEditAvatar} activeOpacity={0.8}>
-              <View style={styles.avatarContainer}>
-                <LinearGradient
-                  colors={colors.gradients.premium}
-                  style={styles.avatarGradient}
-                >
-                  <User size={48} color={colors.text.primary} />
-                </LinearGradient>
-                <View style={styles.cameraButton}>
-                  <Camera size={14} color={colors.text.primary} />
-                </View>
-              </View>
-            </TouchableOpacity>
+            <View style={styles.avatarContainer}>
+              <LinearGradient
+                colors={colors.gradients.premium}
+                style={styles.avatarGradient}
+              >
+                <User size={48} color={colors.text.primary} />
+              </LinearGradient>
+            </View>
             <Text style={styles.userName}>{user.name}</Text>
             <Text style={styles.userEmail}>{user.email}</Text>
           </View>
 
           {/* Account Info */}
           <ProfileSection title="Account Information">
-            <ProfileItem
-              icon={<User size={20} color={colors.accent.primary} />}
-              title="Name"
-              value={user.name}
-            />
+            {editing ? (
+              <View style={styles.profileItem}>
+                <View style={styles.profileItemIcon}>
+                  <User size={20} color={colors.accent.primary} />
+                </View>
+                <View style={styles.profileItemContent}>
+                  <Text style={styles.profileItemTitle}>Name</Text>
+                  <TextInput
+                    value={draft}
+                    onChangeText={setDraft}
+                    onSubmitEditing={saveName}
+                    onBlur={saveName}
+                    autoFocus
+                    autoCapitalize="words"
+                    maxLength={24}
+                    returnKeyType="done"
+                    placeholder="Your name"
+                    placeholderTextColor={colors.text.muted}
+                    style={styles.nameInput}
+                    accessibilityLabel="Edit your name"
+                  />
+                </View>
+              </View>
+            ) : (
+              <ProfileItem
+                icon={<User size={20} color={colors.accent.primary} />}
+                title="Name"
+                value={user.name}
+                onPress={() => {
+                  setDraft(displayName ?? '');
+                  setEditing(true);
+                }}
+                showChevron
+              />
+            )}
             <ProfileItem
               icon={<Mail size={20} color={colors.accent.secondary} />}
               title="Email"
@@ -165,6 +216,13 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingTop: 24,
   } as ViewStyle,
+  nameInput: {
+    color: colors.text.primary,
+    fontSize: 15,
+    fontWeight: '500',
+    paddingVertical: 2,
+    marginTop: 2,
+  } as TextStyle,
   avatarSection: {
     alignItems: 'center',
     marginBottom: 32,
