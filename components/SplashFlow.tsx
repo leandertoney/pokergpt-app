@@ -31,6 +31,15 @@ export function SplashFlow({ onComplete }: SplashFlowProps) {
     return () => clearTimeout(staticTimer);
   }, []);
 
+  // The animated phase advances only when the video reports playToEnd. If the
+  // video fails to load, or the event never fires, the splash would sit there
+  // forever with no error. Cap it so the app always reaches the first screen.
+  useEffect(() => {
+    if (phase !== 'animated') return;
+    const cap = setTimeout(() => handleAnimationComplete(), 4000);
+    return () => clearTimeout(cap);
+  }, [phase]);
+
   const handleAnimationComplete = () => {
     // Phase 3: Fade out entire splash
     setPhase('fade');
