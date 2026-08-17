@@ -343,7 +343,7 @@ export function GoalSettingScreen({ goal, userName, painPoint, onComplete }: Goa
         <View style={styles.commitmentItem}>
           <View style={styles.bulletPoint} />
           <Text style={styles.commitmentText}>
-            Using PokerPro AI to <Text style={styles.highlightText}>level up my game</Text>
+            Using Poker Hands Coach: AI Trainer to <Text style={styles.highlightText}>level up my game</Text>
           </Text>
         </View>
 

@@ -345,7 +345,7 @@ export default function VoiceScreen() {
 
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-        <Text style={styles.headerTitle}>PokerPro AI</Text>
+        <Text style={styles.headerTitle}>Poker Hands Coach</Text>
         {messages.length > 0 && (
           <TouchableOpacity
             style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}

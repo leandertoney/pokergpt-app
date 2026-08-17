@@ -50,7 +50,7 @@ const steps: OnboardingStep[] = [
   {
     type: 'social',
     title: '50,000+ Players Trust Us',
-    description: 'Top pros and grinders use PokerPro AI to study hands and fix leaks faster than ever.',
+    description: 'Top pros and grinders use Poker Hands Coach: AI Trainer to study hands and fix leaks faster than ever.',
     icon: <Users size={64} color={colors.accent.primary} />,
   },
   {
@@ -841,7 +841,7 @@ function ReinforcementStep({ identity, onNext, scaleAnim, iconScaleAnim }: {
       </View>
 
       <Text style={styles.calibratedText}>
-        PokerPro AI is now calibrated to <Text style={styles.calibratedHighlight}>your game</Text>
+        Poker Hands Coach: AI Trainer is now calibrated to <Text style={styles.calibratedHighlight}>your game</Text>
       </Text>
 
       <View style={styles.footer}>

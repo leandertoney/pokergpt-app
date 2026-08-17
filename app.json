@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "PokerGPT",
+    "name": "Poker Hands Coach",
     "slug": "pokergpt",
     "owner": "leandertoney",
     "version": "1.0.6",
@@ -23,8 +23,8 @@
         "UIBackgroundModes": [
           "audio"
         ],
-        "NSMicrophoneUsageDescription": "PokerPro AI uses the microphone for hands-free voice conversations with your AI poker coach. Speak naturally to discuss hands and get instant strategy advice.",
-        "NSCameraUsageDescription": "PokerPro AI does not use the camera. This permission is declared by the voice chat framework and is never requested.",
+        "NSMicrophoneUsageDescription": "Poker Hands Coach uses the microphone for hands-free voice conversations with your AI poker coach. Speak naturally to discuss hands and get instant strategy advice.",
+        "NSCameraUsageDescription": "Poker Hands Coach does not use the camera. This permission is declared by the voice chat framework and is never requested.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
@@ -53,7 +53,7 @@
       [
         "expo-audio",
         {
-          "microphonePermission": "PokerPro AI uses the microphone for hands-free voice conversations with your AI poker coach."
+          "microphonePermission": "Poker Hands Coach uses the microphone for hands-free voice conversations with your AI poker coach."
         }
       ],
       "expo-asset",

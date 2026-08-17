@@ -1,4 +1,4 @@
-// PokerPro AI Brand Colors
+// Poker Hands Coach: AI Trainer Brand Colors
 // Based on the robot card character logo - EXACT colors from logo design
 
 export const colors = {

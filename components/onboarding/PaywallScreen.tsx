@@ -502,7 +502,7 @@ export function PaywallScreen({ goal, userName, onPurchase, onSkip }: PaywallScr
               • Cancel anytime in Google Play Store settings before trial ends to avoid charges
             </Text>
             <Text style={styles.trialTermsCancel}>
-              To cancel: Open Google Play Store → Menu → Subscriptions → PokerPro AI → Cancel Subscription
+              To cancel: Open Google Play Store → Menu → Subscriptions → Poker Hands Coach: AI Trainer → Cancel Subscription
             </Text>
           </Animated.View>
         )}

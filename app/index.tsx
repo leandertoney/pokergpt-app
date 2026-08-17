@@ -635,7 +635,7 @@ Only return the JSON array, nothing else.`;
               style={styles.headerLogo}
               resizeMode="contain"
             />
-            <Text style={styles.headerTitle}>PokerPro AI</Text>
+            <Text style={styles.headerTitle}>Poker Hands Coach</Text>
             <TouchableOpacity onPress={() => router.push('/profile')}>
               <User size={22} color={colors.text.muted} />
             </TouchableOpacity>

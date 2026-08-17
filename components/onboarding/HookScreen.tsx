@@ -151,7 +151,7 @@ export function HookScreen({ onNext }: HookScreenProps) {
               stroke="#FFFFFF"
               strokeWidth={3}
             >
-              PokerPro AI
+              Poker Hands Coach
             </SvgText>
             {/* Gold fill layer (on top) */}
             <SvgText
@@ -162,7 +162,7 @@ export function HookScreen({ onNext }: HookScreenProps) {
               fontWeight="800"
               fill={colors.onboarding.gold}
             >
-              PokerPro AI
+              Poker Hands Coach
             </SvgText>
           </Svg>
         </Animated.View>

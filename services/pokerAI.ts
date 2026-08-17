@@ -15,7 +15,7 @@ export async function sendPokerChatMessage(
   // Build context from conversation history
   const historyContext = conversationHistory
     .slice(-6) // Keep last 6 messages for context
-    .map((msg) => `${msg.role === 'user' ? 'User' : 'PokerPro AI'}: ${msg.content}`)
+    .map((msg) => `${msg.role === 'user' ? 'User' : 'Poker Hands Coach: AI Trainer'}: ${msg.content}`)
     .join('\n\n');
 
   const prompt = historyContext

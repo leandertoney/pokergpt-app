@@ -96,7 +96,7 @@ function RootLayoutNav() {
         name="index"
         options={{
           headerShown: false,
-          title: "PokerPro AI",
+          title: "Poker Hands Coach: AI Trainer",
         }}
       />
       <Stack.Screen

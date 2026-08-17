@@ -146,7 +146,7 @@ export default function SignupScreen() {
             {/* Header */}
             <View style={styles.header}>
               <Text style={styles.title}>Create Account</Text>
-              <Text style={styles.subtitle}>Join PokerPro AI today</Text>
+              <Text style={styles.subtitle}>Join Poker Hands Coach: AI Trainer today</Text>
             </View>
 
             {/* Form */}

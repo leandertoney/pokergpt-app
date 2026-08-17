@@ -28,10 +28,10 @@ const GRAPH_WIDTH = SCREEN_WIDTH - 48;
 const GRAPH_HEIGHT = 200;
 const PADDING = 20;
 
-// Data points for "With PokerPro AI" - trending up
+// Data points for "With Poker Hands Coach" - trending up
 const WITH_POKERGPT = [0.35, 0.38, 0.42, 0.40, 0.48, 0.52, 0.55, 0.60, 0.58, 0.65, 0.72, 0.78];
 
-// Data points for "Without PokerPro AI" - trending down/flat
+// Data points for "Without Poker Hands Coach" - trending down/flat
 const WITHOUT_POKERGPT = [0.35, 0.33, 0.30, 0.32, 0.28, 0.25, 0.27, 0.22, 0.24, 0.20, 0.18, 0.15];
 
 export function ComparisonScreen({ onNext }: ComparisonScreenProps) {
@@ -199,7 +199,7 @@ export function ComparisonScreen({ onNext }: ComparisonScreenProps) {
           }}
         >
           <Text style={styles.headline}>They're getting better.</Text>
-          <Text style={styles.subheadline}>PokerPro AI players vs the rest</Text>
+          <Text style={styles.subheadline}>Poker Hands Coach players vs the rest</Text>
         </Animated.View>
 
       {/* Graph Card */}
@@ -223,7 +223,7 @@ export function ComparisonScreen({ onNext }: ComparisonScreenProps) {
         <View style={styles.legend}>
           <View style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: colors.onboarding.profit }]} />
-            <Text style={styles.legendText}>With PokerPro AI</Text>
+            <Text style={styles.legendText}>With Poker Hands Coach</Text>
           </View>
           <View style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: 'rgba(255,255,255,0.3)' }]} />
@@ -338,7 +338,7 @@ export function ComparisonScreen({ onNext }: ComparisonScreenProps) {
                 <TrendingUp size={18} color={colors.onboarding.profit} />
               </View>
               <Text style={styles.resultValue}>+$2,340</Text>
-              <Text style={styles.resultLabel}>With PokerPro AI</Text>
+              <Text style={styles.resultLabel}>With Poker Hands Coach</Text>
             </View>
 
             <View style={styles.vsContainer}>

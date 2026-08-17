@@ -241,7 +241,7 @@ export function PotentialScreen({ userName, experienceLevel, frequency, goal, go
               </View>
             </View>
           </View>
-          <Text style={styles.xAxisTitle}>Time with PokerPro AI</Text>
+          <Text style={styles.xAxisTitle}>Time with Poker Hands Coach</Text>
         </View>
 
         {/* Stats */}

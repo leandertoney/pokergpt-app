@@ -155,7 +155,7 @@ export default function SettingsScreen() {
 
   const showAbout = () => {
     Alert.alert(
-      'PokerPro AI',
+      'Poker Hands Coach: AI Trainer',
       `Version ${appVersion}\n\nYour AI-powered poker coach.\n\nAnalyze hands, calculate odds, and improve your game with expert guidance.`,
       [{ text: 'OK' }]
     );
@@ -426,7 +426,7 @@ export default function SettingsScreen() {
           )}
 
           <View style={styles.versionContainer}>
-            <Text style={styles.versionText}>PokerPro AI v{appVersion}</Text>
+            <Text style={styles.versionText}>Poker Hands Coach: AI Trainer v{appVersion}</Text>
           </View>
         </ScrollView>
       </LinearGradient>
