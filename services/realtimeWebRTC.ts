@@ -17,8 +17,18 @@ function webrtc() {
   }
 }
 
-const REALTIME_MODEL = 'gpt-4o-realtime-preview-2024-12-17';
-const REALTIME_SDP_URL = `https://api.openai.com/v1/realtime?model=${REALTIME_MODEL}`;
+// The beta Realtime API was retired. POSTing SDP to /v1/realtime?model=...
+// returns 400 beta_api_shape_disabled: "The Realtime Beta API is no longer
+// supported. Please use /v1/realtime for the GA API."
+//
+// GA moves the SDP exchange to /v1/realtime/calls. The model is still passed as
+// a query parameter (omitting it returns 400 missing_model) and the body is
+// still raw SDP with Content-Type: application/sdp.
+//
+// Verified against the live API: /v1/realtime/calls?model=gpt-realtime-2.1
+// returns 201 with an SDP answer.
+const REALTIME_MODEL = 'gpt-realtime-2.1';
+const REALTIME_SDP_URL = `https://api.openai.com/v1/realtime/calls?model=${REALTIME_MODEL}`;
 
 export interface RealtimeCallbacks {
   onSessionCreated?: () => void;
@@ -120,19 +130,29 @@ export class RealtimeWebRTCService {
   }
 
   private sendSessionUpdate(voice: string): void {
+    // GA session shape: `modalities` became `output_modalities`, and voice,
+    // transcription, noise reduction and turn detection all moved under
+    // `audio.input` / `audio.output`. Sending the old flat shape is silently
+    // ignored, which reads as "the coach never speaks".
     const config = {
       type: 'session.update',
       session: {
-        modalities: ['text', 'audio'],
+        type: 'realtime',
+        model: REALTIME_MODEL,
+        output_modalities: ['audio'],
         instructions: VOICE_COACH_PROMPT,
-        voice,
-        input_audio_transcription: { model: 'gpt-4o-mini-transcribe' },
-        input_audio_noise_reduction: { type: 'near_field' },
-        turn_detection: {
-          type: 'server_vad',
-          threshold: 0.4,
-          prefix_padding_ms: 500,
-          silence_duration_ms: 1200,
+        audio: {
+          input: {
+            transcription: { model: 'gpt-4o-mini-transcribe' },
+            noise_reduction: { type: 'near_field' },
+            turn_detection: {
+              type: 'server_vad',
+              threshold: 0.4,
+              prefix_padding_ms: 500,
+              silence_duration_ms: 1200,
+            },
+          },
+          output: { voice },
         },
       },
     };
