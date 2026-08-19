@@ -345,7 +345,16 @@ export async function checkOnboardingComplete(isAuthenticated: boolean = false):
     // Continue with normal flow if RevenueCat check fails or times out
   }
 
-  if (!isAuthenticated) return false;
+  // The stored completion flag is authoritative for everyone, signed in or not.
+  //
+  // This previously read `if (!isAuthenticated) return false;`, which threw the
+  // flag away for guests and re-ran onboarding on every single launch. Someone
+  // who never signs in could finish the flow dozens of times and still land
+  // back at the welcome screen, because completion was written and then never
+  // read.
+  //
+  // Gating a *feature* on sign-in is reasonable; gating the record of a
+  // finished flow on it is not.
   try {
     const complete = await AsyncStorage.getItem(ONBOARDING_COMPLETE_KEY);
     return complete === 'true';

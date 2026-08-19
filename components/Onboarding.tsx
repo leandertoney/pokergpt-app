@@ -1095,21 +1095,12 @@ function PaywallStep({ plans, selectedPlan, onSelectPlan, onPurchase, onFreeTier
 // HELPER EXPORTS
 // ============================================================================
 
-export async function checkOnboardingComplete(isAuthenticated: boolean = false): Promise<boolean> {
-  // Guest users always see onboarding
-  if (!isAuthenticated) {
-    return false;
-  }
-
-  // Only check storage for authenticated users
-  try {
-    const complete = await AsyncStorage.getItem(ONBOARDING_COMPLETE_KEY);
-    return complete === 'true';
-  } catch (error) {
-    console.error('Error checking onboarding status:', error);
-    return false;
-  }
-}
+// checkOnboardingComplete used to be exported from here too, with a
+// `if (!isAuthenticated) return false;` guard that re-ran onboarding on every
+// launch for guests. The live implementation is in OnboardingV2 and is the only
+// one app/index.tsx imports; this copy is removed so the broken variant cannot
+// be picked up by mistake. Only resetOnboarding below is still used, by
+// app/settings.tsx.
 
 export async function resetOnboarding(): Promise<void> {
   try {
