@@ -232,12 +232,17 @@ export class RealtimeWebRTCService {
       case 'conversation.item.input_audio_transcription.completed':
         this.callbacks.onUserTranscript?.(event.transcript);
         break;
+      // GA renamed these to `response.output_audio_transcript.*`. Accept both
+      // spellings: the session is GA, but an unhandled name here is silent —
+      // the coach still speaks, its words just never reach the screen.
+      case 'response.output_audio_transcript.delta':
       case 'response.audio_transcript.delta':
         this.transcriptBuffer += event.delta ?? '';
         this.callbacks.onTranscript?.(this.transcriptBuffer, false);
         break;
+      case 'response.output_audio_transcript.done':
       case 'response.audio_transcript.done':
-        this.callbacks.onTranscript?.(event.transcript, true);
+        this.callbacks.onTranscript?.(event.transcript ?? this.transcriptBuffer, true);
         this.transcriptBuffer = '';
         break;
       case 'response.done':
