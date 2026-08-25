@@ -48,7 +48,10 @@ export class RealtimeWebRTCService {
   private callbacks: RealtimeCallbacks = {};
   private apiKey: string;
   private transcriptBuffer = '';
-  private volumeMultiplier: number = 1.5; // 50% louder by default
+  // _setVolume takes a gain in 0-10 where 1.0 is unity. The old 1.5 never took
+  // effect (it was pushed through applyConstraints, which rejects audio tracks),
+  // so this is the first value that actually reaches the track.
+  private volumeMultiplier: number = 3.0;
 
   constructor(apiKey: string) {
     this.apiKey = apiKey;
@@ -70,6 +73,12 @@ export class RealtimeWebRTCService {
       console.error('[RealtimeWebRTC] getUserMedia failed:', e);
       throw new Error('Microphone permission required');
     }
+
+    // Holding a mic capture puts iOS in play-and-record, which routes output to
+    // the EARPIECE by default — the coach is then correct but barely audible.
+    // react-native-webrtc 124 exposes no routing API, so drive the shared
+    // AVAudioSession through expo-audio instead.
+    await this.routeToSpeaker();
 
     const pc: RTCPeerConnection = new (webrtc().RTCPeerConnection)({
       iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
@@ -187,10 +196,27 @@ export class RealtimeWebRTCService {
     });
   }
 
+  private async routeToSpeaker(): Promise<void> {
+    try {
+      const { setAudioModeAsync } = require('expo-audio');
+      await setAudioModeAsync({
+        // The mic is owned by the WebRTC peer connection, not expo-audio, so
+        // this only steers routing: on iOS `allowsRecording: false` moves the
+        // session off the earpiece to the speaker, and on Android the
+        // earpiece flag does the same explicitly.
+        allowsRecording: false,
+        shouldRouteThroughEarpiece: false,
+        playsInSilentMode: true,
+      });
+    } catch (e) {
+      console.log('[RealtimeWebRTC] Could not force speaker output:', e);
+    }
+  }
+
   setVolume(volume: number): void {
-    // Volume range 0-1, convert to multiplier (0.5-2.0x)
-    // User wants 50% louder as default, so 1.0 in UI = 1.5x multiplier
-    this.volumeMultiplier = 0.5 + (volume * 1.5);
+    // UI 0-1 maps onto gain 0.5-5.0, so the slider's midpoint lands near the
+    // 3.0 default rather than below it.
+    this.volumeMultiplier = 0.5 + (volume * 4.5);
 
     // Apply to existing remote audio tracks
     this.remoteStream?.getAudioTracks().forEach((track) => {
@@ -199,17 +225,19 @@ export class RealtimeWebRTCService {
   }
 
   private applyVolumeToTrack(track: any): void {
+    // `volume` is not a supported constraint for a REMOTE WebRTC track, so the
+    // old applyConstraints() call silently rejected and the coach was never
+    // boosted. react-native-webrtc exposes a real per-track output gain via
+    // _setVolume; keep applyConstraints as a web fallback.
     try {
-      // Attempt to apply volume via constraints (may not be supported on all platforms)
-      const constraints = {
-        volume: this.volumeMultiplier,
-        echoCancellation: false, // Already handled by OpenAI's audio processing
-      };
-
-      track.applyConstraints?.(constraints).catch((err: any) => {
-        console.log('[RealtimeWebRTC] Volume constraint not supported, using default:', err.message);
+      if (typeof track._setVolume === 'function') {
+        track._setVolume(this.volumeMultiplier);
+        return;
+      }
+      track.applyConstraints?.({ volume: this.volumeMultiplier }).catch(() => {
+        console.log('[RealtimeWebRTC] No output gain control on this platform');
       });
-    } catch (e) {
+    } catch {
       console.log('[RealtimeWebRTC] Volume adjustment not available on this platform');
     }
   }
