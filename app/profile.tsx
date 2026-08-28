@@ -29,7 +29,6 @@ import {
   type TextStyle,
 } from 'react-native';
 import { Stack, useRouter, useFocusEffect } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Settings as SettingsIcon,
   ChevronRight,
@@ -46,7 +45,6 @@ import { BottomNav } from '@/components/BottomNav';
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
 
   const [stats, setStats] = useState<ProfileStats | null>(null);
   const [editingName, setEditingName] = useState(false);
@@ -179,15 +177,34 @@ export default function ProfileScreen() {
                 <View style={styles.stat}>
                   <Text style={styles.statKey}>HANDS REVIEWED</Text>
                   <Text style={styles.statValue}>{stats.handsTotal}</Text>
-                  <Text style={styles.statDetail}>{stats.handsThisWeek} this week</Text>
-                </View>
-                <View style={styles.stat}>
-                  <Text style={styles.statKey}>SESSIONS LOGGED</Text>
-                  <Text style={styles.statValue}>{stats.sessionsTotal}</Text>
                   <Text style={styles.statDetail}>
-                    {stats.lastSessionLabel ? `Last: ${stats.lastSessionLabel}` : 'None yet'}
+                    {stats.handsThisWeek > 0 ? `${stats.handsThisWeek} this week` : 'Bring one this week'}
                   </Text>
                 </View>
+                {/* A bare 0 on the screen built to show progress reads as a
+                    scolding, and says nothing about what a session even is.
+                    Until they log one, the tile invites instead of counting. */}
+                {stats.sessionsTotal > 0 ? (
+                  <View style={styles.stat}>
+                    <Text style={styles.statKey}>SESSIONS LOGGED</Text>
+                    <Text style={styles.statValue}>{stats.sessionsTotal}</Text>
+                    <Text style={styles.statDetail}>
+                      {stats.lastSessionLabel ? `Last: ${stats.lastSessionLabel}` : 'None yet'}
+                    </Text>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    style={[styles.stat, styles.statInvite]}
+                    onPress={() => router.push('/')}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.statKey}>SESSIONS</Text>
+                    <Text style={styles.inviteValue}>Track a night</Text>
+                    <Text style={styles.statDetail}>
+                      Log a session to group the hands you play
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </View>
 
               {!!stats.workingOn && (
@@ -371,6 +388,14 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(232,184,74,0.13)',
   } as ViewStyle,
   statHero: { borderColor: 'rgba(232,184,74,0.45)', backgroundColor: 'rgba(232,184,74,0.1)' } as ViewStyle,
+  statInvite: { borderStyle: 'dashed', borderColor: 'rgba(232,184,74,0.35)' } as ViewStyle,
+  inviteValue: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: colors.accent.gold,
+    letterSpacing: -0.3,
+    marginTop: 5,
+  } as TextStyle,
   statKey: {
     fontSize: 9,
     letterSpacing: 1.3,
