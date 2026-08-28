@@ -17,7 +17,9 @@ export const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
 export type NotificationType =
   | 'daily_reminder'
   | 'streak_celebration'
-  | 'streak_at_risk';
+  | 'streak_at_risk'
+  /** Next-morning follow-up on the last hand the player entered. */
+  | 'hand_followup';
 
 export type NotificationData = {
   type: NotificationType;

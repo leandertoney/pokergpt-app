@@ -10,6 +10,7 @@ import {
 } from '@/types/notifications';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { getOrCreateUser } from '@/services/supabaseStorage';
+import { trackOnboardingEvent } from './onboardingAnalytics';
 
 const NOTIFICATION_SETTINGS_KEY = '@notification_settings';
 const DAILY_REMINDER_ID = 'daily-review-reminder';
@@ -257,6 +258,12 @@ export function setupNotificationResponseListener(): () => void {
   const subscription = Notifications.addNotificationResponseReceivedListener(
     (response) => {
       const data = response.notification.request.content.data as NotificationData;
+
+      // Whether a notification actually gets opened is the only way to tell if
+      // the day-two follow-up is doing its job.
+      if (data?.type) {
+        trackOnboardingEvent('notification_opened', { type: data.type });
+      }
 
       if (data?.screen) {
         // Navigate to the specified screen

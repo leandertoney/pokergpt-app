@@ -7,6 +7,8 @@ import type { FavoriteItem } from "@/types/favorites";
 import type { VoiceSettings } from "@/types/voice";
 import type { SessionPreferences } from "@/types/session";
 import { storeHand as storeHandLocally, deleteHand as deleteHandLocally } from "@/services/storageService";
+import { scheduleHandFollowup } from "@/services/handFollowup";
+import { trackAppEvent } from "@/services/appAnalytics";
 
 interface User {
   id: string;
@@ -173,6 +175,14 @@ export async function storeHand(
   } catch (localError) {
     console.error('Error saving hand locally:', localError);
   }
+
+  // Hooked here rather than at the two call sites so no save path can miss it.
+  // Both are fire-and-forget and must never delay or fail the save itself.
+  trackAppEvent('hand_saved', {
+    street: handData.river ? 'river' : handData.turn ? 'turn' : handData.flop ? 'flop' : null,
+    action: analysis?.recommendedAction ?? null,
+  });
+  void scheduleHandFollowup(handData, analysis);
 
   if (!isSupabaseConfigured() || !supabase) {
     return;
