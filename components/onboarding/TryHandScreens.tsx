@@ -67,13 +67,14 @@ export function TryHandInvite({
 /* 2. Listening                                                        */
 /* ------------------------------------------------------------------ */
 
-export function TryHandListening({
-  onDone,
-  transcript,
-}: {
-  onDone: () => void;
-  transcript: string;
-}) {
+/**
+ * The live-mic screen.
+ *
+ * Deliberately shows no running transcript: transcription happens in one pass
+ * after recording stops, so there is nothing to stream. Claiming otherwise
+ * would mean rendering an empty box for the whole take.
+ */
+export function TryHandListening({ onDone }: { onDone: () => void }) {
   return (
     <Screen
       progress={0.38}
@@ -86,14 +87,8 @@ export function TryHandListening({
           <Square size={26} color="#FFFFFF" fill="#FFFFFF" />
         </View>
         <Waveform />
+        <Text style={s.micTip}>Tap Done when you&apos;ve finished the hand</Text>
       </View>
-
-      {!!transcript && (
-        <View style={s.transcriptBox}>
-          <Text style={s.transcriptLabel}>WHAT I&apos;M HEARING</Text>
-          <Text style={s.transcriptText}>{transcript}</Text>
-        </View>
-      )}
     </Screen>
   );
 }
@@ -349,6 +344,11 @@ export function TryHandFlow({ onDone }: { onDone: (r: TryHandResult) => void }) 
   }, [dictation, bail]);
 
   const stopRecording = useCallback(async () => {
+    // Move off the live-mic screen FIRST. stopAndTranscribe awaits a recorder
+    // stop plus a Whisper call with a 20s timeout; leaving the phase on
+    // 'listening' left a frozen red mic and a Done button that could be tapped
+    // again into a racing recorder.stop().
+    setPhase('analyzing');
     const text = await dictation.stopAndTranscribe();
     trackOnboardingEvent('try_hand_recorded', { chars: text.length });
     if (!text.trim()) {
@@ -356,6 +356,8 @@ export function TryHandFlow({ onDone }: { onDone: (r: TryHandResult) => void }) 
       return;
     }
     setPhase('stakes');
+    // Falls through to the stakes question, then back to 'analyzing' for the
+    // model call itself.
   }, [dictation, bail]);
 
   const runAnalysis = useCallback(
@@ -393,7 +395,7 @@ export function TryHandFlow({ onDone }: { onDone: (r: TryHandResult) => void }) 
       return <TryHandInvite onStart={startRecording} onSkip={() => bail('declined_invite')} />;
 
     case 'listening':
-      return <TryHandListening onDone={stopRecording} transcript={dictation.transcript} />;
+      return <TryHandListening onDone={stopRecording} />;
 
     case 'stakes':
       return (
@@ -479,21 +481,6 @@ const s = StyleSheet.create({
 
   wave: { flexDirection: 'row', alignItems: 'center', gap: 3, height: 26 },
   waveBar: { width: 3, borderRadius: 2, backgroundColor: colors.accent.gold } as ViewStyle,
-
-  transcriptBox: {
-    backgroundColor: colors.background.tertiary,
-    borderRadius: radius.lg,
-    padding: spacing.base,
-    marginTop: spacing.base,
-  } as ViewStyle,
-  transcriptLabel: {
-    ...type_.caption,
-    fontSize: 10,
-    letterSpacing: 1.4,
-    color: colors.text.secondary,
-    marginBottom: spacing.snug,
-  } as TextStyle,
-  transcriptText: { ...type_.body, fontSize: 15, color: colors.text.primary } as TextStyle,
 
   card: {
     backgroundColor: colors.background.tertiary,

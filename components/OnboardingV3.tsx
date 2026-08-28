@@ -143,7 +143,11 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
   // left 'welcome' permanently at zero and made every later step look like 100%
   // of a funnel that had no top.
   useEffect(() => {
-    trackOnboardingEvent('welcome');
+    // flow:2 splits this cohort from the pre-try-it funnel. An OTA does not
+    // change app_version, so both flows report 1.1.0, and several event names
+    // (value_live, q_play_where) now sit at different positions. Without this
+    // the two funnels average together and neither is readable.
+    trackOnboardingEvent('welcome', { flow: 2 });
   }, []);
 
   const go = useCallback((next: Step, props: Record<string, unknown> = {}) => {
@@ -153,7 +157,11 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
 
   const back = useCallback(() => {
     const i = STEPS.indexOf(step);
-    if (i > 0) setStep(STEPS[i - 1]);
+    if (i <= 0) return;
+    // 'dealing' auto-advances to 'plan' on a timer, so stepping back into it
+    // would bounce straight forward again. Skip over it.
+    const prev = STEPS[i - 1];
+    setStep(prev === 'dealing' && i - 2 >= 0 ? STEPS[i - 2] : prev);
   }, [step]);
 
   // A synthesised read of the three answers, not a receipt of the taps. 48
