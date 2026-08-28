@@ -1,0 +1,233 @@
+{
+  "configVersion": 0,
+  "apple": {
+    "version": "1.1.0",
+    "copyright": "© 2026 \"UNIVERSOLE APP STUDIOS\", UNIVERSOLE LLC",
+    "release": {
+      "automaticRelease": true
+    },
+    "info": {
+      "es-ES": {
+        "description": "Poker Hands Coach es tu coach personal de poker en tiempo real, diseñado para cash games en vivo, torneos y partidas privadas.\n\nDescribe tu mano en voz alta o escríbela, y la app analizará al instante la mejor decisión combinando lógica GTO con ajustes prácticos basados en el juego real.\n\nPensado para jugadores que quieren mejorar más rápido, tomar decisiones más claras y aplicar una estrategia que realmente funcione en las mesas actuales.\n\nQué hace Poker Hands Coach\n\n• Entiende manos contadas de forma natural\n• Detecta información faltante y hace preguntas inteligentes\n• Analiza cada situación con enfoque GTO, exploit o híbrido\n• Muestra un nivel de confianza en cada recomendación\n• Guarda manos analizadas (Premium)\n• Modo Voz: cuenta tu mano como si hablaras con un amigo\n\nPerfecto para\n\n• Jugadores de cash game (1€/2€, 2€/5€, 5€/10€+)\n• Jugadores de torneos\n• Principiantes aprendiendo fundamentos\n• Jugadores intermedios corrigiendo leaks\n• Cualquiera que quiera revisar manos al instante\n\nFunciones Premium\n\n• Análisis ilimitado de manos\n• Modo Voz (uso manos libres)\n• Guardar y revisar historial\n• Análisis híbrido (GTO + ajustes en vivo)\n• Procesamiento prioritario de IA\n\nPrivacy Policy:\nhttps://universoleappstudios.com/pokergpt/privacy\n\nTerms of Service:\nhttps://universoleappstudios.com/pokergpt/terms",
+        "keywords": [
+          "analisis poker",
+          "app poker",
+          "estrategia poker",
+          "coach poker",
+          "manos poker",
+          "cash game",
+          "torneos poker"
+        ],
+        "releaseNotes": "Una experiencia inicial completamente renovada.\n\nDescríbele una mano al coach y obtén la mejor jugada con el razonamiento que la respalda. Pregunta en voz alta mientras juegas. Responde tres preguntas rápidas y recibe un plan basado en el leak que más te cuesta.",
+        "promoText": "Describe una mano con tus palabras y obtén la jugada correcta, con el razonamiento. Revisa tus manos, pregunta mientras juegas y corrige el leak que más te cuesta.",
+        "supportUrl": "https://universoleappstudios.com/pokergpt/help",
+        "title": "Poker Hands Coach: AI Trainer",
+        "subtitle": "Análisis de Poker en Vivo",
+        "privacyPolicyUrl": "https://universoleappstudios.com/pokergpt/privacy",
+        "screenshots": {
+          "APP_IPHONE_67": [
+            "store/apple/screenshot/es-ES/APP_IPHONE_67/iPhones  6.9-01.png",
+            "store/apple/screenshot/es-ES/APP_IPHONE_67/iPhones  6.9-02.png",
+            "store/apple/screenshot/es-ES/APP_IPHONE_67/iPhones  6.9-03.png",
+            "store/apple/screenshot/es-ES/APP_IPHONE_67/iPhones  6.9-04.png",
+            "store/apple/screenshot/es-ES/APP_IPHONE_67/iPhones  6.9-05.png",
+            "store/apple/screenshot/es-ES/APP_IPHONE_67/iPhones  6.9-06.png"
+          ]
+        }
+      },
+      "pt-BR": {
+        "description": "Poker Hands Coach é o seu coach pessoal de poker em tempo real, desenvolvido para cash games ao vivo, torneios e jogos entre amigos.\n\nDescreva sua mão por voz ou digite a situação, e o aplicativo analisa imediatamente a melhor decisão usando uma combinação de lógica GTO e ajustes práticos baseados no jogo real.\n\nCriado para jogadores que querem evoluir mais rápido, tomar decisões mais claras e aplicar estratégias que realmente funcionam nas mesas de hoje.\n\nO que o Poker Hands Coach faz\n\n• Entende mãos contadas de forma natural\n• Detecta informações faltantes e faz perguntas inteligentes\n• Analisa cada situação com abordagem GTO, exploit ou híbrida\n• Mostra nível de confiança em cada recomendação\n• Salva mãos analisadas (Premium)\n• Modo Voz: conte sua mão como se estivesse falando com um amigo\n\nIdeal para\n\n• Jogadores de cash game (R$1/2, R$2/5 e acima)\n• Jogadores de torneios\n• Iniciantes aprendendo fundamentos\n• Jogadores intermediários corrigindo leaks\n• Quem deseja revisar mãos instantaneamente\n\nRecursos Premium\n\n• Análise ilimitada de mãos\n• Modo Voz (uso sem mãos)\n• Histórico e salvamento de mãos\n• Análise híbrida (GTO + ajustes ao vivo)\n• Processamento prioritário de IA\n\nPrivacy Policy:\nhttps://universoleappstudios.com/pokergpt/privacy\n\nTerms of Service:\nhttps://universoleappstudios.com/pokergpt/terms",
+        "keywords": [
+          "analise poker",
+          "app poker",
+          "estrategia poker",
+          "coach poker",
+          "analise de maos",
+          "cash game",
+          "torneios poker"
+        ],
+        "releaseNotes": "Uma experiência inicial totalmente reformulada.\n\nDescreva uma mão para o coach e receba a melhor jogada com o raciocínio por trás dela. Faça perguntas em voz alta enquanto joga. Responda a três perguntas rápidas e receba um plano baseado no leak que mais custa a você.",
+        "promoText": "Descreva uma mão com suas palavras e receba a jogada certa, com o raciocínio. Revise suas mãos, pergunte durante o jogo e corrija o leak que mais custa a você.",
+        "supportUrl": "https://universoleappstudios.com/pokergpt/help",
+        "title": "Poker Hands Coach: AI Trainer",
+        "subtitle": "Análise de Poker em Tempo Real",
+        "privacyPolicyUrl": "https://universoleappstudios.com/pokergpt/privacy",
+        "screenshots": {
+          "APP_IPHONE_67": [
+            "store/apple/screenshot/pt-BR/APP_IPHONE_67/iPhones  6.9-01.png",
+            "store/apple/screenshot/pt-BR/APP_IPHONE_67/iPhones  6.9-02.png",
+            "store/apple/screenshot/pt-BR/APP_IPHONE_67/iPhones  6.9-03.png",
+            "store/apple/screenshot/pt-BR/APP_IPHONE_67/iPhones  6.9-04.png",
+            "store/apple/screenshot/pt-BR/APP_IPHONE_67/iPhones  6.9-05.png",
+            "store/apple/screenshot/pt-BR/APP_IPHONE_67/iPhones  6.9-06.png"
+          ]
+        }
+      },
+      "fr-FR": {
+        "description": "Poker Hands Coach est votre coach de poker personnel en temps réel, conçu pour les cash games en direct, les tournois et les parties entre amis.\n\nDécrivez votre main à voix haute ou saisissez-la, et l’application analyse instantanément la meilleure décision grâce à une combinaison de logique GTO et d’exploits adaptés aux tendances réelles des joueurs.\n\nPensé pour les joueurs qui veulent progresser plus vite, prendre des décisions plus claires et appliquer une stratégie qui fonctionne réellement dans les parties d’aujourd’hui.\n\nCe que fait Poker Hands Coach\n\n• Comprend des historiques de mains racontés de façon naturelle\n• Détecte les informations manquantes et pose des questions pertinentes\n• Analyse chaque situation avec une approche GTO, exploitante ou hybride\n• Affiche un score de confiance pour chaque recommandation\n• Sauvegarde vos mains analysées (Premium)\n• Mode Vocal : racontez votre main comme si vous parliez à un ami\n\nPourquoi c’est différent\n\nContrairement aux chatbots génériques, Poker Hands Coach est entraîné spécifiquement sur la structure du poker, les dynamiques de jeu en live et les descriptions conversationnelles.\nIl comprend l’argot du poker, les récits émotionnels et les séquences d’action complexes.\n\nIdéal pour :\n\n• Joueurs de cash game (1€/2€, 2€/5€, 5€/10€ et plus)\n• Joueurs de tournois\n• Débutants apprenant les bases\n• Joueurs intermédiaires voulant corriger leurs leaks\n• Toute personne souhaitant analyser ses mains instantanément\n\nFonctionnalités Premium\n\n• Analyse illimitée des mains\n• Mode Vocal (coaching mains libres)\n• Sauvegarde et historique des mains\n• Analyse hybride GTO + exploit en live\n• Traitement prioritaire de l’IA\n\nPrivacy Policy:\nhttps://universoleappstudios.com/pokergpt/privacy\n\nTerms of Service:\nhttps://universoleappstudios.com/pokergpt/terms",
+        "keywords": [
+          "analyse poker",
+          "coach poker",
+          "strategie poker",
+          "decision poker",
+          "application poker",
+          "cote poker",
+          "main poker"
+        ],
+        "releaseNotes": "Une expérience de démarrage entièrement repensée.\n\nDécrivez une main au coach et obtenez la meilleure décision avec le raisonnement qui l'accompagne. Posez vos questions à voix haute pendant que vous jouez. Répondez à trois questions rapides et recevez un plan basé sur la fuite qui vous coûte le plus cher.",
+        "promoText": "Décrivez une main avec vos mots et obtenez la bonne décision, avec le raisonnement. Revoyez vos mains, posez vos questions en jeu, corrigez votre fuite principale.",
+        "supportUrl": "https://universoleappstudios.com/pokergpt/help",
+        "title": "Poker Hands Coach: AI Trainer",
+        "subtitle": "Analyse poker en temps réel",
+        "privacyPolicyUrl": "https://universoleappstudios.com/pokergpt/privacy",
+        "screenshots": {
+          "APP_IPHONE_67": [
+            "store/apple/screenshot/fr-FR/APP_IPHONE_67/iPhones  6.9-01.png",
+            "store/apple/screenshot/fr-FR/APP_IPHONE_67/iPhones  6.9-02.png",
+            "store/apple/screenshot/fr-FR/APP_IPHONE_67/iPhones  6.9-03.png",
+            "store/apple/screenshot/fr-FR/APP_IPHONE_67/iPhones  6.9-04.png",
+            "store/apple/screenshot/fr-FR/APP_IPHONE_67/iPhones  6.9-05.png",
+            "store/apple/screenshot/fr-FR/APP_IPHONE_67/iPhones  6.9-06.png"
+          ]
+        }
+      },
+      "it": {
+        "description": "Poker Hands Coach è il tuo coach di poker in tempo reale, progettato per cash game live, tornei e partite tra amici.\n\nDescrivi la tua mano a voce o scrivila, e l’app analizzerà immediatamente la decisione migliore utilizzando una combinazione di logica GTO e adattamenti pratici basati sul gioco reale.\n\nPensato per giocatori che vogliono migliorare più velocemente, prendere decisioni più chiare e applicare una strategia che funziona davvero ai tavoli di oggi.\n\nCosa fa Poker Hands Coach\n\n• Comprende mani raccontate in modo naturale\n• Rileva informazioni mancanti e pone domande intelligenti\n• Analizza ogni situazione con approccio GTO, exploit o ibrido\n• Fornisce un punteggio di affidabilità per ogni raccomandazione\n• Salva le mani analizzate (Premium)\n• Modalità Vocale: racconta la mano come a un amico\n\nPerfetto per\n\n• Giocatori di cash game (1€/2€, 2€/5€, 5€/10€+)\n• Giocatori di tornei\n• Principianti che vogliono imparare le basi\n• Giocatori intermedi che vogliono correggere leak\n• Chiunque voglia rivedere le mani all’istante\n\nFunzionalità Premium\n\n• Analisi illimitata delle mani\n• Modalità Vocale (mani libere)\n• Storico e salvataggio delle mani\n• Analisi ibrida (GTO + exploit live)\n• Elaborazione AI prioritaria\n\nPrivacy Policy:\nhttps://universoleappstudios.com/pokergpt/privacy\n\nTerms of Service:\nhttps://universoleappstudios.com/pokergpt/terms",
+        "keywords": [
+          "analisi poker",
+          "app poker",
+          "strategia poker",
+          "coach poker",
+          "mano poker",
+          "cash game",
+          "tornei poker"
+        ],
+        "releaseNotes": "Un'esperienza iniziale completamente rinnovata.\n\nDescrivi una mano al coach e ottieni la giocata migliore con il ragionamento che la spiega. Fai domande ad alta voce mentre giochi. Rispondi a tre domande veloci e ricevi un piano basato sul leak che ti costa di più.",
+        "promoText": "Descrivi una mano con parole tue e ottieni la giocata giusta, con il ragionamento. Rivedi le tue mani, chiedi mentre giochi e correggi il leak che ti costa di più.",
+        "supportUrl": "https://universoleappstudios.com/pokergpt/help",
+        "title": "Poker Hands Coach: AI Trainer",
+        "subtitle": "Analisi Poker in Tempo Reale",
+        "privacyPolicyUrl": "https://universoleappstudios.com/pokergpt/privacy",
+        "screenshots": {
+          "APP_IPHONE_67": [
+            "store/apple/screenshot/it/APP_IPHONE_67/iPhones  6.9-01.png",
+            "store/apple/screenshot/it/APP_IPHONE_67/iPhones  6.9-02.png",
+            "store/apple/screenshot/it/APP_IPHONE_67/iPhones  6.9-03.png",
+            "store/apple/screenshot/it/APP_IPHONE_67/iPhones  6.9-04.png",
+            "store/apple/screenshot/it/APP_IPHONE_67/iPhones  6.9-05.png",
+            "store/apple/screenshot/it/APP_IPHONE_67/iPhones  6.9-06.png"
+          ]
+        }
+      },
+      "en-US": {
+        "description": "Poker Hands Coach is your personal real-time poker coach, built for live cash games, tournaments, and home games.\nSpeak your hand out loud or type it in, and the app instantly breaks down the optimal line using a blend of GTO logic and live population exploits.\n\nDesigned for players who want faster improvement, clearer decisions, and real-world strategy that actually wins in today's games.\n\nWhat Poker Hands Coach Does\n\n• Understands messy, narrative-style hand histories\n• Detects missing info and asks smart clarifying questions\n• Breaks down hands using GTO, exploit, and hybrid logic\n• Gives confidence scores so you understand the strength of each recommendation\n• Saves your analyzed hands (premium)\n• Voice Mode: Tell your hand like you're talking to a friend\n\nWhy It's Different\n\nUnlike generic chatbots, Poker Hands Coach is trained specifically on poker structure, live play patterns, and real conversational phrasing. It interprets slang, emotionally charged descriptions, and complex action sequences.\n\nPerfect For:\n\n• Cash game players ($1/3, $2/5, $5/10, $10/20+)\n• Tournament grinders\n• Beginners learning fundamentals\n• Intermediate players looking to break leaks\n• Anyone who wants to review hands instantly\n\nPremium Features\n\n• Unlimited hand analysis\n• Voice Mode (hands-free coaching)\n• Save and review hand history\n• Hybrid \"GTO + Live Exploit\" solver outputs\n• Priority AI processing\n\nPrivacy Policy: https://universoleappstudios.com/pokergpt/privacy\nTerms of Service: https://universoleappstudios.com/pokergpt/terms",
+        "keywords": [
+          "gto",
+          "preflop",
+          "trainer",
+          "odds",
+          "calculator",
+          "holdem",
+          "texas",
+          "strategy",
+          "cash",
+          "game",
+          "tournament",
+          "range",
+          "equity",
+          "study"
+        ],
+        "releaseNotes": "A completely rebuilt first-run experience.\n\nTell the coach a hand and get the play with the reasoning behind it. Ask out loud while you play. Answer three quick questions and get a plan built around the leak costing you the most.\n\nFaster, clearer, and easier to get started.",
+        "promoText": "Describe any hand in your own words and get the right play, with the reasoning behind it. Review past hands, ask mid-session, and fix the leak costing you the most.",
+        "supportUrl": "https://universoleappstudios.com/pokergpt/help",
+        "title": "Poker Hands Coach: AI Trainer",
+        "subtitle": "AI Poker Coach & Hand Analysis",
+        "privacyPolicyUrl": "https://universoleappstudios.com/pokergpt/privacy",
+        "screenshots": {
+          "APP_IPHONE_65": [
+            "store/apple/screenshot/en-US/APP_IPHONE_65/screen-1-home.png",
+            "store/apple/screenshot/en-US/APP_IPHONE_65/screen-2-analysis.png",
+            "store/apple/screenshot/en-US/APP_IPHONE_65/screen-3-chat.png",
+            "store/apple/screenshot/en-US/APP_IPHONE_65/screen-4-plan.png",
+            "store/apple/screenshot/en-US/APP_IPHONE_65/screen-5-training.png"
+          ],
+          "APP_IPHONE_67": [
+            "store/apple/screenshot/en-US/APP_IPHONE_67/screen-1-home.png",
+            "store/apple/screenshot/en-US/APP_IPHONE_67/screen-2-analysis.png",
+            "store/apple/screenshot/en-US/APP_IPHONE_67/screen-3-chat.png",
+            "store/apple/screenshot/en-US/APP_IPHONE_67/screen-4-plan.png",
+            "store/apple/screenshot/en-US/APP_IPHONE_67/screen-5-training.png"
+          ]
+        }
+      },
+      "de-DE": {
+        "description": "Poker Hands Coach ist dein persönlicher Poker-Coach in Echtzeit, entwickelt für Live Cash Games, Turniere und private Runden.\n\nSprich deine Hand einfach ein oder gib sie ein, und die App analysiert sofort die beste Entscheidung mit einer Kombination aus GTO-Logik und praxisnahen Anpassungen für echte Spieler.\n\nFür alle, die schneller besser werden wollen, klarere Entscheidungen treffen möchten und eine Strategie suchen, die am Tisch wirklich funktioniert.\n\nWas Poker Hands Coach bietet\n\n• Versteht natürlich erzählte Handverläufe\n• Erkennt fehlende Informationen und stellt gezielte Fragen\n• Analysiert Spots mit GTO-, Exploit- oder Hybrid-Ansatz\n• Zeigt eine Vertrauensbewertung für jede Empfehlung\n• Speichert analysierte Hände (Premium)\n• Sprachmodus: Erkläre deine Hand wie einem Freund\n\nIdeal für\n\n• Cash Game Spieler (1€/2€, 2€/5€, 5€/10€+)\n• Turnierspieler\n• Anfänger, die Grundlagen lernen\n• Fortgeschrittene Spieler, die Leaks schließen wollen\n• Alle, die Hände sofort überprüfen möchten\n\nPremium Funktionen\n\n• Unbegrenzte Handanalyse\n• Sprachmodus (freihändige Nutzung)\n• Hand-Historie speichern und überprüfen\n• Hybrid-Auswertung (GTO + Live Anpassung)\n• Priorisierte KI-Verarbeitung\n\nPrivacy Policy:\nhttps://universoleappstudios.com/pokergpt/privacy\n\nTerms of Service:\nhttps://universoleappstudios.com/pokergpt/terms",
+        "keywords": [
+          "poker analyse",
+          "poker app",
+          "poker strategie",
+          "poker coach",
+          "handanalyse",
+          "cash game",
+          "pot odds"
+        ],
+        "releaseNotes": "Ein komplett neu gestalteter Einstieg.\n\nBeschreiben Sie dem Coach eine Hand und erhalten Sie die beste Entscheidung samt Begründung. Stellen Sie Ihre Fragen laut, während Sie spielen. Beantworten Sie drei kurze Fragen und erhalten Sie einen Plan, der auf dem Leak basiert, der Sie am meisten kostet.",
+        "promoText": "Beschreiben Sie eine Hand in eigenen Worten und erhalten Sie die richtige Entscheidung samt Begründung. Analysieren Sie Hände und beheben Sie Ihren größten Leak.",
+        "supportUrl": "https://universoleappstudios.com/pokergpt/help",
+        "title": "Poker Hands Coach: AI Trainer",
+        "subtitle": "Poker Analyse in Echtzeit",
+        "privacyPolicyUrl": "https://universoleappstudios.com/pokergpt/privacy",
+        "screenshots": {
+          "APP_IPHONE_67": [
+            "store/apple/screenshot/de-DE/APP_IPHONE_67/iPhones  6.9-01.png",
+            "store/apple/screenshot/de-DE/APP_IPHONE_67/iPhones  6.9-02.png",
+            "store/apple/screenshot/de-DE/APP_IPHONE_67/iPhones  6.9-03.png",
+            "store/apple/screenshot/de-DE/APP_IPHONE_67/iPhones  6.9-04.png",
+            "store/apple/screenshot/de-DE/APP_IPHONE_67/iPhones  6.9-05.png",
+            "store/apple/screenshot/de-DE/APP_IPHONE_67/iPhones  6.9-06.png"
+          ]
+        }
+      }
+    },
+    "categories": [
+      "EDUCATION",
+      "UTILITIES"
+    ],
+    "advisory": {
+      "ageRatingOverride": "NONE",
+      "alcoholTobaccoOrDrugUseOrReferences": "NONE",
+      "contests": "NONE",
+      "gambling": false,
+      "gamblingSimulated": "FREQUENT_OR_INTENSE",
+      "horrorOrFearThemes": "NONE",
+      "kidsAgeBand": null,
+      "koreaAgeRatingOverride": "NONE",
+      "lootBox": false,
+      "matureOrSuggestiveThemes": "NONE",
+      "medicalOrTreatmentInformation": "NONE",
+      "profanityOrCrudeHumor": "NONE",
+      "sexualContentGraphicAndNudity": "NONE",
+      "sexualContentOrNudity": "NONE",
+      "unrestrictedWebAccess": false,
+      "violenceCartoonOrFantasy": "NONE",
+      "violenceRealistic": "NONE",
+      "violenceRealisticProlongedGraphicOrSadistic": "NONE",
+      "advertising": false,
+      "ageAssurance": false,
+      "ageRatingOverrideV2": "NONE",
+      "developerAgeRatingInfoUrl": null,
+      "gunsOrOtherWeapons": "NONE",
+      "healthOrWellnessTopics": false,
+      "messagingAndChat": false,
+      "parentalControls": false,
+      "userGeneratedContent": false
+    },
+    "review": {
+      "firstName": "",
+      "lastName": "",
+      "email": "",
+      "phone": "",
+      "demoRequired": false
+    }
+  }
+}

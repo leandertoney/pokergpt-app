@@ -19,6 +19,8 @@
 import React, { useCallback, useState } from 'react';
 import {
   View,
+  Image,
+  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -27,6 +29,7 @@ import {
   ActivityIndicator,
   type ViewStyle,
   type TextStyle,
+  type ImageStyle,
 } from 'react-native';
 import { Stack, useRouter, useFocusEffect } from 'expo-router';
 import {
@@ -42,6 +45,8 @@ import { getUserDisplayName, setUserDisplayName } from '@/services/storageServic
 import { getProfileStats, type ProfileStats } from '@/services/profileStats';
 import { colors } from '@/constants/colors';
 import { BottomNav } from '@/components/BottomNav';
+import { getAvatarUri, pickAvatar, clearAvatar } from '@/services/avatarService';
+import { trackAppEvent } from '@/services/appAnalytics';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -49,6 +54,7 @@ export default function ProfileScreen() {
   const [stats, setStats] = useState<ProfileStats | null>(null);
   const [editingName, setEditingName] = useState(false);
   const [draftName, setDraftName] = useState('');
+  const [avatarUri, setAvatarUri] = useState<string | null>(null);
 
   // Refetch on focus: hands and sessions change elsewhere in the app, and a
   // profile showing yesterday's counts is worse than one that loads briefly.
@@ -56,8 +62,11 @@ export default function ProfileScreen() {
     useCallback(() => {
       let cancelled = false;
       (async () => {
-        const s = await getProfileStats();
-        if (!cancelled) setStats(s);
+        const [s, uri] = await Promise.all([getProfileStats(), getAvatarUri()]);
+        if (!cancelled) {
+          setStats(s);
+          setAvatarUri(uri);
+        }
       })();
       return () => {
         cancelled = true;
@@ -69,6 +78,37 @@ export default function ProfileScreen() {
     setDraftName((await getUserDisplayName()) ?? '');
     setEditingName(true);
   }, []);
+
+  const onAvatarPress = useCallback(() => {
+    const options: any[] = [
+      {
+        text: avatarUri ? 'Choose a different photo' : 'Choose a photo',
+        onPress: async () => {
+          const uri = await pickAvatar();
+          if (uri) {
+            setAvatarUri(uri);
+            trackAppEvent('avatar_set');
+          }
+        },
+      },
+      { text: 'Edit name', onPress: () => beginEditName() },
+    ];
+
+    if (avatarUri) {
+      options.push({
+        text: 'Remove photo',
+        style: 'destructive',
+        onPress: async () => {
+          await clearAvatar();
+          setAvatarUri(null);
+          trackAppEvent('avatar_cleared');
+        },
+      });
+    }
+
+    options.push({ text: 'Cancel', style: 'cancel' });
+    Alert.alert('Profile picture', undefined, options);
+  }, [avatarUri, beginEditName]);
 
   const commitName = useCallback(async () => {
     const trimmed = draftName.trim();
@@ -112,7 +152,7 @@ export default function ProfileScreen() {
         >
           {/* Identity */}
           <View style={styles.ident}>
-            <Monogram name={stats.displayName} onPress={beginEditName} />
+            <Avatar uri={avatarUri} name={stats.displayName} onPress={onAvatarPress} />
 
             <View style={styles.identText}>
               {editingName ? (
@@ -276,26 +316,37 @@ export default function ProfileScreen() {
 }
 
 /**
- * Initial-based avatar.
+ * Profile picture, with the initial as its fallback.
  *
- * A real photo needs expo-image-picker registered as a config plugin plus
- * NSPhotoLibraryUsageDescription in app.json — both native changes, so it
- * cannot ship over the air and is waiting on the next build. Until then this is
- * a deliberate monogram rather than an empty placeholder, and tapping it edits
- * the name so it is never a dead control.
+ * The monogram is not a placeholder for a missing image -- it is what someone
+ * who never sets a photo keeps, so it has to look deliberate rather than empty.
+ * Tapping either state opens the same menu.
  */
-function Monogram({ name, onPress }: { name: string | null; onPress: () => void }) {
+function Avatar({
+  uri,
+  name,
+  onPress,
+}: {
+  uri: string | null;
+  name: string | null;
+  onPress: () => void;
+}) {
   const initial = (name?.trim()?.[0] ?? '?').toUpperCase();
+
   return (
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.8}
       accessibilityRole="button"
-      accessibilityLabel="Edit your name"
+      accessibilityLabel={uri ? 'Change your profile picture' : 'Add a profile picture'}
     >
-      <View style={styles.avatar}>
-        <Text style={styles.avatarText}>{initial}</Text>
-      </View>
+      {uri ? (
+        <Image source={{ uri }} style={styles.avatarImage} />
+      ) : (
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>{initial}</Text>
+        </View>
+      )}
     </TouchableOpacity>
   );
 }
@@ -352,6 +403,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   } as ViewStyle,
   avatarText: { fontSize: 23, fontWeight: '800', color: colors.text.dark } as TextStyle,
+  avatarImage: {
+    width: 56,
+    height: 56,
+    borderRadius: 999,
+    borderWidth: 2,
+    borderColor: colors.accent.gold,
+  } as ImageStyle,
   identText: { flex: 1, minWidth: 0 } as ViewStyle,
 
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 } as ViewStyle,

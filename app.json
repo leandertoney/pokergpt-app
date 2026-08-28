@@ -24,8 +24,9 @@
           "audio"
         ],
         "NSMicrophoneUsageDescription": "Poker Hands Coach uses the microphone for hands-free voice conversations with your AI poker coach. Speak naturally to discuss hands and get instant strategy advice.",
-        "NSCameraUsageDescription": "Poker Hands Coach does not use the camera. This permission is declared by the voice chat framework and is never requested.",
-        "ITSAppUsesNonExemptEncryption": false
+        "NSCameraUsageDescription": "Poker Hands Coach does not use the camera. This permission is declared by frameworks the app depends on and is never requested.",
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSPhotoLibraryUsageDescription": "Poker Hands Coach lets you choose a photo from your library to use as your profile picture. Photos stay on your device and are never uploaded."
       }
     },
     "android": {
@@ -79,6 +80,12 @@
             "targetSdkVersion": 36,
             "minSdkVersion": 24
           }
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Choose a photo for your profile picture. Photos stay on your device."
         }
       ]
     ],
