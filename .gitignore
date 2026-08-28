@@ -44,3 +44,4 @@ _archive_*/
 *.aab
 # Play publishing service account key (never commit)
 google-service-account.json
+TRIAL_ANALYSIS_*.md

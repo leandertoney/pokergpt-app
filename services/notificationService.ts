@@ -283,6 +283,15 @@ export async function getInitialNotification(): Promise<NotificationData | null>
 
 const EXPO_PROJECT_ID = '74438842-5df3-4dd3-96e1-35306d266aa5';
 
+/**
+ * Get the Expo push token, if permission has already been granted.
+ *
+ * This only READS permission — it never prompts. The OS notification prompt can
+ * be shown once per install, so the decision of when to spend it belongs to a
+ * screen that has earned it (see requestAndRegisterPushToken), not to app
+ * startup. Calling this at launch before anything has asked is exactly why 0 of
+ * the last 34 signups had a token.
+ */
 export async function registerExpoPushToken(): Promise<string | null> {
   if (!Device.isDevice) {
     console.log('Push tokens require a physical device');
@@ -303,6 +312,34 @@ export async function registerExpoPushToken(): Promise<string | null> {
   } catch (error) {
     console.warn('Failed to get Expo push token:', error);
     return null;
+  }
+}
+
+/**
+ * Ask for notification permission, then register and sync the token.
+ *
+ * This is the one place that spends the OS prompt. It must be called from a
+ * screen that has already told the player what they get, because the system
+ * dialog only appears once per install and a denial is permanent without a trip
+ * to Settings.
+ *
+ * @returns true if permission was granted and a token was stored.
+ */
+export async function requestAndRegisterPushToken(): Promise<boolean> {
+  try {
+    const granted = await requestNotificationPermissions();
+    if (!granted) return false;
+
+    const token = await registerExpoPushToken();
+    if (!token) return false;
+
+    await syncPushTokenToSupabase(token);
+    return true;
+  } catch (e: any) {
+    // Never surface this. A failed token is a missed re-engagement, not
+    // something the player needs to see or resolve mid-onboarding.
+    console.warn('[notifications] request+register failed:', e?.message);
+    return false;
   }
 }
 
