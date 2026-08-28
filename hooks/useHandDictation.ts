@@ -18,6 +18,7 @@ import {
   AudioModule,
   setAudioModeAsync,
 } from 'expo-audio';
+import * as FileSystem from 'expo-file-system/legacy';
 import { withTimeout } from '@/utils/withTimeout';
 
 const OPENAI_API_KEY = process.env.EXPO_PUBLIC_OPENAI_API_KEY || '';
@@ -63,6 +64,11 @@ export function useHandDictation() {
       }
 
       await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
+
+      // expo-audio's contract is prepare-then-record. Skipping prepare can
+      // produce a missing or unfinalised file, which surfaces later as an empty
+      // transcript or an upload that never completes.
+      await recorder.prepareToRecordAsync();
       await recorder.record();
 
       activeRef.current = true;
@@ -120,39 +126,56 @@ export function useHandDictation() {
   return { state, transcript, start, stopAndTranscribe, cancel, lastError: lastErrorRef };
 }
 
+/**
+ * Upload the recording and return what was said.
+ *
+ * Uses FileSystem.uploadAsync rather than fetch with a multipart FormData.
+ * React Native's fetch does not stream file bodies reliably on device -- the
+ * first live run of this flow timed out after 20s uploading a clip of a few
+ * seconds, while the same file and key transcribed in under two seconds from a
+ * laptop. uploadAsync hands the file to the platform's native upload task
+ * instead, which is the supported path for this in Expo.
+ */
 async function transcribe(audioUri: string): Promise<string> {
   if (!OPENAI_API_KEY) {
     console.warn('[dictation] no OpenAI key');
-    return '';
+    throw new Error('no_api_key');
   }
 
-  const formData = new FormData();
-  formData.append('file', {
-    uri: audioUri,
-    type: 'audio/m4a',
-    name: 'audio.m4a',
-  } as any);
-  formData.append('model', 'gpt-4o-mini-transcribe');
+  // Recorded file facts go into telemetry on failure: a zero-byte or
+  // unexpected-extension file convicts the recorder, a healthy file that still
+  // fails convicts the transport.
+  const info = await FileSystem.getInfoAsync(audioUri).catch(() => null);
+  const size = info && 'size' in info ? (info.size as number) : -1;
+  if (!info?.exists || size <= 0) {
+    throw new Error(`empty_file_${size}`);
+  }
 
-  const response = await withTimeout(
-    fetch('https://api.openai.com/v1/audio/transcriptions', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${OPENAI_API_KEY}` },
-      body: formData,
-    }),
-    20000,
+  const result = await withTimeout(
+    FileSystem.uploadAsync(
+      'https://api.openai.com/v1/audio/transcriptions',
+      audioUri,
+      {
+        httpMethod: 'POST',
+        uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+        fieldName: 'file',
+        mimeType: 'audio/m4a',
+        parameters: { model: 'gpt-4o-mini-transcribe' },
+        headers: { Authorization: `Bearer ${OPENAI_API_KEY}` },
+      }
+    ),
+    30000,
     'Onboarding transcription'
   );
 
-  // Previously this returned '' on any non-OK response, so a failed
-  // transcription was indistinguishable from a silent recording and the flow
-  // fell through to the generic questions with no way to tell why.
-  if (!response.ok) {
-    const detail = await response.text().catch(() => '');
-    console.warn('[dictation] transcribe HTTP', response.status, detail.slice(0, 200));
-    throw new Error(`transcribe_http_${response.status}`);
+  if (result.status !== 200) {
+    console.warn('[dictation] transcribe HTTP', result.status, String(result.body).slice(0, 200));
+    throw new Error(`transcribe_http_${result.status}_size${size}`);
   }
 
-  const data = await response.json();
-  return data.text || '';
+  try {
+    return JSON.parse(result.body)?.text || '';
+  } catch {
+    throw new Error('transcribe_bad_json');
+  }
 }

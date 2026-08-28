@@ -297,7 +297,7 @@ export type TryHandResult = {
   notificationsEnabled: boolean;
 };
 
-type Phase = 'invite' | 'listening' | 'stakes' | 'analyzing' | 'verdict' | 'notify';
+type Phase = 'invite' | 'listening' | 'retry' | 'stakes' | 'analyzing' | 'verdict' | 'notify';
 
 /**
  * Drives the five try-it screens and hands the outcome back to OnboardingV3.
@@ -343,6 +343,8 @@ export function TryHandFlow({ onDone }: { onDone: (r: TryHandResult) => void }) 
     setPhase('listening');
   }, [dictation, bail]);
 
+  const retriedRef = useRef(false);
+
   const stopRecording = useCallback(async () => {
     // Move off the live-mic screen FIRST. stopAndTranscribe awaits a recorder
     // stop plus a Whisper call with a 20s timeout; leaving the phase on
@@ -355,7 +357,17 @@ export function TryHandFlow({ onDone }: { onDone: (r: TryHandResult) => void }) 
       failure: text ? null : (dictation.lastError.current ?? 'unknown'),
     });
     if (!text.trim()) {
-      bail(dictation.lastError.current ?? 'empty_transcript');
+      const reason = dictation.lastError.current ?? 'empty_transcript';
+      // Falling silently forward is right for a hand we could not READ, but
+      // after someone has visibly spoken it just looks broken. One retry, then
+      // move on -- never an error wall inside onboarding.
+      if (!retriedRef.current) {
+        retriedRef.current = true;
+        trackOnboardingEvent('try_hand_retry_offered', { reason });
+        setPhase('retry');
+        return;
+      }
+      bail(reason);
       return;
     }
     setPhase('stakes');
@@ -429,6 +441,17 @@ export function TryHandFlow({ onDone }: { onDone: (r: TryHandResult) => void }) 
         />
       );
 
+    case 'retry':
+      return (
+        <TryHandRetry
+          onRetry={() => {
+            trackOnboardingEvent('try_hand_retry_taken');
+            void startRecording();
+          }}
+          onSkip={() => bail('declined_retry')}
+        />
+      );
+
     case 'analyzing':
       return <AnalyzingScreen />;
 
@@ -455,6 +478,36 @@ export function TryHandFlow({ onDone }: { onDone: (r: TryHandResult) => void }) 
         />
       );
   }
+}
+
+/** Shown once when a recording produced nothing usable. */
+export function TryHandRetry({
+  onRetry,
+  onSkip,
+}: {
+  onRetry: () => void;
+  onSkip: () => void;
+}) {
+  return (
+    <Screen
+      progress={0.38}
+      eyebrow="One more go"
+      headline={"Didn't catch that."}
+      support="Tap the mic, wait a beat, then say the spot. A few seconds is plenty."
+      footer={
+        <>
+          <PrimaryButton label="Try again" onPress={onRetry} />
+          <TextButton label="Skip for now" onPress={onSkip} />
+        </>
+      }
+    >
+      <View style={s.micWrap}>
+        <Pressable onPress={onRetry} style={s.micButton}>
+          <Mic size={34} color={colors.text.dark} />
+        </Pressable>
+      </View>
+    </Screen>
+  );
 }
 
 /** Brief hold while the model reads the hand. */
