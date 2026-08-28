@@ -84,13 +84,24 @@ export async function getProfileStats(): Promise<ProfileStats> {
 
   const handsThisWeek = handTimes.filter((t) => now - t < WEEK_MS).length;
 
+  // A hand worked today IS a review, whether it came from the daily flow or
+  // from speaking a spot in onboarding. creditReviewForToday handles that going
+  // forward, but hands saved before it existed were never credited, and showing
+  // someone a hand they did today next to a streak of 0 tells them their work
+  // did not count. Reconcile at read time rather than backfilling storage.
+  const reviewedToday = handTimes.some((t) => isSameDay(t, now));
+  const currentStreak = Math.max(
+    review.currentStreak ?? 0,
+    reviewedToday ? 1 : 0
+  );
+
   return {
     displayName: name,
     tier: tier === 'paid' ? 'paid' : 'free',
     playsLine: buildPlaysLine(identity),
 
-    currentStreak: review.currentStreak ?? 0,
-    bestStreak: review.bestStreak ?? 0,
+    currentStreak,
+    bestStreak: Math.max(review.bestStreak ?? 0, currentStreak),
 
     handsTotal: hands.length,
     handsThisWeek,
@@ -140,6 +151,16 @@ function bucketByWeek(timestamps: number[], now: number): number[] {
   const peak = Math.max(...buckets);
   if (peak === 0) return buckets;
   return buckets.map((n) => n / peak);
+}
+
+function isSameDay(a: number, b: number): boolean {
+  const x = new Date(a);
+  const y = new Date(b);
+  return (
+    x.getFullYear() === y.getFullYear() &&
+    x.getMonth() === y.getMonth() &&
+    x.getDate() === y.getDate()
+  );
 }
 
 function relativeDay(ts: number, now: number): string {

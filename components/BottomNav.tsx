@@ -69,7 +69,7 @@ export function BottomNav({ active }: { active: NavTab }) {
         accessibilityLabel="Talk through a hand"
       >
         <View style={styles.fab}>
-          <Mic size={22} color={colors.text.dark} />
+          <Mic size={26} color={colors.text.dark} />
         </View>
       </Pressable>
 
@@ -100,7 +100,7 @@ function Tab({
       hitSlop={6}
     >
       <Icon
-        size={19}
+        size={24}
         color={active ? colors.accent.gold : colors.text.secondary}
         strokeWidth={active ? 2.4 : 2}
       />
@@ -116,35 +116,36 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'space-around',
-    paddingTop: 8,
-    paddingHorizontal: 6,
+    paddingTop: 12,
+    paddingHorizontal: 4,
     backgroundColor: colors.background.shadow,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: 'rgba(244,232,216,0.13)',
   } as ViewStyle,
 
-  tab: { flex: 1, alignItems: 'center', gap: 3, paddingVertical: 2 } as ViewStyle,
+  tab: { flex: 1, alignItems: 'center', gap: 5, paddingVertical: 4 } as ViewStyle,
   label: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '600',
+    letterSpacing: -0.1,
     color: colors.text.secondary,
-    opacity: 0.75,
+    opacity: 0.8,
   } as TextStyle,
   labelActive: { color: colors.accent.gold, opacity: 1, fontWeight: '700' } as TextStyle,
 
   // Raised out of the bar, so the product's core action is the one control
   // that does not look like a menu item.
-  fabWrap: { width: 62, alignItems: 'center', justifyContent: 'flex-end' } as ViewStyle,
+  fabWrap: { width: 76, alignItems: 'center', justifyContent: 'flex-end' } as ViewStyle,
   fabPressed: { opacity: 0.85 } as ViewStyle,
   fab: {
-    width: 50,
-    height: 50,
+    width: 60,
+    height: 60,
     borderRadius: 999,
     backgroundColor: colors.accent.gold,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 4,
-    marginTop: -22,
+    marginBottom: 6,
+    marginTop: -26,
     ...Platform.select({
       ios: {
         shadowColor: '#000',
