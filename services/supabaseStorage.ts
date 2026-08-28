@@ -9,6 +9,7 @@ import type { SessionPreferences } from "@/types/session";
 import { storeHand as storeHandLocally, deleteHand as deleteHandLocally } from "@/services/storageService";
 import { scheduleHandFollowup } from "@/services/handFollowup";
 import { trackAppEvent } from "@/services/appAnalytics";
+import { creditReviewForToday } from "@/services/dailyReviewService";
 
 interface User {
   id: string;
@@ -183,6 +184,9 @@ export async function storeHand(
     action: analysis?.recommendedAction ?? null,
   });
   void scheduleHandFollowup(handData, analysis);
+  // Working a real spot counts toward the streak wherever it happened,
+  // including during onboarding.
+  void creditReviewForToday();
 
   if (!isSupabaseConfigured() || !supabase) {
     return;

@@ -42,6 +42,7 @@ import {
 import { getUserDisplayName, setUserDisplayName } from '@/services/storageService';
 import { getProfileStats, type ProfileStats } from '@/services/profileStats';
 import { colors } from '@/constants/colors';
+import { BottomNav } from '@/components/BottomNav';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -81,7 +82,7 @@ export default function ProfileScreen() {
   }, [draftName]);
 
   return (
-    <View style={[styles.container, { paddingBottom: insets.bottom }]}>
+    <View style={styles.container}>
       <Stack.Screen
         options={{
           title: 'Your Game',
@@ -170,7 +171,7 @@ export default function ProfileScreen() {
                   )}
                 </View>
                 <Text style={styles.statDetail}>
-                  {stats.bestStreak > 0 ? `Best ever: ${stats.bestStreak} days` : 'Review a hand to start one'}
+                  {stats.bestStreak > 1 ? `Best ever: ${stats.bestStreak} days` : 'Come back tomorrow to make it two'}
                 </Text>
               </View>
 
@@ -251,6 +252,8 @@ export default function ProfileScreen() {
           )}
         </ScrollView>
       )}
+
+      <BottomNav active="profile" />
     </View>
   );
 }

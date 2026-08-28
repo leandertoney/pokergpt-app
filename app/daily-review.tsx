@@ -11,6 +11,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { colors } from '@/constants/colors';
+import { BottomNav } from '@/components/BottomNav';
 import { useDailyReview, ReviewStep } from '@/hooks/useDailyReview';
 import { ReviewAnswer } from '@/types/dailyReview';
 
@@ -344,7 +345,8 @@ export default function DailyReviewScreen() {
             <Text style={styles.loadingText}>Loading your review...</Text>
           </View>
         </LinearGradient>
-      </SafeAreaView>
+        <BottomNav active="daily" />
+    </SafeAreaView>
     );
   }
 
@@ -358,7 +360,7 @@ export default function DailyReviewScreen() {
         >
           <View style={styles.alreadyReviewedContainer}>
             <Text style={styles.alreadyReviewedEmoji}>✓</Text>
-            <Text style={styles.alreadyReviewedTitle}>Today's Review Complete!</Text>
+            <Text style={styles.alreadyReviewedTitle}>Today&apos;s Review Complete!</Text>
             <Text style={styles.alreadyReviewedText}>
               Come back tomorrow to continue your streak.
             </Text>
@@ -371,7 +373,8 @@ export default function DailyReviewScreen() {
             </TouchableOpacity>
           </View>
         </LinearGradient>
-      </SafeAreaView>
+        <BottomNav active="daily" />
+    </SafeAreaView>
     );
   }
 
@@ -407,6 +410,7 @@ export default function DailyReviewScreen() {
           />
         )}
       </LinearGradient>
+      <BottomNav active="daily" />
     </SafeAreaView>
   );
 }

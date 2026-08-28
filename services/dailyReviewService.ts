@@ -324,6 +324,44 @@ export function getAccuracyPercentage(state: DailyReviewState): number {
 }
 
 // Reset daily review state (for testing)
+/**
+ * Count a hand the player worked through outside the daily-review flow.
+ *
+ * Onboarding has them speak a real spot and read a real verdict, which is the
+ * same work a daily review is. Without this the streak stayed at 0 while the
+ * profile showed a hand they had just done -- the app telling them they had
+ * done nothing, on the screen built to show progress. Nobody should be started
+ * from zero when they have in fact already put a hand in.
+ *
+ * Idempotent per day: a second hand on the same date does not double-count.
+ */
+export async function creditReviewForToday(): Promise<void> {
+  try {
+    const state = await getDailyReviewState();
+    const today = getTodayString();
+
+    if (state.lastReviewDate && isToday(state.lastReviewDate)) return;
+
+    const newStreak =
+      state.lastReviewDate === null
+        ? 1
+        : isConsecutiveDay(state.lastReviewDate, today)
+          ? state.currentStreak + 1
+          : 1;
+
+    await saveDailyReviewState({
+      ...state,
+      currentStreak: newStreak,
+      bestStreak: Math.max(state.bestStreak ?? 0, newStreak),
+      lastReviewDate: today,
+      totalReviewed: (state.totalReviewed ?? 0) + 1,
+    });
+  } catch (e: any) {
+    // A missed streak credit must never cost the player their hand.
+    console.warn('[dailyReview] credit failed:', e?.message);
+  }
+}
+
 export async function resetDailyReviewState(): Promise<void> {
   await AsyncStorage.removeItem(DAILY_REVIEW_KEY);
 }

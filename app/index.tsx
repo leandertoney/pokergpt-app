@@ -3,7 +3,7 @@ import { View, StyleSheet, Text, TouchableOpacity, FlatList, Animated, KeyboardA
 import { useRouter, useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { MessageCircle, Star, User } from 'lucide-react-native';
+import { MessageCircle, Star, Search } from 'lucide-react-native';
 import { SpotifyHandCard } from '@/components/SpotifyHandCard';
 import { ChatCard } from '@/components/ChatCard';
 import { SessionCard } from '@/components/SessionCard';
@@ -19,7 +19,8 @@ import { LoadingIndicator } from '@/components/LoadingIndicator';
 import CardPicker from '@/components/CardPicker';
 import { checkOnboardingComplete } from '@/components/OnboardingV2';
 import { OnboardingV3 } from '@/components/OnboardingV3';
-import { DailyReviewCard } from '@/components/DailyReviewCard';
+import { BottomNav } from '@/components/BottomNav';
+import { trackScreen } from '@/services/appAnalytics';
 import { useHandHistory, type StoredHandEntryWithName } from '@/hooks/useHandHistory';
 import { useChatHistory } from '@/hooks/useChatHistory';
 import { useFavorites } from '@/hooks/useFavorites';
@@ -94,6 +95,13 @@ export default function HomeScreen() {
 
   // Active filter state
   const [activeFilter, setActiveFilter] = useState<FilterOption>('all');
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  // Home was invisible in telemetry; the nav change is the first thing that
+  // needs measuring rather than arguing about.
+  useEffect(() => {
+    trackScreen('home');
+  }, []);
 
   // Selected hand for detail view
   const [selectedHand, setSelectedHand] = useState<StoredHandEntryWithName | null>(null);
@@ -636,8 +644,13 @@ Only return the JSON array, nothing else.`;
               resizeMode="contain"
             />
             <Text style={styles.headerTitle}>Poker Hands Coach</Text>
-            <TouchableOpacity onPress={() => router.push('/profile')}>
-              <User size={22} color={colors.text.muted} />
+            <TouchableOpacity
+              onPress={() => setSearchOpen((v) => !v)}
+              accessibilityRole="button"
+              accessibilityLabel="Search your hands"
+              hitSlop={8}
+            >
+              <Search size={22} color={searchOpen ? colors.accent.gold : colors.text.muted} />
             </TouchableOpacity>
           </View>
           {isLoading ? (
@@ -649,9 +662,6 @@ Only return the JSON array, nothing else.`;
             </View>
           ) : (
             <View style={styles.content}>
-              {/* Daily Review Card */}
-              <DailyReviewCard />
-
               {/* Filter Chips */}
               <FilterChips
                 activeFilter={activeFilter}
@@ -744,21 +754,26 @@ Only return the JSON array, nothing else.`;
                 }}
               />
 
-              {/* Search Bar with Speak Button */}
-              <SearchBottomBar
-                value={searchQuery}
-                onChangeText={(text) => {
-                  setSearchQuery(text);
-                  if (aiSearchResults !== null) {
-                    setAISearchResults(null);
-                  }
-                }}
-                onSubmit={performAISearch}
-              />
+              {/* Search stays available, but above the nav rather than owning
+                  the most reachable strip of the screen. */}
+              {searchOpen && (
+                <SearchBottomBar
+                  value={searchQuery}
+                  onChangeText={(text) => {
+                    setSearchQuery(text);
+                    if (aiSearchResults !== null) {
+                      setAISearchResults(null);
+                    }
+                  }}
+                  onSubmit={performAISearch}
+                />
+              )}
             </View>
           )}
         </LinearGradient>
       </KeyboardAvoidingView>
+
+      <BottomNav active="home" />
 
       {/* Result Overlay */}
       {selectedHand && (
