@@ -26,25 +26,24 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 
 import { Screen, PrimaryButton, TextButton, Choice, NameField } from './onboarding/ui/Primitives';
 import { buildPlanAnalysis } from './onboarding/planAnalysis';
 import {
-  AnalysisVisual,
   BuildingSteps,
   WelcomeVisual,
-  AnalyzeVisual,
   LiveVisual,
-  ReviewVisual,
   QuestionVisual,
-  PlanVisual,
 } from './onboarding/ui/Visuals';
 import { PaywallV2 } from './onboarding/PaywallV2';
-import { colors } from '@/constants/colors';
-import { spacing, radius, type as t } from '@/constants/theme';
+import { TryHandFlow, type TryHandResult } from './onboarding/TryHandScreens';
+import { ResultsScreen } from './onboarding/ResultsScreen';
+import { DealingScreen } from './onboarding/DealingScreen';
+import { PlanVisualV2 } from './onboarding/PlanVisualV2';
+import { spacing } from '@/constants/theme';
 import { trackOnboardingEvent } from '@/services/onboardingAnalytics';
 import { setUserTier, setUserIdentity, setPaywallState, setOnboardingProfile, setUserDisplayName } from '@/services/storageService';
 import { checkSubscriptionStatus } from '@/services/revenueCat';
@@ -54,26 +53,43 @@ const ONBOARDING_COMPLETE_KEY = '@onboarding_v2_complete';
 
 type Step =
   | 'welcome'
-  | 'value_analyze'
   | 'value_live'
-  | 'value_review'
+  | 'try_hand'
   | 'q_play_where'
-  | 'q_stakes'
   | 'q_leak'
   | 'building'
+  | 'dealing'
   | 'plan'
+  | 'results'
   | 'paywall';
 
+/**
+ * Flow order, value-first.
+ *
+ * The three value screens that used to sit here described what the app does;
+ * 'try_hand' now lets the player do it instead, roughly 30 seconds in rather
+ * than after the paywall. Published onboarding benchmarks put drop-off at
+ * 10-15% per screen shown before any value lands, which is what the old order
+ * was spending on explanation.
+ *
+ * 'value_live' survives alone because it teaches the exact interaction the very
+ * next screen asks for cold — talking to the app out loud.
+ *
+ * The profile questions move behind the payoff (progressive profiling). Both of
+ * this app's paying trials skipped them, so asking first cost real screens for
+ * data neither payer gave. Stakes is the exception and is asked inside the
+ * try-it flow, where the reason for asking is self-evident.
+ */
 const STEPS: Step[] = [
   'welcome',
-  'value_analyze',
   'value_live',
-  'value_review',
+  'try_hand',
   'q_play_where',
-  'q_stakes',
   'q_leak',
   'building',
+  'dealing',
   'plan',
+  'results',
   'paywall',
 ];
 
@@ -115,6 +131,10 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
   const [stakes, setStakes] = useState<string | null>('low');
   const [leak, setLeak] = useState<string | null>('call_too_much');
   const [name, setName] = useState<string | null>(null);
+  // Outcome of the try-it sequence. Null when the player skipped it, the mic was
+  // denied, or the model could not read what they said — all of which are normal
+  // paths, not errors, and all of which continue to the plan.
+  const [tryResult, setTryResult] = useState<TryHandResult | null>(null);
 
   const index = STEPS.indexOf(step);
   const progress = index / (STEPS.length - 1);
@@ -159,7 +179,9 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
         frequency: null,
         goalTimeline: null,
         referralSource: where,
-        notificationsEnabled: false,
+        // Carries the real answer now. This was hardcoded false, so the profile
+        // recorded a decision the player was never actually asked to make.
+        notificationsEnabled: tryResult?.notificationsEnabled ?? false,
       };
 
       await AsyncStorage.setItem(ONBOARDING_COMPLETE_KEY, 'true');
@@ -173,7 +195,7 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
       console.warn('[onboarding] completion save failed', e);
     }
     onComplete();
-  }, [where, stakes, leak, name, onComplete]);
+  }, [where, stakes, leak, name, onComplete, tryResult]);
 
   const onPurchase = useCallback(async () => {
     const status = await checkSubscriptionStatus();
@@ -198,28 +220,13 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
           reveal
           accent={['guessing']}
           support="Know the right play, every hand."
-          footer={<PrimaryButton label="Get started" onPress={() => go('value_analyze')} />}
+          footer={<PrimaryButton label="Get started" onPress={() => go('value_live')} />}
         >
           <WelcomeVisual />
         </Screen>
       );
 
-    // -- Three value screens. One idea each, no photos, no scripted waiting. --
-    case 'value_analyze':
-      return (
-        <Screen
-          progress={progress}
-          onBack={back}
-          headline={'Call or fold?\nKnow in seconds.'}
-          reveal
-          accent={['call', 'fold']}
-          support="Say what happened. Get the play and the reason."
-          footer={<PrimaryButton label="Next" onPress={() => go('value_live')} />}
-        >
-          <AnalyzeVisual />
-        </Screen>
-      );
-
+    // -- One value screen. It teaches the interaction the next screen needs. --
     case 'value_live':
       return (
         <Screen
@@ -228,26 +235,29 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
           headline={'Ask out loud,\nmid-hand.'}
           reveal
           accent={['loud', 'mid-hand']}
-          support="Use it live at the table or at home."
-          footer={<PrimaryButton label="Next" onPress={() => go('value_review')} />}
+          support="Say what happened. Get the play and the reason, in seconds."
+          footer={<PrimaryButton label="Try it on a hand" onPress={() => go('try_hand')} />}
         >
           <LiveVisual />
         </Screen>
       );
 
-    case 'value_review':
+    // -- The player uses the product. Five sub-screens, all failures fall
+    //    forward to the questions. See TryHandScreens.tsx. --
+    case 'try_hand':
       return (
-        <Screen
-          progress={progress}
-          onBack={back}
-          headline={'Plug the leak\ndraining your stack.'}
-          reveal
-          accent={['leak', 'draining']}
-          support="Every hand is saved. You get one thing to fix first."
-          footer={<PrimaryButton label="Next" onPress={() => go('q_play_where')} />}
-        >
-          <ReviewVisual />
-        </Screen>
+        <TryHandFlow
+          onDone={(r) => {
+            setTryResult(r);
+            // Stakes answered inside the try flow is the real answer; keep the
+            // default rather than overwriting it with null when they skipped.
+            if (r.stakes) setStakes(r.stakes);
+            go('q_play_where', {
+              gotVerdict: !!r.parsed,
+              notificationsEnabled: r.notificationsEnabled,
+            });
+          }}
+        />
       );
 
     // -- Three short questions. Every answer is used on the plan screen. --
@@ -259,12 +269,12 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
           headline="Where do you play?"
           footer={
             <>
-              <PrimaryButton label="Continue" onPress={() => go('q_stakes', { where })} />
+              <PrimaryButton label="Continue" onPress={() => go('q_leak', { where })} />
               <TextButton
                 label="Skip"
                 onPress={() => {
                   setWhere(null);
-                  go('q_stakes', { skipped: true });
+                  go('q_leak', { skipped: true });
                 }}
               />
             </>
@@ -277,37 +287,6 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
               label={o.label}
               selected={where === o.value}
               onPress={() => setWhere(o.value)}
-            />
-          ))}
-        </Screen>
-      );
-
-    case 'q_stakes':
-      return (
-        <Screen
-          progress={progress}
-          onBack={back}
-          headline="What do you play for?"
-          footer={
-            <>
-              <PrimaryButton label="Continue" onPress={() => go('q_leak', { stakes })} />
-              <TextButton
-                label="Skip"
-                onPress={() => {
-                  setStakes(null);
-                  go('q_leak', { skipped: true });
-                }}
-              />
-            </>
-          }
-        >
-          <QuestionVisual n={2} />
-          {STAKES.map((o) => (
-            <Choice
-              key={o.value}
-              label={o.label}
-              selected={stakes === o.value}
-              onPress={() => setStakes(o.value)}
             />
           ))}
         </Screen>
@@ -353,7 +332,19 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
           stakesLabel={STAKES.find((x) => x.value === stakes)?.label ?? 'your stakes'}
           name={name}
           setName={setName}
-          onDone={() => go('plan', { named: !!name })}
+          onDone={() => go('dealing', { named: !!name })}
+        />
+      );
+
+    // -- Themed hold while the plan is composed. Names what is being compared
+    //    rather than showing a bare spinner. --
+    case 'dealing':
+      return (
+        <DealingScreen
+          progress={progress}
+          parsed={tryResult?.parsed ?? null}
+          stakesLabel={STAKES.find((x) => x.value === stakes)?.label ?? 'your stakes'}
+          onDone={() => go('plan')}
         />
       );
 
@@ -369,21 +360,35 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
           scroll
           footer={
             <PrimaryButton
-              label="Unlock my plan"
+              label="What this looks like"
               onPress={() => {
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                go('paywall');
+                go('results');
               }}
             />
           }
         >
-          <AnalysisVisual
-            profile={analysis.profile}
+          <PlanVisualV2
             diagnosis={analysis.diagnosis}
-            outcome={analysis.outcome}
+            outcomeShort={analysis.outcomeShort}
             thirtyDay={analysis.thirtyDay}
+            parsed={tryResult?.parsed ?? null}
           />
         </Screen>
+      );
+
+    // -- Forward-looking payoff before the price. Counts a behaviour in one
+    //    spot, never a win rate or an amount won: this app is gambling-adjacent
+    //    and an invented outcome statistic is a review risk. --
+    case 'results':
+      return (
+        <ResultsScreen
+          progress={progress}
+          onBack={back}
+          outcomeShort={analysis.outcomeShort}
+          spotLabel={tryResult?.parsed ? 'the spot you brought us' : 'your biggest leak'}
+          onContinue={() => go('paywall')}
+        />
       );
 
     case 'paywall':
@@ -394,16 +399,6 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
 }
 
 // -----------------------------------------------------------------------------
-
-
-
-
-
-const s = StyleSheet.create({
-
-
-
-});
 
 /**
  * The "customizing your plan" beat.
