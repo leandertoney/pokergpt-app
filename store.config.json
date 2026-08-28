@@ -1,7 +1,7 @@
 {
   "configVersion": 0,
   "apple": {
-    "version": "1.1.0",
+    "version": "1.2.0",
     "copyright": "© 2026 \"UNIVERSOLE APP STUDIOS\", UNIVERSOLE LLC",
     "release": {
       "automaticRelease": true
@@ -223,9 +223,9 @@
       "userGeneratedContent": false
     },
     "review": {
-      "firstName": "",
-      "lastName": "",
-      "email": "",
+      "firstName": "Leander",
+      "lastName": "Toney",
+      "email": "leandertoney@gmail.com",
       "phone": "",
       "demoRequired": false
     }
