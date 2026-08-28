@@ -39,10 +39,10 @@ export function TryHandInvite({
     <Screen
       progress={0.26}
       eyebrow="Your turn"
-      headline={'Tell me a hand\nthat still bugs you.'}
+      headline={'Tell me a spot\nthat still bugs you.'}
       reveal
       accent={['bugs']}
-      support="Any spot you're not sure you played right. Just talk."
+      support={"Just the part you're unsure about. \u201cI had ace queen on the button and got check-raised on the turn\u201d is plenty."}
       footer={<TextButton label="I'll do this later" onPress={onSkip} />}
     >
       <View style={s.micWrap}>
@@ -57,7 +57,7 @@ export function TryHandInvite({
         >
           <Mic size={34} color={colors.text.dark} />
         </Pressable>
-        <Text style={s.micTip}>Tap to talk</Text>
+        <Text style={s.micTip}>Tap to talk{"\n"}A few seconds is enough</Text>
       </View>
     </Screen>
   );
@@ -79,7 +79,7 @@ export function TryHandListening({ onDone }: { onDone: () => void }) {
     <Screen
       progress={0.38}
       eyebrow="Listening"
-      headline={'Keep going.'}
+      headline={'Go ahead.'}
       footer={<PrimaryButton label="Done" onPress={onDone} />}
     >
       <View style={s.micWrap}>
@@ -87,7 +87,7 @@ export function TryHandListening({ onDone }: { onDone: () => void }) {
           <Square size={26} color="#FFFFFF" fill="#FFFFFF" />
         </View>
         <Waveform />
-        <Text style={s.micTip}>Tap Done when you&apos;ve finished the hand</Text>
+        <Text style={s.micTip}>Tap Done when you&apos;ve said enough</Text>
       </View>
     </Screen>
   );
@@ -350,9 +350,12 @@ export function TryHandFlow({ onDone }: { onDone: (r: TryHandResult) => void }) 
     // again into a racing recorder.stop().
     setPhase('analyzing');
     const text = await dictation.stopAndTranscribe();
-    trackOnboardingEvent('try_hand_recorded', { chars: text.length });
+    trackOnboardingEvent('try_hand_recorded', {
+      chars: text.length,
+      failure: text ? null : (dictation.lastError.current ?? 'unknown'),
+    });
     if (!text.trim()) {
-      bail('empty_transcript');
+      bail(dictation.lastError.current ?? 'empty_transcript');
       return;
     }
     setPhase('stakes');
@@ -376,6 +379,22 @@ export function TryHandFlow({ onDone }: { onDone: (r: TryHandResult) => void }) 
         readable: true,
         action: result.analysis.recommendedAction,
       });
+
+      // Persist it. Without this the very first hand a player gives us is shown
+      // once and thrown away, so they land on an empty home screen having just
+      // watched the app read a real spot. Saving also schedules the day-two
+      // follow-up, which is the whole retention loop.
+      try {
+        const { storeHand } = await import('@/services/supabaseStorage');
+        await storeHand(
+          { ...result.handData, id: `hand-${Date.now()}`, timestamp: Date.now() } as any,
+          { ...result.analysis, timestamp: Date.now() } as any
+        );
+      } catch (e: any) {
+        // A failed save must not cost them the verdict they just earned.
+        console.warn('[try_hand] save failed:', e?.message);
+      }
+
       setParsed(result);
       setPhase('verdict');
     },

@@ -40,6 +40,7 @@ import {
 } from './onboarding/ui/Visuals';
 import { PaywallV2 } from './onboarding/PaywallV2';
 import { TryHandFlow, type TryHandResult } from './onboarding/TryHandScreens';
+import type { ParsedHand } from '@/services/handAnalysis';
 import { ResultsScreen } from './onboarding/ResultsScreen';
 import { DealingScreen } from './onboarding/DealingScreen';
 import { PlanVisualV2 } from './onboarding/PlanVisualV2';
@@ -121,6 +122,30 @@ const WHERE = [
   { value: 'both', label: 'Both' },
 ] as const;
 
+/**
+ * Read the leak straight out of the verdict.
+ *
+ * Maps onto the same four values q_leak offers, so everything downstream --
+ * planAnalysis, LEAK_TO_CHALLENGE, the saved identity -- is unchanged and does
+ * not care whether the answer came from a tap or from the hand itself.
+ *
+ * Returns null when the verdict is too thin to infer from; the question is
+ * then still asked.
+ */
+function deriveLeak(parsed: ParsedHand | null): string | null {
+  const action = parsed?.analysis?.recommendedAction?.toLowerCase();
+  if (!action) return null;
+
+  // They called (or asked about calling) somewhere the read says fold.
+  if (action.includes('fold')) return 'call_too_much';
+  // The read wants more money in the pot than they put in.
+  if (action.includes('raise') || action.includes('bet')) return 'miss_value';
+  // A call being correct means they were considering folding a hand that plays.
+  if (action.includes('call')) return 'play_scared';
+
+  return null;
+}
+
 export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
   const [step, setStep] = useState<Step>('welcome');
   // Pre-selected with the most common answer for each question. A user who taps
@@ -138,6 +163,13 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
 
   const index = STEPS.indexOf(step);
   const progress = index / (STEPS.length - 1);
+
+  // When a hand was actually read, the app has already diagnosed the leak and
+  // asking "what costs you the most?" is backwards -- people download this
+  // BECAUSE they do not know. The question only survives as a fallback for the
+  // players we could not read a hand from.
+  const leakFromHand = deriveLeak(tryResult?.parsed ?? null);
+  const afterWhere: Step = leakFromHand ? 'building' : 'q_leak';
 
   // The first screen is never a transition target, so tracking only inside go()
   // left 'welcome' permanently at zero and made every later step look like 100%
@@ -167,8 +199,8 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
   // A synthesised read of the three answers, not a receipt of the taps. 48
   // combinations produce genuinely different text — see planAnalysis.ts.
   const analysis = useMemo(
-    () => buildPlanAnalysis(where as any, stakes as any, leak as any),
-    [where, stakes, leak]
+    () => buildPlanAnalysis(where as any, stakes as any, (leakFromHand ?? leak) as any),
+    [where, stakes, leak, leakFromHand]
   );
 
   const finish = useCallback(async () => {
@@ -179,8 +211,8 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
       const identity: UserIdentity = {
         archetype: null,
         experienceLevel: stakes === 'mid' ? 'advanced' : stakes === 'home' ? 'beginner' : 'intermediate',
-        primaryGoal: leak === 'tilt' ? 'fun' : 'profit',
-        biggestChallenge: LEAK_TO_CHALLENGE[leak ?? ''] ?? null,
+        primaryGoal: (leakFromHand ?? leak) === 'tilt' ? 'fun' : 'profit',
+        biggestChallenge: LEAK_TO_CHALLENGE[(leakFromHand ?? leak) ?? ''] ?? null,
         painPoint: null,
       };
       const profile: OnboardingProfile = {
@@ -205,7 +237,7 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
       console.warn('[onboarding] completion save failed', e);
     }
     onComplete();
-  }, [where, stakes, leak, name, onComplete, tryResult]);
+  }, [where, stakes, leak, leakFromHand, name, onComplete, tryResult]);
 
   const onPurchase = useCallback(async () => {
     const status = await checkSubscriptionStatus();
@@ -279,12 +311,12 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
           headline="Where do you play?"
           footer={
             <>
-              <PrimaryButton label="Continue" onPress={() => go('q_leak', { where })} />
+              <PrimaryButton label="Continue" onPress={() => go(afterWhere, { where })} />
               <TextButton
                 label="Skip"
                 onPress={() => {
                   setWhere(null);
-                  go('q_leak', { skipped: true });
+                  go(afterWhere, { skipped: true });
                 }}
               />
             </>

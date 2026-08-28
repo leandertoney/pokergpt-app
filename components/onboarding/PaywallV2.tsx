@@ -112,7 +112,7 @@ const VALUE = [
 /** Local defaults. Any key can be overridden from the RevenueCat dashboard. */
 const DEFAULT_COPY = {
   sell_headline: 'Try it free\nfor 3 days.',
-  sell_support: 'Full access. You will not be charged today.',
+  sell_support: 'Full access. You will not be charged today, and we will remind you before the trial ends.',
   // Apple requires the subscription NAME on the sign-up screen, not just the
   // plans. "Pick your plan" satisfies neither the requirement nor the user's
   // question of what they are actually buying.
@@ -242,7 +242,7 @@ export function PaywallV2({ onPurchase, onSkip }: Props) {
           headline={c('price_headline')}
           cta={c('cta')}
           ctaNoTrial={c('cta_no_trial')}
-          trialTerms={`3 days free, then ${prices.yearly} per year. Cancel any time before day 3.`}
+          trialTerms={`3 days free, then ${prices.yearly} per year. Cancel any time before the trial ends.`}
           weeklyTerms={`${prices.weekly} per week, billed today. Cancel any time.`}
           dismissLabel={c('dismiss')}
           plan={plan}

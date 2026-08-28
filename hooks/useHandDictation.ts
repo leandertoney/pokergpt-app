@@ -35,6 +35,8 @@ export function useHandDictation() {
   const [transcript, setTranscript] = useState('');
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const activeRef = useRef(false);
+  /** Why the last attempt produced nothing, for telemetry. */
+  const lastErrorRef = useRef<string | null>(null);
 
   useEffect(() => {
     return () => {
@@ -95,10 +97,12 @@ export function useHandDictation() {
       const text = await transcribe(uri);
       setTranscript(text);
       setState(text ? 'done' : 'error');
+      lastErrorRef.current = text ? null : 'silent_recording';
       return text;
     } catch (e: any) {
       console.warn('[dictation] transcribe failed:', e?.message);
       activeRef.current = false;
+      lastErrorRef.current = e?.message ?? 'transcribe_failed';
       setState('error');
       return '';
     }
@@ -113,11 +117,14 @@ export function useHandDictation() {
     setTranscript('');
   }, [recorder]);
 
-  return { state, transcript, start, stopAndTranscribe, cancel };
+  return { state, transcript, start, stopAndTranscribe, cancel, lastError: lastErrorRef };
 }
 
 async function transcribe(audioUri: string): Promise<string> {
-  if (!OPENAI_API_KEY) return '';
+  if (!OPENAI_API_KEY) {
+    console.warn('[dictation] no OpenAI key');
+    return '';
+  }
 
   const formData = new FormData();
   formData.append('file', {
@@ -137,7 +144,15 @@ async function transcribe(audioUri: string): Promise<string> {
     'Onboarding transcription'
   );
 
-  if (!response.ok) return '';
+  // Previously this returned '' on any non-OK response, so a failed
+  // transcription was indistinguishable from a silent recording and the flow
+  // fell through to the generic questions with no way to tell why.
+  if (!response.ok) {
+    const detail = await response.text().catch(() => '');
+    console.warn('[dictation] transcribe HTTP', response.status, detail.slice(0, 200));
+    throw new Error(`transcribe_http_${response.status}`);
+  }
+
   const data = await response.json();
   return data.text || '';
 }

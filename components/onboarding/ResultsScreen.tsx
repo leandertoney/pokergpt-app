@@ -44,7 +44,7 @@ export function ResultsScreen({
       reveal
       accent={['right.']}
       scroll
-      footer={<PrimaryButton label="See my plan" onPress={onContinue} />}
+      footer={<PrimaryButton label="Continue" onPress={onContinue} />}
     >
       <View style={s.card}>
         <View style={s.bars}>
@@ -65,7 +65,7 @@ export function ResultsScreen({
       </View>
 
       <Text style={s.tail}>
-        One leak — {outcomeShort} — worked on for a month. That is the whole plan.
+        One leak, worked on for a month. That is the whole plan.
       </Text>
     </Screen>
   );
