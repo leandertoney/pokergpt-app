@@ -29,6 +29,8 @@ import {
   LogIn,
   LogOut,
   RefreshCw,
+  Mail,
+  Calendar,
   Trash2,
 } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
@@ -93,7 +95,7 @@ function SettingsSection({ title, children }: { title: string; children: React.R
 export default function SettingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { isAuthenticated, signOut, deleteAccount } = useAuth();
+  const { user, isAuthenticated, signOut, deleteAccount } = useAuth();
 
   // Voice input preference (stored locally for now)
   const [voiceEnabled, setVoiceEnabled] = useState(true);
@@ -345,6 +347,27 @@ export default function SettingsScreen() {
           showsVerticalScrollIndicator={false}
         >
           <SettingsSection title="Account">
+            {/* Moved off the profile screen, where these read "Not signed in"
+                and "Unknown" and took two of its three rows to say nothing. */}
+            <SettingsItem
+              icon={<Mail size={22} color={colors.accent.gold} />}
+              title="Email"
+              subtitle={user?.email ?? 'Not signed in'}
+              showChevron={false}
+            />
+            <SettingsItem
+              icon={<Calendar size={22} color={colors.accent.gold} />}
+              title="Member since"
+              subtitle={
+                user?.created_at
+                  ? new Date(user.created_at).toLocaleDateString(undefined, {
+                      month: 'long',
+                      year: 'numeric',
+                    })
+                  : 'Not signed in'
+              }
+              showChevron={false}
+            />
             <SettingsItem
               icon={<CreditCard size={22} color={colors.accent.gold} />}
               title="Subscription"

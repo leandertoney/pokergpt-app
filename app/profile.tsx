@@ -1,318 +1,448 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { View, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, type ViewStyle, type TextStyle } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
+/**
+ * "Your Game" — the profile screen, rebuilt.
+ *
+ * What was wrong: three rows, two of which read "Not signed in" and "Unknown",
+ * a Settings row, and then half a screen of empty red. The title was the root
+ * cause — "Profile" promises account fields, so account fields were what got
+ * built, and for a signed-out user they are all empty.
+ *
+ * The screen now leads with what the player has actually done. Every number is
+ * read from local storage (see services/profileStats.ts); nothing here needs a
+ * migration or a network call. Account details move under Settings, which is
+ * now a gear in the nav bar rather than a row competing for attention.
+ *
+ * No money is shown anywhere. Sessions store a `result`, so a profit total is
+ * available and is deliberately omitted: gambling-adjacent app, already
+ * rejected once, and "Up $3K this month" was cut for exactly this reason.
+ */
+
+import React, { useCallback, useState } from 'react';
 import {
-  User,
-  Mail,
-  Calendar,
+  View,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  ActivityIndicator,
+  type ViewStyle,
+  type TextStyle,
+} from 'react-native';
+import { Stack, useRouter, useFocusEffect } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  Settings as SettingsIcon,
   ChevronRight,
-  Settings,
+  Spade,
+  Star,
+  MessageSquare,
+  Check,
+  Flame,
 } from 'lucide-react-native';
-import { useAuth } from '@/contexts/AuthContext';
 import { getUserDisplayName, setUserDisplayName } from '@/services/storageService';
-import { supabase } from '@/lib/supabase';
+import { getProfileStats, type ProfileStats } from '@/services/profileStats';
 import { colors } from '@/constants/colors';
-
-interface ProfileItemProps {
-  icon: React.ReactNode;
-  title: string;
-  value?: string;
-  onPress?: () => void;
-  showChevron?: boolean;
-  danger?: boolean;
-}
-
-function ProfileItem({ icon, title, value, onPress, showChevron = false, danger = false }: ProfileItemProps) {
-  const content = (
-    <View style={styles.profileItem}>
-      <View style={[styles.profileItemIcon, danger && styles.profileItemIconDanger]}>{icon}</View>
-      <View style={styles.profileItemContent}>
-        <Text style={[styles.profileItemTitle, danger && styles.profileItemTitleDanger]}>{title}</Text>
-        {value && <Text style={styles.profileItemValue}>{value}</Text>}
-      </View>
-      {showChevron && <ChevronRight size={20} color={colors.text.muted} />}
-    </View>
-  );
-
-  if (onPress) {
-    return (
-      <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
-        {content}
-      </TouchableOpacity>
-    );
-  }
-
-  return content;
-}
-
-function ProfileSection({ title, children }: { title?: string; children: React.ReactNode }) {
-  return (
-    <View style={styles.section}>
-      {title && <Text style={styles.sectionTitle}>{title}</Text>}
-      <View style={styles.sectionContent}>{children}</View>
-    </View>
-  );
-}
 
 export default function ProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { user: authUser } = useAuth();
 
-  // The name is editable. Onboarding already captures it and writes it to
-  // local storage, so the profile reads the same value rather than showing a
-  // hardcoded placeholder the user cannot change.
-  const [displayName, setDisplayName] = useState<string | null>(null);
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState('');
+  const [stats, setStats] = useState<ProfileStats | null>(null);
+  const [editingName, setEditingName] = useState(false);
+  const [draftName, setDraftName] = useState('');
 
-  useEffect(() => {
-    getUserDisplayName().then(setDisplayName);
+  // Refetch on focus: hands and sessions change elsewhere in the app, and a
+  // profile showing yesterday's counts is worse than one that loads briefly.
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      (async () => {
+        const s = await getProfileStats();
+        if (!cancelled) setStats(s);
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }, [])
+  );
+
+  const beginEditName = useCallback(async () => {
+    setDraftName((await getUserDisplayName()) ?? '');
+    setEditingName(true);
   }, []);
 
-  const saveName = useCallback(async () => {
-    const next = draft.trim();
-    setEditing(false);
-    if (!next || next === displayName) return;
-
-    setDisplayName(next);
-    await setUserDisplayName(next);
-
-    // Mirror to the account when there is one, so the name survives a reinstall.
-    // Local storage is the source of truth for signed-out users.
-    try {
-      if (authUser && supabase) {
-        await supabase.auth.updateUser({ data: { full_name: next } });
-      }
-    } catch (e) {
-      console.warn('[profile] could not sync name to account', e);
+  const commitName = useCallback(async () => {
+    const trimmed = draftName.trim();
+    if (trimmed) {
+      await setUserDisplayName(trimmed);
+      setStats((prev) => (prev ? { ...prev, displayName: trimmed } : prev));
     }
-  }, [draft, displayName, authUser]);
-
-  // Get user data from auth context
-  const user = {
-    name: displayName || authUser?.user_metadata?.full_name || 'Poker Player',
-    email: authUser?.email || 'Not signed in',
-    memberSince: authUser?.created_at
-      ? new Date(authUser.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-      : 'Unknown',
-    avatarUrl: authUser?.user_metadata?.avatar_url || null,
-  };
+    setEditingName(false);
+  }, [draftName]);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingBottom: insets.bottom }]}>
       <Stack.Screen
         options={{
-          title: 'Profile',
-          headerStyle: {
-            backgroundColor: colors.background.primary,
-          },
-          headerTintColor: colors.text.primary,
-          headerTitleStyle: {
-            fontWeight: '600' as const,
-            fontSize: 18,
-          },
-          headerBackTitle: '',
+          title: 'Your Game',
+          headerStyle: { backgroundColor: colors.background.primary },
+          headerTintColor: colors.accent.primary,
+          headerTitleStyle: { fontWeight: '700' as const, color: colors.text.primary },
+          headerRight: () => (
+            <TouchableOpacity
+              onPress={() => router.push('/settings')}
+              style={styles.gear}
+              accessibilityRole="button"
+              accessibilityLabel="Settings"
+              hitSlop={10}
+            >
+              <SettingsIcon size={19} color={colors.text.secondary} />
+            </TouchableOpacity>
+          ),
         }}
       />
 
-      <LinearGradient
-        colors={[colors.background.tertiary, colors.background.secondary, colors.background.primary, '#0D0202']}
-        locations={[0, 0.3, 0.7, 1]}
-        style={styles.gradient}
-      >
+      {!stats ? (
+        <View style={styles.loading}>
+          <ActivityIndicator color={colors.accent.gold} />
+        </View>
+      ) : (
         <ScrollView
-          contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 20 }]}
+          contentContainerStyle={styles.scroll}
           showsVerticalScrollIndicator={false}
         >
-          {/* Avatar Section */}
-          <View style={styles.avatarSection}>
-            <View style={styles.avatarContainer}>
-              <LinearGradient
-                colors={colors.gradients.premium}
-                style={styles.avatarGradient}
-              >
-                <User size={48} color={colors.text.primary} />
-              </LinearGradient>
-            </View>
-            <Text style={styles.userName}>{user.name}</Text>
-            <Text style={styles.userEmail}>{user.email}</Text>
-          </View>
+          {/* Identity */}
+          <View style={styles.ident}>
+            <Monogram name={stats.displayName} onPress={beginEditName} />
 
-          {/* Account Info */}
-          <ProfileSection title="Account Information">
-            {editing ? (
-              <View style={styles.profileItem}>
-                <View style={styles.profileItemIcon}>
-                  <User size={20} color={colors.accent.primary} />
-                </View>
-                <View style={styles.profileItemContent}>
-                  <Text style={styles.profileItemTitle}>Name</Text>
+            <View style={styles.identText}>
+              {editingName ? (
+                <View style={styles.nameEditRow}>
                   <TextInput
-                    value={draft}
-                    onChangeText={setDraft}
-                    onSubmitEditing={saveName}
-                    onBlur={saveName}
+                    value={draftName}
+                    onChangeText={setDraftName}
+                    onSubmitEditing={commitName}
                     autoFocus
-                    autoCapitalize="words"
-                    maxLength={24}
-                    returnKeyType="done"
                     placeholder="Your name"
                     placeholderTextColor={colors.text.muted}
                     style={styles.nameInput}
-                    accessibilityLabel="Edit your name"
+                    returnKeyType="done"
+                    maxLength={24}
                   />
+                  <TouchableOpacity onPress={commitName} hitSlop={10}>
+                    <Check size={20} color={colors.accent.gold} />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity onPress={beginEditName} activeOpacity={0.7}>
+                  <View style={styles.nameRow}>
+                    <Text style={styles.name}>{stats.displayName ?? 'Add your name'}</Text>
+                    <View style={[styles.pill, stats.tier === 'free' && styles.pillFree]}>
+                      <Text
+                        style={[
+                          styles.pillText,
+                          stats.tier === 'free' && styles.pillTextFree,
+                        ]}
+                      >
+                        {stats.tier === 'paid' ? 'PRO' : 'FREE'}
+                      </Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              )}
+              {!!stats.playsLine && <Text style={styles.plays}>{stats.playsLine}</Text>}
+            </View>
+          </View>
+
+          {stats.isEmpty ? (
+            <EmptyState onStart={() => router.push('/voice')} />
+          ) : (
+            <>
+              {/* Streak, as the hero */}
+              <View style={[styles.stat, styles.statHero]}>
+                <Text style={styles.statKey}>CURRENT STREAK</Text>
+                <View style={styles.streakRow}>
+                  <Text style={[styles.statValue, styles.statValueHero]}>
+                    {stats.currentStreak} {stats.currentStreak === 1 ? 'day' : 'days'}
+                  </Text>
+                  {stats.currentStreak > 0 && (
+                    <Flame size={20} color={colors.accent.gold} />
+                  )}
+                </View>
+                <Text style={styles.statDetail}>
+                  {stats.bestStreak > 0 ? `Best ever: ${stats.bestStreak} days` : 'Review a hand to start one'}
+                </Text>
+              </View>
+
+              <View style={styles.statRow}>
+                <View style={styles.stat}>
+                  <Text style={styles.statKey}>HANDS REVIEWED</Text>
+                  <Text style={styles.statValue}>{stats.handsTotal}</Text>
+                  <Text style={styles.statDetail}>{stats.handsThisWeek} this week</Text>
+                </View>
+                <View style={styles.stat}>
+                  <Text style={styles.statKey}>SESSIONS LOGGED</Text>
+                  <Text style={styles.statValue}>{stats.sessionsTotal}</Text>
+                  <Text style={styles.statDetail}>
+                    {stats.lastSessionLabel ? `Last: ${stats.lastSessionLabel}` : 'None yet'}
+                  </Text>
                 </View>
               </View>
-            ) : (
-              <ProfileItem
-                icon={<User size={20} color={colors.accent.primary} />}
-                title="Name"
-                value={user.name}
-                onPress={() => {
-                  setDraft(displayName ?? '');
-                  setEditing(true);
-                }}
-                showChevron
-              />
-            )}
-            <ProfileItem
-              icon={<Mail size={20} color={colors.accent.secondary} />}
-              title="Email"
-              value={user.email}
-            />
-            <ProfileItem
-              icon={<Calendar size={20} color={colors.accent.primary} />}
-              title="Member Since"
-              value={user.memberSince}
-            />
-          </ProfileSection>
 
-          {/* Settings */}
-          <ProfileSection title="">
-            <ProfileItem
-              icon={<Settings size={20} color={colors.accent.primary} />}
-              title="Settings"
-              onPress={() => router.push('/settings')}
-              showChevron
-            />
-          </ProfileSection>
+              {!!stats.workingOn && (
+                <View style={styles.leak}>
+                  <Text style={styles.leakKey}>WORKING ON</Text>
+                  <Text style={styles.leakValue}>{stats.workingOn}</Text>
+                </View>
+              )}
+
+              {stats.activity.some((v) => v > 0) && (
+                <View style={styles.activity}>
+                  <Text style={styles.statKey}>LAST 12 WEEKS</Text>
+                  <View style={styles.weeks}>
+                    {stats.activity.map((v, i) => (
+                      <View
+                        key={i}
+                        style={[
+                          styles.week,
+                          {
+                            height: `${Math.max(8, Math.round(v * 100))}%`,
+                            backgroundColor:
+                              v > 0.66
+                                ? colors.accent.gold
+                                : v > 0.33
+                                  ? 'rgba(232,184,74,0.6)'
+                                  : v > 0
+                                    ? 'rgba(232,184,74,0.35)'
+                                    : 'rgba(244,232,216,0.13)',
+                          },
+                        ]}
+                      />
+                    ))}
+                  </View>
+                  <View style={styles.weekLabels}>
+                    <Text style={styles.weekLabel}>12 wks ago</Text>
+                    <Text style={styles.weekLabel}>this week</Text>
+                  </View>
+                </View>
+              )}
+
+              <View style={styles.rows}>
+                <LinkRow
+                  icon={<Spade size={15} color={colors.accent.gold} />}
+                  label="Hand history"
+                  value={String(stats.handsTotal)}
+                  onPress={() => router.push('/history')}
+                />
+                <LinkRow
+                  icon={<Star size={15} color={colors.accent.gold} />}
+                  label="Saved hands"
+                  value={String(stats.favoritesTotal)}
+                  onPress={() => router.push('/history')}
+                />
+                <LinkRow
+                  icon={<MessageSquare size={15} color={colors.accent.gold} />}
+                  label="Coach chats"
+                  value={String(stats.chatsTotal)}
+                  onPress={() => router.push('/poker-chat')}
+                />
+              </View>
+            </>
+          )}
         </ScrollView>
-      </LinearGradient>
+      )}
     </View>
   );
 }
 
+/**
+ * Initial-based avatar.
+ *
+ * A real photo needs expo-image-picker registered as a config plugin plus
+ * NSPhotoLibraryUsageDescription in app.json — both native changes, so it
+ * cannot ship over the air and is waiting on the next build. Until then this is
+ * a deliberate monogram rather than an empty placeholder, and tapping it edits
+ * the name so it is never a dead control.
+ */
+function Monogram({ name, onPress }: { name: string | null; onPress: () => void }) {
+  const initial = (name?.trim()?.[0] ?? '?').toUpperCase();
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.8}
+      accessibilityRole="button"
+      accessibilityLabel="Edit your name"
+    >
+      <View style={styles.avatar}>
+        <Text style={styles.avatarText}>{initial}</Text>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+function EmptyState({ onStart }: { onStart: () => void }) {
+  return (
+    <View style={styles.empty}>
+      <Text style={styles.emptyTitle}>Nothing here yet.</Text>
+      <Text style={styles.emptyBody}>
+        Bring one hand you are not sure about. Your streak, your history, and the leak you are
+        working on all start filling in from there.
+      </Text>
+      <TouchableOpacity style={styles.emptyCta} onPress={onStart} activeOpacity={0.85}>
+        <Text style={styles.emptyCtaText}>Talk through a hand</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+function LinkRow({
+  icon,
+  label,
+  value,
+  onPress,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  onPress: () => void;
+}) {
+  return (
+    <TouchableOpacity style={styles.row} onPress={onPress} activeOpacity={0.7}>
+      <View style={styles.rowIcon}>{icon}</View>
+      <Text style={styles.rowLabel}>{label}</Text>
+      <Text style={styles.rowValue}>{value}</Text>
+      <ChevronRight size={17} color={colors.text.muted} />
+    </TouchableOpacity>
+  );
+}
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background.primary,
+  container: { flex: 1, backgroundColor: colors.background.primary } as ViewStyle,
+  loading: { flex: 1, alignItems: 'center', justifyContent: 'center' } as ViewStyle,
+  scroll: { padding: 16, gap: 12 } as ViewStyle,
+  gear: { padding: 4 } as ViewStyle,
+
+  ident: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 2 } as ViewStyle,
+  avatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 999,
+    backgroundColor: colors.accent.gold,
+    alignItems: 'center',
+    justifyContent: 'center',
   } as ViewStyle,
-  gradient: {
-    flex: 1,
-  } as ViewStyle,
-  scrollContent: {
-    paddingTop: 24,
-  } as ViewStyle,
+  avatarText: { fontSize: 23, fontWeight: '800', color: colors.text.dark } as TextStyle,
+  identText: { flex: 1, minWidth: 0 } as ViewStyle,
+
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 } as ViewStyle,
+  name: { fontSize: 22, fontWeight: '800', color: colors.text.primary, letterSpacing: -0.4 } as TextStyle,
+  nameEditRow: { flexDirection: 'row', alignItems: 'center', gap: 10 } as ViewStyle,
   nameInput: {
+    flex: 1,
+    fontSize: 20,
+    fontWeight: '700',
     color: colors.text.primary,
-    fontSize: 15,
-    fontWeight: '500',
+    borderBottomWidth: 1,
+    borderBottomColor: colors.accent.gold,
     paddingVertical: 2,
-    marginTop: 2,
   } as TextStyle,
-  avatarSection: {
-    alignItems: 'center',
-    marginBottom: 32,
+  plays: { fontSize: 13, color: colors.text.secondary, marginTop: 2 } as TextStyle,
+
+  pill: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 999,
+    backgroundColor: colors.accent.gold,
   } as ViewStyle,
-  avatarContainer: {
-    position: 'relative',
-    marginBottom: 16,
+  pillFree: { backgroundColor: 'rgba(244,232,216,0.18)' } as ViewStyle,
+  pillText: { fontSize: 9.5, fontWeight: '800', letterSpacing: 0.9, color: colors.text.dark } as TextStyle,
+  pillTextFree: { color: colors.text.secondary } as TextStyle,
+
+  statRow: { flexDirection: 'row', gap: 8 } as ViewStyle,
+  stat: {
+    flex: 1,
+    backgroundColor: colors.background.tertiary,
+    borderRadius: 15,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(232,184,74,0.13)',
   } as ViewStyle,
-  avatarGradient: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    alignItems: 'center',
-    justifyContent: 'center',
-  } as ViewStyle,
-  cameraButton: {
-    position: 'absolute',
-    right: 0,
-    bottom: 0,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.accent.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 3,
-    borderColor: colors.background.primary,
-  } as ViewStyle,
-  userName: {
-    fontSize: 22,
-    fontWeight: '700' as const,
+  statHero: { borderColor: 'rgba(232,184,74,0.45)', backgroundColor: 'rgba(232,184,74,0.1)' } as ViewStyle,
+  statKey: {
+    fontSize: 9,
+    letterSpacing: 1.3,
+    fontWeight: '700',
+    color: colors.text.secondary,
+    opacity: 0.85,
+  } as TextStyle,
+  statValue: {
+    fontSize: 26,
+    fontWeight: '800',
     color: colors.text.primary,
-    marginBottom: 4,
+    letterSpacing: -0.6,
+    marginTop: 3,
   } as TextStyle,
-  userEmail: {
-    fontSize: 14,
-    color: colors.text.muted,
-  } as TextStyle,
-  section: {
-    marginBottom: 24,
+  statValueHero: { color: colors.accent.gold, fontSize: 29 } as TextStyle,
+  streakRow: { flexDirection: 'row', alignItems: 'center', gap: 8 } as ViewStyle,
+  statDetail: { fontSize: 11.5, color: colors.text.secondary, marginTop: 2 } as TextStyle,
+
+  leak: {
+    backgroundColor: colors.background.tertiary,
+    borderRadius: 15,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(232,184,74,0.2)',
   } as ViewStyle,
-  sectionTitle: {
-    fontSize: 13,
-    fontWeight: '600' as const,
-    color: colors.text.muted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginLeft: 20,
-    marginBottom: 8,
-  } as TextStyle,
-  sectionContent: {
-    backgroundColor: colors.background.secondary,
-    marginHorizontal: 16,
-    borderRadius: 12,
-    overflow: 'hidden',
+  leakKey: { fontSize: 9, letterSpacing: 1.3, fontWeight: '700', color: colors.accent.gold } as TextStyle,
+  leakValue: { fontSize: 17, fontWeight: '800', color: colors.text.primary, marginTop: 3 } as TextStyle,
+
+  activity: {
+    backgroundColor: colors.background.tertiary,
+    borderRadius: 15,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(232,184,74,0.1)',
   } as ViewStyle,
-  profileItem: {
+  weeks: { flexDirection: 'row', alignItems: 'flex-end', gap: 3, height: 44, marginTop: 9 } as ViewStyle,
+  week: { flex: 1, borderRadius: 3 } as ViewStyle,
+  weekLabels: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 } as ViewStyle,
+  weekLabel: { fontSize: 9.5, color: colors.text.secondary, opacity: 0.8 } as TextStyle,
+
+  rows: { borderRadius: 15, overflow: 'hidden', gap: 1, backgroundColor: 'rgba(244,232,216,0.09)' } as ViewStyle,
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.background.tertiary,
+    gap: 11,
+    padding: 12,
+    backgroundColor: colors.background.primary,
   } as ViewStyle,
-  profileItemIcon: {
-    width: 36,
-    height: 36,
+  rowIcon: {
+    width: 28,
+    height: 28,
     borderRadius: 8,
-    backgroundColor: colors.background.tertiary,
+    backgroundColor: 'rgba(232,184,74,0.15)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
   } as ViewStyle,
-  profileItemIconDanger: {
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+  rowLabel: { flex: 1, fontSize: 14, color: colors.text.primary, fontWeight: '500' } as TextStyle,
+  rowValue: { fontSize: 13, color: colors.text.secondary } as TextStyle,
+
+  empty: {
+    backgroundColor: colors.background.tertiary,
+    borderRadius: 16,
+    padding: 20,
+    gap: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(232,184,74,0.16)',
   } as ViewStyle,
-  profileItemContent: {
-    flex: 1,
+  emptyTitle: { fontSize: 19, fontWeight: '800', color: colors.text.primary } as TextStyle,
+  emptyBody: { fontSize: 14, lineHeight: 20, color: colors.text.secondary } as TextStyle,
+  emptyCta: {
+    backgroundColor: colors.accent.gold,
+    borderRadius: 999,
+    paddingVertical: 13,
+    alignItems: 'center',
+    marginTop: 4,
   } as ViewStyle,
-  profileItemTitle: {
-    fontSize: 16,
-    fontWeight: '500' as const,
-    color: colors.text.primary,
-  } as TextStyle,
-  profileItemTitleDanger: {
-    color: colors.utility.error,
-  } as TextStyle,
-  profileItemValue: {
-    fontSize: 13,
-    color: colors.text.muted,
-    marginTop: 2,
-  } as TextStyle,
+  emptyCtaText: { fontSize: 15, fontWeight: '700', color: colors.text.dark } as TextStyle,
 });

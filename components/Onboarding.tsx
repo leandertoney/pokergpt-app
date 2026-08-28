@@ -1110,6 +1110,10 @@ export async function resetOnboarding(): Promise<void> {
     // did nothing: the v2 flag survived, so onboarding never reappeared.
     // Three separate things can make checkOnboardingComplete() return true, and
     // a reset that misses any one of them looks like it silently did nothing.
+    // Also set the override, so a subscribed device actually sees the flow
+    // instead of being short-circuited straight past it by the RevenueCat
+    // branch in checkOnboardingComplete.
+    await AsyncStorage.setItem('@force_onboarding', 'true');
     await AsyncStorage.multiRemove([
       ONBOARDING_COMPLETE_KEY,
       '@onboarding_v2_complete',

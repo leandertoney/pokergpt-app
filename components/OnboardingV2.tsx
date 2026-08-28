@@ -321,6 +321,21 @@ export function OnboardingV2({ onComplete }: OnboardingV2Props) {
 
 // Exports
 export async function checkOnboardingComplete(isAuthenticated: boolean = false): Promise<boolean> {
+  // Force the flow open, ahead of every other check including the subscription
+  // short-circuit below.
+  //
+  // A subscribed device can otherwise never see onboarding: the RevenueCat
+  // branch marks it complete and returns true, so Settings → Restart Onboarding
+  // clears the flag and this immediately re-sets it. That leaves the owner of
+  // the app unable to test the one flow every new user gets.
+  //
+  // Set from Settings → Restart Onboarding. Cleared when the flow completes.
+  try {
+    if ((await AsyncStorage.getItem('@force_onboarding')) === 'true') return false;
+  } catch {
+    // An unreadable store just means no override.
+  }
+
   // Skip onboarding in development mode for faster iteration
   if (__DEV__) {
     const skipOnboarding = await AsyncStorage.getItem('@dev_skip_onboarding');

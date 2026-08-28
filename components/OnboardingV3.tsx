@@ -193,6 +193,8 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
       };
 
       await AsyncStorage.setItem(ONBOARDING_COMPLETE_KEY, 'true');
+      // Release the Settings override so the flow does not reappear next launch.
+      await AsyncStorage.removeItem('@force_onboarding');
       // Persist the name. The previous flow collected answers and threw them
       // away at completion; anything asked for has to actually be kept.
       if (name?.trim()) await setUserDisplayName(name.trim());
