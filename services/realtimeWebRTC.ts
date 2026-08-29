@@ -17,6 +17,19 @@ function webrtc() {
   }
 }
 
+// react-native-incall-manager owns the platform audio route. It is a native
+// module, so binaries built before it was added (<= 1.2.0) return null here and
+// we fall back to the expo-audio routing below.
+function inCallManager(): any | null {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const mod = require('react-native-incall-manager');
+    return mod?.default ?? mod;
+  } catch {
+    return null;
+  }
+}
+
 // The beta Realtime API was retired. POSTing SDP to /v1/realtime?model=...
 // returns 400 beta_api_shape_disabled: "The Realtime Beta API is no longer
 // supported. Please use /v1/realtime for the GA API."
@@ -135,7 +148,31 @@ export class RealtimeWebRTCService {
     const answerSdp = await sdpResponse.text();
     await pc.setRemoteDescription(new (webrtc().RTCSessionDescription)({ type: 'answer', sdp: answerSdp }));
 
+    // WebRTC configures AVAudioSession itself when its audio unit starts
+    // (play-and-record + voice-chat mode = earpiece, quiet). Anything set before
+    // this point gets overridden, so force the speaker now and again once the
+    // connection reports connected.
+    this.forceSpeaker();
+    (pc as any).onconnectionstatechange = () => {
+      if ((pc as any).connectionState === 'connected') this.forceSpeaker();
+    };
+
     return remoteStream;
+  }
+
+  private forceSpeaker(): void {
+    const icm = inCallManager();
+    if (icm) {
+      try {
+        icm.start({ media: 'audio', auto: false });
+        icm.setForceSpeakerphoneOn(true);
+        return;
+      } catch (e) {
+        console.log('[RealtimeWebRTC] InCallManager speaker routing failed:', e);
+      }
+    }
+    // Older binaries without the native module: best effort via expo-audio.
+    void this.routeToSpeaker();
   }
 
   private sendSessionUpdate(voice: string): void {
@@ -287,6 +324,11 @@ export class RealtimeWebRTCService {
   }
 
   disconnect(): void {
+    const icm = inCallManager();
+    try {
+      icm?.setForceSpeakerphoneOn(false);
+      icm?.stop();
+    } catch {}
     this.dc?.close();
     this.dc = null;
     this.localStream?.getTracks().forEach((t) => t.stop());
