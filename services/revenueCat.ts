@@ -5,6 +5,7 @@ import Purchases, {
   LOG_LEVEL,
 } from 'react-native-purchases';
 import { Platform } from 'react-native';
+import * as Application from 'expo-application';
 import { withTimeout } from '@/utils/withTimeout';
 
 // RevenueCat API Keys from dashboard
@@ -61,10 +62,52 @@ class RevenueCatService {
       await Purchases.configure({ apiKey });
       this.initialized = true;
 
+      // Attach what the device actually knows, so a future trial can be
+      // explained without archaeology across three dashboards.
+      //
+      // NOTE: this is NOT the App Store acquisition source. Apple does not
+      // expose "came from Search vs Browse" to the app at all -- that lives
+      // only in App Store Connect's aggregate analytics and cannot be attached
+      // to an individual customer. What follows is the context that IS
+      // available on device.
+      void this.attachContext();
+
       console.log('RevenueCat initialized successfully');
     } catch (error) {
       console.error('Failed to initialize RevenueCat:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Tag the RevenueCat customer with device-side context.
+   *
+   * Every attribution field on this project's customers is currently empty, so
+   * a trial can only be tied back to a device by matching timestamps by hand.
+   * These attributes make the customer record self-describing: which app
+   * version they started on, which onboarding flow they saw, and the device id
+   * that joins them to public.onboarding_events.
+   *
+   * Fire-and-forget. Attribution is never worth failing a purchase over.
+   */
+  private async attachContext(): Promise<void> {
+    try {
+      const [{ getDeviceId }, AsyncStorage] = await Promise.all([
+        import('@/services/onboardingAnalytics'),
+        import('@react-native-async-storage/async-storage').then((m) => m.default),
+      ]);
+
+      const deviceId = await getDeviceId();
+      const flow = (await AsyncStorage.getItem('@onboarding_flow')) ?? '2';
+
+      await Purchases.setAttributes({
+        device_id: deviceId,
+        app_version: Application.nativeApplicationVersion ?? 'unknown',
+        platform: Platform.OS,
+        onboarding_flow: flow,
+      });
+    } catch (e: any) {
+      console.warn('[revenueCat] attach context failed:', e?.message);
     }
   }
 

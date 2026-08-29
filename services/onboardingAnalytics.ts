@@ -30,7 +30,7 @@ let cachedDeviceId: string | null = null;
  * pre-auth and post-signup events stitch into one funnel. Most of onboarding
  * happens before any account exists, so this — not user_id — is the join key.
  */
-async function getDeviceId(): Promise<string> {
+export async function getDeviceId(): Promise<string> {
   if (cachedDeviceId) return cachedDeviceId;
 
   try {

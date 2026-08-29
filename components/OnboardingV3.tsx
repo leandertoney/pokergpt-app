@@ -180,6 +180,9 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
     // (value_live, q_play_where) now sit at different positions. Without this
     // the two funnels average together and neither is readable.
     trackOnboardingEvent('welcome', { flow: 2 });
+    // Mirrored into storage so RevenueCat can tag the customer with the flow
+    // they actually saw, rather than assuming the current one.
+    AsyncStorage.setItem('@onboarding_flow', '2').catch(() => {});
   }, []);
 
   const go = useCallback((next: Step, props: Record<string, unknown> = {}) => {
