@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { View, FlatList, StyleSheet, Text, TouchableOpacity, RefreshControl, Animated, type ViewStyle, type TextStyle } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -8,11 +8,16 @@ import { HandHistoryCard } from '@/components/HandHistoryCard';
 import { NotesBottomBar } from '@/components/NotesBottomBar';
 import { FullResultCard } from '@/components/FullResultCard';
 import { LoadingIndicator } from '@/components/LoadingIndicator';
+import { trackScreen } from '@/services/appAnalytics';
 import { colors } from '@/constants/colors';
 
 const { height: screenHeight } = require('react-native').Dimensions.get('window');
 
 export default function HistoryScreen() {
+  useEffect(() => {
+    trackScreen('history');
+  }, []);
+
   const router = useRouter();
   const { hands, isLoading, isSearching, searchQuery, setSearchQuery, submitSearch, refresh } = useHandHistory();
 

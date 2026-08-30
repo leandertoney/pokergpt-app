@@ -26,6 +26,32 @@ const DEVICE_ID_KEY = '@pokergpt/device_id';
 let cachedDeviceId: string | null = null;
 
 /**
+ * Single-flight resolve of the user row id.
+ *
+ * Events fire in bursts — two `welcome` events land inside the same second on
+ * a cold start — and getOrCreateUser INSERTs when no row exists yet. Calling it
+ * per event would mean concurrent inserts for the same visitor_id, which has no
+ * unique constraint, so a race would mint duplicate user rows and corrupt the
+ * signup count. Resolve once per launch and let every event share the promise.
+ */
+let userIdPromise: Promise<string | null> | null = null;
+
+function resolveUserId(): Promise<string | null> {
+  if (!userIdPromise) {
+    userIdPromise = (async () => {
+      try {
+        const { getOrCreateUser } = await import('@/services/supabaseStorage');
+        return (await getOrCreateUser())?.id ?? null;
+      } catch {
+        // Leave NULL; a missing join key is better than a dropped event.
+        return null;
+      }
+    })();
+  }
+  return userIdPromise;
+}
+
+/**
  * Stable per-install id, generated locally and persisted, so a device's
  * pre-auth and post-signup events stitch into one funnel. Most of onboarding
  * happens before any account exists, so this — not user_id — is the join key.
@@ -75,15 +101,18 @@ export function trackOnboardingEvent(
 
       const deviceId = await getDeviceId();
 
-      // Attach the user when there is one; NULL is expected and meaningful for
-      // everyone who has not signed up yet.
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      // Attach the user row when there is one.
+      //
+      // This used to read supabase.auth.getSession(), which is null for
+      // essentially everyone: this app identifies players by visitor_id and
+      // leaves auth_id unset, so no event ever carried a user_id and none
+      // could be joined to hands, sessions or tier. Resolve the same row the
+      // rest of the app writes against instead, once per launch.
+      const userId = await resolveUserId();
 
       const { error } = await supabase.from('onboarding_events').insert({
         device_id: deviceId,
-        user_id: session?.user?.id ?? null,
+        user_id: userId,
         event,
         properties,
         platform: Platform.OS,

@@ -9,7 +9,9 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { PokerFlowProvider } from "@/hooks/usePokerFlow";
 import { SplashFlow } from "@/components/SplashFlow";
 import { colors } from "@/constants/colors";
-import { initializeRevenueCat } from "@/services/revenueCat";
+import { initializeRevenueCat, identifyUser } from "@/services/revenueCat";
+import { getOrCreateUser } from "@/services/supabaseStorage";
+import { trackAppEvent } from "@/services/appAnalytics";
 import {
   setupNotificationResponseListener,
   getInitialNotification,
@@ -65,12 +67,29 @@ function RootLayoutNav() {
     // Clear badge when app opens
     clearBadge();
 
+    // One event per cold start. Without this, "have they opened the app since
+    // subscribing?" can only be answered by inference from whether they
+    // happened to save a hand, which is not the same question.
+    trackAppEvent('app_opened');
+
     // Register push token and sync to Supabase
     registerExpoPushToken().then((token) => {
       if (token) {
         syncPushTokenToSupabase(token);
       }
     });
+
+    // Join the RevenueCat customer to the Supabase user.
+    //
+    // identifyUser has existed since the SDK was added and was never called, so
+    // every subscriber to date is an anonymous RevenueCat id that can only be
+    // tied back to a person by matching timestamps by hand. Calling it here
+    // also gives cross-device restore, which anonymous ids cannot do.
+    getOrCreateUser()
+      .then((user) => {
+        if (user?.id) return identifyUser(user.id);
+      })
+      .catch(() => {});
 
     return unsubscribe;
   }, [router]);

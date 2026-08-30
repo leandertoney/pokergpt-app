@@ -75,6 +75,14 @@ export async function setUserTier(tier: UserTier): Promise<void> {
   } catch (error) {
     console.error('Error setting user tier:', error);
   }
+
+  // Mirror onto the user row so the database can answer "who is paying".
+  // Dynamic import: supabaseStorage imports this module, so a static import
+  // here would be a cycle. Fire-and-forget -- the local write above is what
+  // gates features, and reporting must never fail a purchase.
+  void import('@/services/supabaseStorage')
+    .then((m) => m.setUserTierRemote(tier === 'paid' ? 'paid' : 'free'))
+    .catch(() => {});
 }
 
 // Check if user can save a hand (free tier limit check)

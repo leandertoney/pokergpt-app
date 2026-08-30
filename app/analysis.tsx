@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, type ViewStyle, type TextStyle } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -6,10 +6,15 @@ import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft } from 'lucide-react-native';
 import { FullResultCard } from '@/components/FullResultCard';
 import { LoadingIndicator } from '@/components/LoadingIndicator';
+import { trackScreen } from '@/services/appAnalytics';
 import { getHandHistory } from '@/services/storageService';
 import { colors } from '@/constants/colors';
 
 export default function AnalysisScreen() {
+  useEffect(() => {
+    trackScreen('analysis');
+  }, []);
+
   const router = useRouter();
   const { handId } = useLocalSearchParams<{ handId: string }>();
   const insets = useSafeAreaInsets();

@@ -13,6 +13,7 @@ import { useRouter } from 'expo-router';
 import { colors } from '@/constants/colors';
 import { BottomNav } from '@/components/BottomNav';
 import { useDailyReview, ReviewStep } from '@/hooks/useDailyReview';
+import { trackScreen } from '@/services/appAnalytics';
 import { ReviewAnswer } from '@/types/dailyReview';
 
 // Action button component
@@ -304,6 +305,10 @@ function StreakScreen({
 
 // Main Daily Review Screen
 export default function DailyReviewScreen() {
+  useEffect(() => {
+    trackScreen('daily_review');
+  }, []);
+
   const router = useRouter();
   const {
     state,

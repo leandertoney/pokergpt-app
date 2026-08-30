@@ -9,6 +9,7 @@ import { ChatBubble } from '@/components/ChatBubble';
 import { InputBar } from '@/components/InputBar';
 import { VoiceInput } from '@/components/VoiceInput';
 import { LoadingIndicator } from '@/components/LoadingIndicator';
+import { trackScreen } from '@/services/appAnalytics';
 import { UpgradeModal } from '@/components/UpgradeModal';
 import { colors } from '@/constants/colors';
 import { MAX_FREE_HANDS } from '@/types/poker';
@@ -17,6 +18,10 @@ const OPENAI_API_KEY = process.env.EXPO_PUBLIC_OPENAI_API_KEY || '';
 const BACKGROUND_IMAGE = require('../assets/images/chat/poker_table_bg.jpg');
 
 export default function ChatScreen() {
+  useEffect(() => {
+    trackScreen('chat');
+  }, []);
+
   const {
     messages,
     sendMessage,

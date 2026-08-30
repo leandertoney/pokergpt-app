@@ -289,6 +289,34 @@ export async function isOnboardingComplete(): Promise<boolean> {
   }
 }
 
+/**
+ * Mirror the entitlement onto the user row.
+ *
+ * The device already tracks tier in AsyncStorage (storageService.setUserTier),
+ * which is what gates features locally. That copy is invisible to us: every
+ * subscriber to date still reads "free" in Postgres, so the database cannot
+ * answer "who is paying" without exporting RevenueCat by hand.
+ *
+ * This is the write that closes that gap. It is deliberately not the source of
+ * truth -- RevenueCat is -- so it never gates anything, and a failure here must
+ * never block a purchase from completing.
+ */
+export async function setUserTierRemote(tier: "free" | "paid"): Promise<void> {
+  if (!isSupabaseConfigured() || !supabase) {
+    return;
+  }
+
+  try {
+    const user = await getOrCreateUser();
+    if (!user) return;
+    if (user.tier === tier) return;
+
+    await supabase.from("users").update({ tier }).eq("id", user.id);
+  } catch {
+    // Fire-and-forget: reporting is never worth failing a purchase over.
+  }
+}
+
 export async function getUserTier(): Promise<"free" | "paid"> {
   if (!isSupabaseConfigured() || !supabase) {
     return "free";

@@ -116,7 +116,15 @@ class RevenueCatService {
    * Call this after user authentication
    */
   async identifyUser(userId: string): Promise<void> {
-    if (!this.initialized) return;
+    // Wait for configure rather than dropping the link. The caller races
+    // module-level initialization against a Supabase round-trip, and a silent
+    // early return here would leave that session anonymous with no retry --
+    // which is how every customer to date ended up unidentifiable.
+    try {
+      await this.initialize();
+    } catch {
+      return;
+    }
 
     try {
       await Purchases.logIn(userId);

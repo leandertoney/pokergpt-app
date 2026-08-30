@@ -243,10 +243,16 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
   }, [where, stakes, leak, leakFromHand, name, onComplete, tryResult]);
 
   const onPurchase = useCallback(async () => {
+    // Trust the entitlement, not the fact that the sheet closed. Both arms of
+    // this used to be 'paid', which marked anyone who reached the store as a
+    // subscriber even when the purchase never granted the entitlement.
     const status = await checkSubscriptionStatus();
-    await setUserTier(status.isSubscribed ? 'paid' : 'paid');
+    await setUserTier(status.isSubscribed ? 'paid' : 'free');
     await setPaywallState({ hasSeenPaywall: true, hasSkippedPaywall: false });
-    trackOnboardingEvent('paywall_purchased');
+    trackOnboardingEvent('paywall_purchased', {
+      entitled: status.isSubscribed,
+      trial: status.isInTrial,
+    });
     await finish();
   }, [finish]);
 
