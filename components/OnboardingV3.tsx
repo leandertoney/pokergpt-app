@@ -39,7 +39,7 @@ import {
   QuestionVisual,
 } from './onboarding/ui/Visuals';
 import { PaywallV2 } from './onboarding/PaywallV2';
-import { TryHandFlow, type TryHandResult } from './onboarding/TryHandScreens';
+import { TryHandFlow, TryHandNotify, type TryHandResult } from './onboarding/TryHandScreens';
 import type { ParsedHand } from '@/services/handAnalysis';
 import { ResultsScreen } from './onboarding/ResultsScreen';
 import { DealingScreen } from './onboarding/DealingScreen';
@@ -62,6 +62,7 @@ type Step =
   | 'dealing'
   | 'plan'
   | 'results'
+  | 'notify'
   | 'paywall';
 
 /**
@@ -91,6 +92,7 @@ const STEPS: Step[] = [
   'dealing',
   'plan',
   'results',
+  'notify',
   'paywall',
 ];
 
@@ -100,6 +102,19 @@ const LEAKS = [
   { value: 'tilt', label: 'I tilt', sub: 'One bad beat and I spiral' },
   { value: 'play_scared', label: 'I play scared', sub: 'I fold when I might be ahead' },
 ] as const;
+
+/**
+ * Human label for the leak, for the notification screen.
+ *
+ * The try-hand flow derives this from the analysed hand; on the skip path there
+ * is no hand, so fall back to the leak the player picked and finally to
+ * something neutral rather than rendering a raw enum value.
+ */
+function describeLeakLabel(value: string | null | undefined): string {
+  const match = LEAKS.find((l) => l.value === value);
+  if (match) return match.label.replace(/^I /, 'You ');
+  return 'the leak in your plan';
+}
 
 const STAKES = [
   { value: 'home', label: 'Home games' },
@@ -195,9 +210,14 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
     if (i <= 0) return;
     // 'dealing' auto-advances to 'plan' on a timer, so stepping back into it
     // would bounce straight forward again. Skip over it.
-    const prev = STEPS[i - 1];
+    let prev = STEPS[i - 1];
+    // 'notify' is skipped forward for anyone who already enabled notifications
+    // in the try-hand flow; stepping back into it would ask again.
+    if (prev === 'notify' && tryResult?.notificationsEnabled && i - 2 >= 0) {
+      prev = STEPS[i - 2];
+    }
     setStep(prev === 'dealing' && i - 2 >= 0 ? STEPS[i - 2] : prev);
-  }, [step]);
+  }, [step, tryResult]);
 
   // A synthesised read of the three answers, not a receipt of the taps. 48
   // combinations produce genuinely different text — see planAnalysis.ts.
@@ -241,6 +261,31 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
     }
     onComplete();
   }, [where, stakes, leak, leakFromHand, name, onComplete, tryResult]);
+
+  /**
+   * Request the push token from the main flow.
+   *
+   * Mirrors the try-hand version, but records the result on state rather than
+   * on the TryHandResult, since there may be no hand on this path. A denial is
+   * recorded and the player moves on -- the prompt is never repeated.
+   */
+  const onEnableNotifications = useCallback(async () => {
+    trackOnboardingEvent('notif_prompt_accepted', { source: 'main_flow' });
+    try {
+      const { requestAndRegisterPushToken } = await import('@/services/notificationService');
+      const granted = await requestAndRegisterPushToken();
+      trackOnboardingEvent('notif_permission_result', { granted, source: 'main_flow' });
+      setTryResult((prev) =>
+        prev
+          ? { ...prev, notificationsEnabled: granted }
+          : { parsed: null, stakes: null, notificationsEnabled: granted }
+      );
+    } catch {
+      // A failed token is a missed re-engagement, not something to surface
+      // mid-onboarding.
+    }
+    go('paywall');
+  }, [go]);
 
   const onPurchase = useCallback(async () => {
     // Trust the entitlement, not the fact that the sheet closed. Both arms of
@@ -438,7 +483,41 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
           onBack={back}
           outcomeShort={analysis.outcomeShort}
           spotLabel={tryResult?.parsed ? 'the spot you brought us' : 'your biggest leak'}
-          onContinue={() => go('paywall')}
+          onContinue={() => {
+            // Anyone who already enabled inside the try-hand flow goes straight
+            // to the paywall; deciding here rather than inside the notify case
+            // avoids a setState during render.
+            if (tryResult?.notificationsEnabled) {
+              go('paywall');
+              return;
+            }
+            trackOnboardingEvent('notif_prompt_shown', { source: 'main_flow' });
+            go('notify');
+          }}
+        />
+      );
+
+    // -- Ask for notifications on a path everyone walks.
+    //
+    //    This prompt used to live only at the end of the try-hand flow, so it
+    //    was reached solely by players who recorded a hand, got a verdict and
+    //    tapped through. Everyone who skipped the hand -- the majority, by the
+    //    event log -- arrived at the paywall with no push token, which made
+    //    them permanently unreachable: the day-two follow-up selects on
+    //    expo_push_token, so it can never see them. The trials most likely to
+    //    lapse were exactly the ones nothing could be sent to.
+    //
+    //    Anyone who already enabled inside the try-hand flow skips straight
+    //    past, so nobody is asked twice. --
+    case 'notify':
+      return (
+        <TryHandNotify
+          leakLabel={describeLeakLabel(leakFromHand ?? leak)}
+          onEnable={onEnableNotifications}
+          onSkip={() => {
+            trackOnboardingEvent('notif_prompt_declined');
+            go('paywall');
+          }}
         />
       );
 
