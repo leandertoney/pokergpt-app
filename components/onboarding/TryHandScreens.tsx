@@ -14,9 +14,9 @@
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Animated, Pressable, type ViewStyle, type TextStyle } from 'react-native';
+import { View, Text, StyleSheet, Animated, Pressable, TextInput, type ViewStyle, type TextStyle } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { Mic, Square } from 'lucide-react-native';
+import { Mic, Square, Keyboard } from 'lucide-react-native';
 import { colors } from '@/constants/colors';
 import { spacing, radius, type as type_, elevation } from '@/constants/theme';
 import { Screen, PrimaryButton, TextButton, Choice } from './ui/Primitives';
@@ -30,34 +30,110 @@ import { trackOnboardingEvent } from '@/services/onboardingAnalytics';
 
 export function TryHandInvite({
   onStart,
+  onType,
   onSkip,
 }: {
   onStart: () => void;
+  onType: () => void;
   onSkip: () => void;
 }) {
   return (
     <Screen
       progress={0.26}
       eyebrow="Your turn"
-      headline={'Tell me a spot\nthat still bugs you.'}
+      headline={"What's up? Tell me\nabout the hand."}
       reveal
-      accent={['bugs']}
-      support={"Just the part you're unsure about. \u201cI had ace queen on the button and got check-raised on the turn\u201d is plenty."}
-      footer={<TextButton label="I'll do this later" onPress={onSkip} />}
+      accent={['hand.']}
+      support={"Any spot that still bugs you. \u201cI had ace queen on the button and got check-raised on the turn\u201d is plenty."}
+      footer={<TextButton label="Skip" onPress={onSkip} />}
     >
-      <View style={s.micWrap}>
+      {/* Two routes, deliberately the same size. Speech is rated far less
+          acceptable in public than in private, so a meaningful share of first
+          runs happen somewhere the player simply will not talk -- presenting
+          text as a lesser fallback loses those players for a reason that has
+          nothing to do with whether they want the app. */}
+      <View style={s.routeRow}>
         <Pressable
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
             onStart();
           }}
-          style={({ pressed }) => [s.micButton, pressed && s.micPressed]}
+          style={({ pressed }) => [s.route, s.routePrimary, pressed && s.routePressed]}
           accessibilityRole="button"
-          accessibilityLabel="Start recording your hand"
+          accessibilityLabel="Say your hand out loud"
         >
-          <Mic size={34} color={colors.text.dark} />
+          <View style={s.routeIcon}>
+            <Mic size={20} color={colors.text.dark} />
+          </View>
+          <Text style={s.routeLabel}>Say it</Text>
+          <Text style={s.routeSub}>faster</Text>
         </Pressable>
-        <Text style={s.micTip}>Tap to talk{"\n"}A few seconds is enough</Text>
+
+        <Pressable
+          onPress={onType}
+          style={({ pressed }) => [s.route, pressed && s.routePressed]}
+          accessibilityRole="button"
+          accessibilityLabel="Type your hand instead"
+        >
+          <View style={s.routeIcon}>
+            <Keyboard size={20} color={colors.text.dark} />
+          </View>
+          <Text style={s.routeLabel}>Type it</Text>
+          <Text style={s.routeSub}>anywhere</Text>
+        </Pressable>
+      </View>
+    </Screen>
+  );
+}
+
+/**
+ * The typed route.
+ *
+ * A message composer rather than a labelled form field: the player has just
+ * tapped through an exchange of chat bubbles, and the whole flow is selling a
+ * conversation. A text input with a caption would break that in the one place
+ * it needs to hold.
+ */
+export function TryHandCompose({
+  value,
+  onChange,
+  onSubmit,
+  onSkip,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onSubmit: () => void;
+  onSkip: () => void;
+}) {
+  const ready = value.trim().length >= 8;
+  return (
+    <Screen
+      progress={0.34}
+      eyebrow="Your turn"
+      headline={'Type the spot.'}
+      support="A sentence is enough. The coach fills in the rest."
+      footer={
+        <>
+          <PrimaryButton label="Send it" onPress={onSubmit} disabled={!ready} />
+          <TextButton label="Skip" onPress={onSkip} />
+        </>
+      }
+    >
+      <View style={s.composer}>
+        <TextInput
+          value={value}
+          onChangeText={onChange}
+          placeholder="Jacks in middle position, raised, button 3-bet me"
+          placeholderTextColor={colors.text.muted}
+          style={s.composerInput}
+          multiline
+          autoFocus
+          maxLength={400}
+          returnKeyType="done"
+          blurOnSubmit
+          onSubmitEditing={() => ready && onSubmit()}
+          accessibilityLabel="Describe your hand"
+        />
       </View>
     </Screen>
   );
@@ -251,12 +327,26 @@ function Meta({ k, v }: { k: string; v: string }) {
 /* 5. The notification ask                                             */
 /* ------------------------------------------------------------------ */
 
+/**
+ * The permission ask, worded for what actually happened.
+ *
+ * Every route through the try-it flow lands here -- spoke, typed, or skipped --
+ * because it is the only screen all three share, and a player who leaves
+ * without granting this cannot be reached again at all.
+ *
+ * The offer differs by route on purpose. Someone who just handed us a hand and
+ * got it read does not want an offer of more hands; they want the coach to keep
+ * working on the leak it just found. Only the player with no hand is offered
+ * the daily spot, because for them it is the honest description of what arrives.
+ */
 export function TryHandNotify({
   leakLabel,
+  hasHand,
   onEnable,
   onSkip,
 }: {
   leakLabel: string;
+  hasHand: boolean;
   onEnable: () => void;
   onSkip: () => void;
 }) {
@@ -264,21 +354,32 @@ export function TryHandNotify({
     <Screen
       progress={0.74}
       eyebrow="One more thing"
-      headline={'You\'ll play that\nspot again\nthis week.'}
+      headline={hasHand ? 'Want me to keep\nworking on this?' : 'A hand a day,\nthen.'}
       reveal
-      accent={['again']}
-      support={`We'll flag it the next time it shows up in a hand you bring us.`}
+      accent={hasHand ? ['this?'] : ['then.']}
+      support={
+        hasHand
+          ? `I'll send you spots that test exactly that, one a day.`
+          : `A real spot every morning. See how your play stacks up before you sit down.`
+      }
       scroll
       footer={
         <>
-          <PrimaryButton label="Turn on notifications" onPress={onEnable} />
-          <TextButton label="Not now" onPress={onSkip} />
+          <PrimaryButton
+            label={hasHand ? 'Keep working on this' : 'Send me a hand a day'}
+            onPress={onEnable}
+          />
+          <TextButton label="No thanks" onPress={onSkip} />
         </>
       }
     >
       <View style={s.card}>
-        <Text style={s.cardLabel}>WATCHING FOR</Text>
-        <Text style={s.watchFor}>{leakLabel}</Text>
+        <Text style={s.cardLabel}>{hasHand ? 'WATCHING FOR' : 'TOMORROW'}</Text>
+        <Text style={s.watchFor}>
+          {hasHand
+            ? leakLabel
+            : 'AQ suited on the button, facing a 3-bet. What’s your play?'}
+        </Text>
       </View>
     </Screen>
   );
@@ -297,7 +398,7 @@ export type TryHandResult = {
   notificationsEnabled: boolean;
 };
 
-type Phase = 'invite' | 'listening' | 'retry' | 'stakes' | 'analyzing' | 'verdict' | 'notify';
+type Phase = 'invite' | 'listening' | 'retry' | 'compose' | 'stakes' | 'analyzing' | 'verdict' | 'notify';
 
 /**
  * Drives the five try-it screens and hands the outcome back to OnboardingV3.
@@ -309,8 +410,21 @@ export function TryHandFlow({ onDone }: { onDone: (r: TryHandResult) => void }) 
   const [phase, setPhase] = useState<Phase>('invite');
   const [stakes, setStakes] = useState<string | null>(null);
   const [parsed, setParsed] = useState<ParsedHand | null>(null);
+  // What the player typed, when they took the text route. Kept separate from
+  // the dictation transcript so a denied mic followed by typing does not read
+  // back a stale half-transcription.
+  const [typed, setTyped] = useState('');
   const dictation = useHandDictation();
   const finished = useRef(false);
+
+  /**
+   * The hand text, whichever way it arrived.
+   *
+   * Typing is not a fallback here -- a large share of first runs happen where
+   * the player will not speak aloud, so the two routes are equals and the rest
+   * of the flow must not care which one produced the words.
+   */
+  const handText = typed.trim() || dictation.transcript || '';
 
   const finish = useCallback(
     (notificationsEnabled: boolean) => {
@@ -321,15 +435,22 @@ export function TryHandFlow({ onDone }: { onDone: (r: TryHandResult) => void }) 
     [onDone, parsed, stakes]
   );
 
-  /** Every abandon path lands here: no verdict, no token, keep moving. */
+  /**
+   * Every abandon path lands here: no verdict, keep moving.
+   *
+   * It routes through the notification ask rather than straight out. Skipping
+   * the hand is not a reason to leave without a push token -- these are exactly
+   * the players least likely to come back on their own, and this is the last
+   * screen in the flow that reaches them.
+   */
   const bail = useCallback(
     (reason: string) => {
       trackOnboardingEvent('try_hand_skipped', { reason });
       if (finished.current) return;
-      finished.current = true;
-      onDone({ parsed: null, stakes, notificationsEnabled: false });
+      trackOnboardingEvent('notif_prompt_shown', { source: 'skip_path' });
+      setPhase('notify');
     },
-    [onDone, stakes]
+    []
   );
 
   const startRecording = useCallback(async () => {
@@ -337,7 +458,11 @@ export function TryHandFlow({ onDone }: { onDone: (r: TryHandResult) => void }) 
     const ok = await dictation.start();
     trackOnboardingEvent('mic_permission_result', { granted: ok });
     if (!ok) {
-      bail('mic_denied');
+      // A denied mic used to end the try-it flow outright, which threw away a
+      // player who was willing to give us a hand and only refused the
+      // microphone. Typing is a real route, so send them there instead.
+      trackOnboardingEvent('try_hand_compose', { reason: 'mic_denied' });
+      setPhase('compose');
       return;
     }
     setPhase('listening');
@@ -379,16 +504,28 @@ export function TryHandFlow({ onDone }: { onDone: (r: TryHandResult) => void }) 
     async (stakesValue: string | null) => {
       setPhase('analyzing');
       const label = STAKES.find((x) => x.value === stakesValue)?.label ?? null;
-      const result = await parseAndAnalyzeHand(dictation.transcript, label);
+      const source = typed.trim() ? 'typed' : 'voice';
+      const result = await parseAndAnalyzeHand(handText, label);
 
       if (!isReadableHand(result)) {
-        trackOnboardingEvent('try_hand_analyzed', { readable: false });
+        // Five of the first six recordings died here with nothing recorded but
+        // the word "unreadable", which cannot distinguish a bad transcription
+        // from a good one the model would not treat as poker. The length, the
+        // opening words and the route are enough to tell those apart without
+        // storing what someone said.
+        trackOnboardingEvent('try_hand_analyzed', {
+          readable: false,
+          chars: handText.length,
+          preview: handText.slice(0, 60),
+          source,
+        });
         bail('unreadable');
         return;
       }
 
       trackOnboardingEvent('try_hand_analyzed', {
         readable: true,
+        source,
         action: result.analysis.recommendedAction,
       });
 
@@ -402,15 +539,20 @@ export function TryHandFlow({ onDone }: { onDone: (r: TryHandResult) => void }) 
           { ...result.handData, id: `hand-${Date.now()}`, timestamp: Date.now() } as any,
           { ...result.analysis, timestamp: Date.now() } as any
         );
+        // Confirms the hand is waiting on the home screen. Without this the
+        // only evidence of a save was the row itself, so a save that never
+        // happened was indistinguishable from one that did.
+        trackOnboardingEvent('try_hand_saved');
       } catch (e: any) {
         // A failed save must not cost them the verdict they just earned.
         console.warn('[try_hand] save failed:', e?.message);
+        trackOnboardingEvent('try_hand_save_failed', { reason: e?.message ?? 'unknown' });
       }
 
       setParsed(result);
       setPhase('verdict');
     },
-    [dictation.transcript, bail]
+    [handText, typed, bail]
   );
 
   const enableNotifications = useCallback(async () => {
@@ -423,10 +565,32 @@ export function TryHandFlow({ onDone }: { onDone: (r: TryHandResult) => void }) 
 
   switch (phase) {
     case 'invite':
-      return <TryHandInvite onStart={startRecording} onSkip={() => bail('declined_invite')} />;
+      return (
+        <TryHandInvite
+          onStart={startRecording}
+          onType={() => {
+            trackOnboardingEvent('try_hand_compose', { reason: 'chose_text' });
+            setPhase('compose');
+          }}
+          onSkip={() => bail('declined_invite')}
+        />
+      );
 
     case 'listening':
       return <TryHandListening onDone={stopRecording} />;
+
+    case 'compose':
+      return (
+        <TryHandCompose
+          value={typed}
+          onChange={setTyped}
+          onSubmit={() => {
+            trackOnboardingEvent('try_hand_typed', { chars: typed.trim().length });
+            setPhase('stakes');
+          }}
+          onSkip={() => bail('declined_compose')}
+        />
+      );
 
     case 'stakes':
       return (
@@ -470,6 +634,7 @@ export function TryHandFlow({ onDone }: { onDone: (r: TryHandResult) => void }) 
       return (
         <TryHandNotify
           leakLabel={describeLeak(parsed)}
+          hasHand={!!parsed}
           onEnable={enableNotifications}
           onSkip={() => {
             trackOnboardingEvent('notif_prompt_declined');
@@ -536,6 +701,49 @@ function describeLeak(parsed: ParsedHand | null): string {
 }
 
 const s = StyleSheet.create({
+  /* Two equal routes into the same flow -- same width, same padding, same
+     radius. Any asymmetry here reads as "typing is the lesser option", which
+     is exactly the signal that loses the players who cannot speak right now. */
+  routeRow: { flexDirection: 'row', gap: spacing.snug, paddingVertical: spacing.base },
+  route: {
+    flex: 1,
+    alignItems: 'center',
+    gap: spacing.tight,
+    paddingVertical: spacing.base,
+    paddingHorizontal: spacing.snug,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(232,184,74,0.2)',
+    backgroundColor: colors.background.tertiary,
+  } as ViewStyle,
+  routePrimary: { borderColor: colors.accent.gold } as ViewStyle,
+  routePressed: { opacity: 0.85, transform: [{ scale: 0.98 }] } as ViewStyle,
+  routeIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.pill,
+    backgroundColor: colors.accent.gold,
+    alignItems: 'center',
+    justifyContent: 'center',
+  } as ViewStyle,
+  routeLabel: { ...type_.body, fontWeight: '800', color: colors.text.primary } as TextStyle,
+  routeSub: { ...type_.caption, color: colors.text.muted } as TextStyle,
+
+  composer: {
+    backgroundColor: colors.background.tertiary,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.accent.gold,
+    padding: spacing.base,
+    minHeight: 132,
+  } as ViewStyle,
+  composerInput: {
+    ...type_.body,
+    color: colors.text.primary,
+    minHeight: 100,
+    textAlignVertical: 'top',
+  } as TextStyle,
+
   micWrap: { alignItems: 'center', gap: spacing.base, paddingVertical: spacing.base },
 
   micButton: {

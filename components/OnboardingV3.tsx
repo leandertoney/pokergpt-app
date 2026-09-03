@@ -1,52 +1,44 @@
 /**
- * Onboarding, rebuilt.
+ * Onboarding, rebuilt around one worked hand.
  *
- * What was wrong with the old flow:
- *  - ChatDemoScreen played an 11-message scripted conversation and gated the
- *    Continue button behind it — roughly 8 seconds of forced waiting with no
- *    skip. Nothing the user did mattered until it finished.
- *  - Questions were wordy and extractive: four of them, and the answers were
- *    thrown away at the end (handleComplete hardcoded experienceLevel and
- *    passed a null profile), so nothing the user said changed anything.
- *  - 30 screens existed, 9 were reachable, 3 could not be exited at all.
+ * The flow this replaces reached the paywall reliably -- 89% of everyone who
+ * started it got there -- and sold almost nobody, because it spent eleven
+ * screens describing a coach the player never met. Of the first four buyers,
+ * three never saw the coach do anything at all, and two of thirty-seven devices
+ * ever opened the app a second time.
  *
- * What this is instead:
- *  - One idea per screen. Each value screen leads with the OUTCOME as its
- *    headline and proves it with an exaggerated mock of the real UI — it does
- *    not describe the feature in prose first.
- *  - Nothing is time-gated. Every screen's button is live on arrival.
- *  - Three short questions, and every answer is used: it is echoed back on the
- *    plan screen and persisted at completion.
- *  - No stock photography. The old flow leaned on 15 large JPEGs that had to be
- *    re-bundled after the Supabase project paused and broke every one of them.
+ * So the order is inverted. The coach answers a real hand before it asks the
+ * player for anything, and the screens that only made claims are gone:
+ *
+ *   welcome -> example -> try_hand -> (questions) -> notify -> paywall
+ *
+ * Three rules hold this together:
+ *
+ *  1. Show, never describe. 'value_analyze' and 'value_review' asserted what
+ *     the app does; the example screen spends one exchange doing it.
+ *  2. The player acts. Nothing plays at them and nothing is time-gated --
+ *     watching a demonstration measurably raises how hard people rate the task
+ *     afterwards, while doing one lands.
+ *  3. No theater. 'building' and 'dealing' were a progress bar over work that
+ *     does not exist, and a wait that personalises nothing costs attention and
+ *     returns none.
  *
  * Copy is written at roughly a fifth-grade reading level: short sentences,
  * common words, second person, no poker jargon beyond words a player already
  * uses at the table.
  */
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Haptics from 'expo-haptics';
 
-import { Screen, PrimaryButton, TextButton, Choice, NameField } from './onboarding/ui/Primitives';
-import { buildPlanAnalysis } from './onboarding/planAnalysis';
-import {
-  BuildingSteps,
-  WelcomeVisual,
-  LiveVisual,
-  QuestionVisual,
-} from './onboarding/ui/Visuals';
+import { Screen, PrimaryButton, TextButton, Choice } from './onboarding/ui/Primitives';
+import { WelcomeVisual, QuestionVisual } from './onboarding/ui/Visuals';
 import { PaywallV2 } from './onboarding/PaywallV2';
 import { TryHandFlow, TryHandNotify, type TryHandResult } from './onboarding/TryHandScreens';
 import type { ParsedHand } from '@/services/handAnalysis';
-import { ResultsScreen } from './onboarding/ResultsScreen';
-import { DealingScreen } from './onboarding/DealingScreen';
-import { PlanVisualV2 } from './onboarding/PlanVisualV2';
-import { spacing } from '@/constants/theme';
 import { trackOnboardingEvent } from '@/services/onboardingAnalytics';
-import { setUserTier, setUserIdentity, setPaywallState, setOnboardingProfile, setUserDisplayName } from '@/services/storageService';
+import { setUserTier, setUserIdentity, setPaywallState, setOnboardingProfile } from '@/services/storageService';
+import { ExampleHand } from './onboarding/ExampleHand';
 import { checkSubscriptionStatus } from '@/services/revenueCat';
 import type { UserIdentity, OnboardingProfile, BiggestChallenge } from '@/types/poker';
 
@@ -58,29 +50,25 @@ type Step =
   | 'try_hand'
   | 'q_play_where'
   | 'q_leak'
-  | 'building'
-  | 'dealing'
-  | 'plan'
-  | 'results'
   | 'notify'
   | 'paywall';
 
 /**
- * Flow order, value-first.
+ * The flow, after cutting everything that talked instead of showing.
  *
- * The three value screens that used to sit here described what the app does;
- * 'try_hand' now lets the player do it instead, roughly 30 seconds in rather
- * than after the paywall. Published onboarding benchmarks put drop-off at
- * 10-15% per screen shown before any value lands, which is what the old order
- * was spending on explanation.
+ * The profile questions sit behind the payoff (progressive profiling). Both of
+ * this app's early paying trials skipped them, so asking first spent real
+ * screens on data neither payer gave. Stakes is asked inside the try-it flow,
+ * where the reason for asking is self-evident.
  *
- * 'value_live' survives alone because it teaches the exact interaction the very
- * next screen asks for cold — talking to the app out loud.
+ * 'building' and 'dealing' were a progress bar over work that does not exist --
+ * a wait that personalises nothing costs attention and returns none. 'plan' and
+ * 'results' presented a plan assembled from three taps as if it were a
+ * diagnosis; the coach reading a real hand is the stronger version of the same
+ * promise, and it now happens before any of this. 'q_leak' survives only as a
+ * fallback inside the try flow, for players we could not read a hand from.
  *
- * The profile questions move behind the payoff (progressive profiling). Both of
- * this app's paying trials skipped them, so asking first cost real screens for
- * data neither payer gave. Stakes is the exception and is asked inside the
- * try-it flow, where the reason for asking is self-evident.
+ * Eleven screens to six on the longest path.
  */
 const STEPS: Step[] = [
   'welcome',
@@ -88,10 +76,6 @@ const STEPS: Step[] = [
   'try_hand',
   'q_play_where',
   'q_leak',
-  'building',
-  'dealing',
-  'plan',
-  'results',
   'notify',
   'paywall',
 ];
@@ -115,13 +99,6 @@ function describeLeakLabel(value: string | null | undefined): string {
   if (match) return match.label.replace(/^I /, 'You ');
   return 'the leak in your plan';
 }
-
-const STAKES = [
-  { value: 'home', label: 'Home games' },
-  { value: 'micro', label: 'Micro stakes' },
-  { value: 'low', label: '1/2 or 1/3' },
-  { value: 'mid', label: '2/5 and up' },
-] as const;
 
 /** Plain-language leak answers mapped onto the app's existing challenge type. */
 const LEAK_TO_CHALLENGE: Record<string, BiggestChallenge | undefined> = {
@@ -170,7 +147,6 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
   const [where, setWhere] = useState<string | null>('live');
   const [stakes, setStakes] = useState<string | null>('low');
   const [leak, setLeak] = useState<string | null>('call_too_much');
-  const [name, setName] = useState<string | null>(null);
   // Outcome of the try-it sequence. Null when the player skipped it, the mic was
   // denied, or the model could not read what they said — all of which are normal
   // paths, not errors, and all of which continue to the plan.
@@ -184,7 +160,7 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
   // BECAUSE they do not know. The question only survives as a fallback for the
   // players we could not read a hand from.
   const leakFromHand = deriveLeak(tryResult?.parsed ?? null);
-  const afterWhere: Step = leakFromHand ? 'building' : 'q_leak';
+  const afterWhere: Step = leakFromHand ? 'notify' : 'q_leak';
 
   // The first screen is never a transition target, so tracking only inside go()
   // left 'welcome' permanently at zero and made every later step look like 100%
@@ -200,31 +176,34 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
     AsyncStorage.setItem('@onboarding_flow', '2').catch(() => {});
   }, []);
 
-  const go = useCallback((next: Step, props: Record<string, unknown> = {}) => {
-    trackOnboardingEvent(next, props);
-    setStep(next);
-  }, []);
+  const go = useCallback(
+    (next: Step, props: Record<string, unknown> = {}) => {
+      // Nobody is asked for notifications twice. The try-hand flow ends with
+      // the same prompt, so a player who granted (or refused) it there walks
+      // straight past this one. Centralised here rather than at each call site
+      // into 'notify' -- there are several, and one that forgot would ask again.
+      if (next === 'notify' && tryResult) {
+        trackOnboardingEvent('paywall', { ...props, notifySkipped: true });
+        setStep('paywall');
+        return;
+      }
+      trackOnboardingEvent(next, props);
+      setStep(next);
+    },
+    [tryResult]
+  );
 
   const back = useCallback(() => {
     const i = STEPS.indexOf(step);
     if (i <= 0) return;
-    // 'dealing' auto-advances to 'plan' on a timer, so stepping back into it
-    // would bounce straight forward again. Skip over it.
     let prev = STEPS[i - 1];
     // 'notify' is skipped forward for anyone who already enabled notifications
     // in the try-hand flow; stepping back into it would ask again.
     if (prev === 'notify' && tryResult?.notificationsEnabled && i - 2 >= 0) {
       prev = STEPS[i - 2];
     }
-    setStep(prev === 'dealing' && i - 2 >= 0 ? STEPS[i - 2] : prev);
+    setStep(prev);
   }, [step, tryResult]);
-
-  // A synthesised read of the three answers, not a receipt of the taps. 48
-  // combinations produce genuinely different text — see planAnalysis.ts.
-  const analysis = useMemo(
-    () => buildPlanAnalysis(where as any, stakes as any, (leakFromHand ?? leak) as any),
-    [where, stakes, leak, leakFromHand]
-  );
 
   const finish = useCallback(async () => {
     try {
@@ -250,17 +229,14 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
       await AsyncStorage.setItem(ONBOARDING_COMPLETE_KEY, 'true');
       // Release the Settings override so the flow does not reappear next launch.
       await AsyncStorage.removeItem('@force_onboarding');
-      // Persist the name. The previous flow collected answers and threw them
-      // away at completion; anything asked for has to actually be kept.
-      if (name?.trim()) await setUserDisplayName(name.trim());
       await setUserIdentity(identity);
       await setOnboardingProfile(profile);
-      trackOnboardingEvent('onboarding_completed', { where, stakes, leak, named: !!name?.trim() });
+      trackOnboardingEvent('onboarding_completed', { where, stakes, leak });
     } catch (e) {
       console.warn('[onboarding] completion save failed', e);
     }
     onComplete();
-  }, [where, stakes, leak, leakFromHand, name, onComplete, tryResult]);
+  }, [where, stakes, leak, leakFromHand, onComplete, tryResult]);
 
   /**
    * Request the push token from the main flow.
@@ -322,20 +298,16 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
         </Screen>
       );
 
-    // -- One value screen. It teaches the interaction the next screen needs. --
+    // -- One worked exchange, advanced by the player. It does not describe the
+    //    coach, it runs one turn of it, which is the thing the old value
+    //    screens were only claiming. See ExampleHand.tsx. --
     case 'value_live':
       return (
-        <Screen
+        <ExampleHand
           progress={progress}
           onBack={back}
-          headline={'Ask out loud,\nmid-hand.'}
-          reveal
-          accent={['loud', 'mid-hand']}
-          support="Say what happened. Get the play and the reason, in seconds."
-          footer={<PrimaryButton label="Try it on a hand" onPress={() => go('try_hand')} />}
-        >
-          <LiveVisual />
-        </Screen>
+          onDone={() => go('try_hand')}
+        />
       );
 
     // -- The player uses the product. Five sub-screens, all failures fall
@@ -397,12 +369,12 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
           scroll
           footer={
             <>
-              <PrimaryButton label="Continue" onPress={() => go('building', { leak })} />
+              <PrimaryButton label="Continue" onPress={() => go('notify', { leak })} />
               <TextButton
                 label="Not sure yet"
                 onPress={() => {
                   setLeak(null);
-                  go('building', { skipped: true });
+                  go('notify', { skipped: true });
                 }}
               />
             </>
@@ -421,82 +393,6 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
         </Screen>
       );
 
-    // -- The payback. Their answers, read back to them. --
-    case 'building':
-      return (
-        <BuildingScreen
-          stakesLabel={STAKES.find((x) => x.value === stakes)?.label ?? 'your stakes'}
-          name={name}
-          setName={setName}
-          onDone={() => go('dealing', { named: !!name })}
-        />
-      );
-
-    // -- Themed hold while the plan is composed. Names what is being compared
-    //    rather than showing a bare spinner. --
-    case 'dealing':
-      return (
-        <DealingScreen
-          progress={progress}
-          parsed={tryResult?.parsed ?? null}
-          stakesLabel={STAKES.find((x) => x.value === stakes)?.label ?? 'your stakes'}
-          onDone={() => go('plan')}
-        />
-      );
-
-    case 'plan':
-      return (
-        <Screen
-          progress={progress}
-          onBack={back}
-          eyebrow="Your analysis"
-          headline={name ? `Here is what\nwe found, ${name}.` : 'Here is what\nwe found.'}
-          reveal
-          accent={name ? [`${name.toLowerCase()}.`] : ['found.']}
-          scroll
-          footer={
-            <PrimaryButton
-              label="What this looks like"
-              onPress={() => {
-                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                go('results');
-              }}
-            />
-          }
-        >
-          <PlanVisualV2
-            diagnosis={analysis.diagnosis}
-            outcomeShort={analysis.outcomeShort}
-            thirtyDay={analysis.thirtyDay}
-            parsed={tryResult?.parsed ?? null}
-          />
-        </Screen>
-      );
-
-    // -- Forward-looking payoff before the price. Counts a behaviour in one
-    //    spot, never a win rate or an amount won: this app is gambling-adjacent
-    //    and an invented outcome statistic is a review risk. --
-    case 'results':
-      return (
-        <ResultsScreen
-          progress={progress}
-          onBack={back}
-          outcomeShort={analysis.outcomeShort}
-          spotLabel={tryResult?.parsed ? 'the spot you brought us' : 'your biggest leak'}
-          onContinue={() => {
-            // Anyone who already enabled inside the try-hand flow goes straight
-            // to the paywall; deciding here rather than inside the notify case
-            // avoids a setState during render.
-            if (tryResult?.notificationsEnabled) {
-              go('paywall');
-              return;
-            }
-            trackOnboardingEvent('notif_prompt_shown', { source: 'main_flow' });
-            go('notify');
-          }}
-        />
-      );
-
     // -- Ask for notifications on a path everyone walks.
     //
     //    This prompt used to live only at the end of the try-hand flow, so it
@@ -513,6 +409,11 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
       return (
         <TryHandNotify
           leakLabel={describeLeakLabel(leakFromHand ?? leak)}
+          // A leak derived from an actual hand is the only case where the
+          // coach has something of theirs to keep working on. A leak they
+          // merely tapped in q_leak is not the same claim, so those players
+          // get the daily-hand offer instead.
+          hasHand={!!leakFromHand}
           onEnable={onEnableNotifications}
           onSkip={() => {
             trackOnboardingEvent('notif_prompt_declined');
@@ -526,67 +427,4 @@ export function OnboardingV3({ onComplete }: { onComplete: () => void }) {
         <PaywallV2 goal={leak} onPurchase={onPurchase} onSkip={onSkipPaywall} />
       );
   }
-}
-
-// -----------------------------------------------------------------------------
-
-/**
- * The "customizing your plan" beat.
- *
- * A short processing moment before the analysis. Every high-converting flow
- * researched (Cal AI, RISE, Opal) has one: it makes the output feel earned
- * rather than instant, and it is where the app says out loud that it is reading
- * *their* answers rather than showing everyone the same page.
- *
- * Capped at 2.4s and it advances itself — nothing here can strand the user, and
- * there is no button to wait for.
- */
-function BuildingScreen({
-  stakesLabel,
-  name,
-  setName,
-  onDone,
-}: {
-  stakesLabel: string;
-  name: string | null;
-  setName: (v: string) => void;
-  onDone: () => void;
-}) {
-  const steps = useMemo(
-    () => [
-      'Reading your answers',
-      `Comparing players at ${stakesLabel.toLowerCase()}`,
-      'Building your plan',
-    ],
-    [stakesLabel]
-  );
-  const [step, setStep] = useState(0);
-
-  // The steps run on their own. The name field sits alongside them so asking
-  // costs no extra screen, and the button is live from the first frame — the
-  // processing beat never gates the user.
-  useEffect(() => {
-    const a = setTimeout(() => setStep(1), 900);
-    const b = setTimeout(() => setStep(2), 1800);
-    return () => {
-      clearTimeout(a);
-      clearTimeout(b);
-    };
-  }, []);
-
-  return (
-    <Screen
-      headline={'Customizing\nyour plan.'}
-      reveal
-      accent={['Customizing']}
-      support="What should we call you?"
-      scroll
-      footer={<PrimaryButton label="See my analysis" onPress={onDone} />}
-    >
-      <View style={{ gap: spacing.roomy }}>
-        <NameField value={name ?? ''} onChange={setName} onSubmit={onDone} />
-        <BuildingSteps steps={steps} active={step} />
-      </View>
-    </Screen>
-  );
 }

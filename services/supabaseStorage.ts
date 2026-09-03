@@ -202,11 +202,20 @@ export async function storeHand(
     // Note: Free tier limit is now enforced BEFORE calling storeHand via canSaveHand()
     // No auto-pruning - if a hand gets here, it's allowed to be saved
 
-    await supabase.from("hands").insert({
+    const { error } = await supabase.from("hands").insert({
       user_id: user.id,
       hand_data: handData,
       analysis,
     });
+
+    // The insert result used to go unread, so a rejected row looked exactly
+    // like a saved one and the first hand a player ever gave us could vanish
+    // without a trace. Offline is still not an error -- the hand is already in
+    // local storage by this point -- but a server that answered and refused is.
+    if (error) {
+      console.warn('[storeHand] insert rejected:', error.message);
+      trackAppEvent('hand_save_failed', { reason: error.message });
+    }
   } catch {
     // Silent catch - hand storage fails gracefully offline
   }
