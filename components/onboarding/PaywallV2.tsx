@@ -234,16 +234,32 @@ export function PaywallV2({ onPurchase, onSkip }: Props) {
       if (res.success) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         onPurchase();
-      } else if (res.error !== 'cancelled') {
-        Alert.alert('Could not complete', res.error ?? 'Please try again.');
+        return;
       }
+
+      // Every outcome of the store sheet is now recorded. Previously a tap that
+      // did not become a purchase left NO event at all: someone dismissing
+      // Apple's or Google's sheet and someone hitting a real billing error were
+      // both invisible and indistinguishable, so the gap between taps and
+      // purchases could not be read as either lost intent or a broken flow.
+      // ('paywall_declined' is the app's own "Not now" button, a different
+      // thing entirely, and was never the store sheet.)
+      if (res.error === 'cancelled') {
+        trackOnboardingEvent('purchase_cancelled', { plan });
+        return;
+      }
+
+      trackOnboardingEvent('purchase_failed', { plan, reason: res.error ?? 'unknown' });
+      Alert.alert('Could not complete', res.error ?? 'Please try again.');
     } finally {
       setBusy(false);
     }
   }, [busy, plan, onPurchase]);
 
   const restore = useCallback(async () => {
+    trackOnboardingEvent('restore_tapped');
     const res = await restorePurchases();
+    trackOnboardingEvent('restore_result', { restored: res.success });
     if (res.success) onPurchase();
     else Alert.alert('Nothing to restore', 'No previous purchase was found on this account.');
   }, [onPurchase]);
