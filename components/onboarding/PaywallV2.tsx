@@ -8,11 +8,16 @@
  *    conventional two-option paywall. Superwall measured 12.41% vs 9.07% for
  *    multi-page versus single-page onboarding paywalls across 40M+ opens.
  *
- *  - THE TWO PLANS ARE NOT EQUIVALENT, and the screen says so. In App Store
- *    Connect only pokergpt_yearly ($29.99/yr) carries the 3-day introductory
- *    offer; pokergpt_weekly ($9.99/wk) has none. Presenting both under one
- *    "Try for $0.00" button would be false for the weekly plan, so the CTA and
- *    the terms line both change with the selection.
+ *  - THE TWO PLANS ARE NOT EQUIVALENT, and the screen says so. Only the yearly
+ *    plan carries an introductory offer; the weekly has none. Presenting both
+ *    under one "Try for $0.00" button would be false for the weekly plan, so
+ *    the CTA and the terms line both change with the selection.
+ *
+ *  - THE TRIAL LENGTH IS READ FROM THE STORE, never hardcoded. Both consoles
+ *    can change it with no app release, so a constant here becomes a false
+ *    promise the moment that happens -- see introTrialDays. Every trial claim
+ *    on this screen (headline, support line, CTA, terms, timeline) is derived
+ *    from it, and all of them disappear when the product has no free trial.
  *
  *  - VALUE, PRICE AND TERMS TOGETHER on the converting screen. After nine
  *    onboarding screens people have genuinely forgotten what the app does, so
@@ -62,6 +67,7 @@ import {
   PRODUCT_IDS,
   type PlanType,
 } from '@/services/revenueCat';
+import type { PurchasesPackage } from 'react-native-purchases';
 import { trackOnboardingEvent } from '@/services/onboardingAnalytics';
 import { colors } from '@/constants/colors';
 import { spacing, radius, type as t, motion, elevation } from '@/constants/theme';
@@ -111,7 +117,7 @@ const VALUE = [
 
 /** Local defaults. Any key can be overridden from the RevenueCat dashboard. */
 const DEFAULT_COPY = {
-  sell_headline: 'Try it free\nfor 3 days.',
+  sell_headline: 'Try it free\nfor {days} days.',
   sell_support: 'Full access. You will not be charged today, and we will remind you before the trial ends.',
   // Apple requires the subscription NAME on the sign-up screen, not just the
   // plans. "Pick your plan" satisfies neither the requirement nor the user's
@@ -138,11 +144,50 @@ type Props = {
   onSkip: () => void;
 };
 
+/**
+ * The free-trial length, in days, as the store reports it.
+ *
+ * RevenueCat carries the introductory offer on the product, so the app can read
+ * what App Store Connect and Play Console are actually granting instead of
+ * repeating a number someone typed here months ago. Both consoles can change
+ * that length with no app release, which is exactly how a hardcoded "3 days
+ * free" ends up on screen while the store hands out seven.
+ *
+ * Returns null when the product has no introductory offer, when the offer is
+ * not a free trial (a discounted intro price is a different promise), or when
+ * the period is not expressible in whole days -- callers then say nothing about
+ * a trial rather than inventing one.
+ */
+function introTrialDays(pkg: PurchasesPackage | null | undefined): number | null {
+  const intro = pkg?.product.introPrice;
+  if (!intro) return null;
+  // A paid introductory price is not a free trial and must not be sold as one.
+  if (intro.price !== 0) return null;
+
+  const units = intro.periodNumberOfUnits;
+  if (!units || units < 1) return null;
+
+  switch (intro.periodUnit) {
+    case 'DAY':
+      return units;
+    case 'WEEK':
+      return units * 7;
+    // Month and year trials exist but are not offered here, and rendering them
+    // as a day count ("Day 30") would read wrong on the timeline.
+    default:
+      return null;
+  }
+}
+
 export function PaywallV2({ onPurchase, onSkip }: Props) {
   const insets = useSafeAreaInsets();
   const [page, setPage] = useState<'sell' | 'price'>('sell');
   const [plan, setPlan] = useState<PlanType>('yearly');
   const [prices, setPrices] = useState<{ weekly?: string; yearly?: string }>({});
+  // Free-trial length as the store reports it. Null until the offering loads,
+  // and null for a product with no introductory offer at all -- in which case
+  // every trial promise on this screen is suppressed rather than guessed at.
+  const [trialDays, setTrialDays] = useState<number | null>(null);
   const [amounts, setAmounts] = useState<{ weekly: number; yearly: number }>({ weekly: 0, yearly: 0 });
   const [copy, setCopy] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
@@ -170,6 +215,7 @@ export function PaywallV2({ onPurchase, onSkip }: Props) {
         setUnavailable(true);
         return;
       }
+      setTrialDays(introTrialDays(offering?.annual));
       setPrices({ weekly, yearly });
     })();
   }, []);
@@ -205,6 +251,13 @@ export function PaywallV2({ onPurchase, onSkip }: Props) {
   if (unavailable) return null;
 
   const loaded = !!(prices.weekly && prices.yearly);
+
+  // The sell headline names the trial length the store is granting. With no
+  // trial on the product there is nothing free to offer, so it falls back to
+  // the product rather than promising a trial that does not exist.
+  const sellHeadline = trialDays
+    ? c('sell_headline').replace('{days}', String(trialDays))
+    : c('price_headline');
   if (!loaded) {
     return (
       <View style={[s.screen, s.center]}>
@@ -217,8 +270,9 @@ export function PaywallV2({ onPurchase, onSkip }: Props) {
     <View style={[s.screen, { paddingTop: insets.top + spacing.base }]}>
       {page === 'sell' ? (
         <SellPage
-          headline={c('sell_headline')}
-          support={c('sell_support')}
+          headline={sellHeadline}
+          support={trialDays ? c('sell_support') : undefined}
+          trialDays={trialDays}
           onNext={() => {
             trackOnboardingEvent('paywall_page_price');
             setPage('price');
@@ -240,9 +294,13 @@ export function PaywallV2({ onPurchase, onSkip }: Props) {
               : 0
           }
           headline={c('price_headline')}
-          cta={c('cta')}
+          cta={trialDays ? c('cta') : c('cta_no_trial')}
           ctaNoTrial={c('cta_no_trial')}
-          trialTerms={`3 days free, then ${prices.yearly} per year. Cancel any time before the trial ends.`}
+          trialTerms={
+            trialDays
+              ? `${trialDays} days free, then ${prices.yearly} per year. Cancel any time before the trial ends.`
+              : `${prices.yearly} per year, billed today. Cancel any time.`
+          }
           weeklyTerms={`${prices.weekly} per week, billed today. Cancel any time.`}
           dismissLabel={c('dismiss')}
           plan={plan}
@@ -266,13 +324,16 @@ export function PaywallV2({ onPurchase, onSkip }: Props) {
 function SellPage({
   headline,
   support,
+  trialDays,
   onNext,
   onSkip,
   dismissLabel,
   insetBottom,
 }: {
   headline: string;
-  support: string;
+  support?: string;
+  /** Store-reported trial length, null when the product has no free trial. */
+  trialDays: number | null;
   onNext: () => void;
   onSkip: () => void;
   dismissLabel: string;
@@ -291,9 +352,11 @@ function SellPage({
         {/* Priming carries trust and urgency, not features. The onboarding
             already demonstrated what the app does; repeating it here is what
             made the previous version read as a feature dump. */}
-        <Fade delay={160} style={{ marginTop: spacing.loose }}>
-          <Timeline />
-        </Fade>
+        {trialDays ? (
+          <Fade delay={160} style={{ marginTop: spacing.loose }}>
+            <Timeline trialDays={trialDays} />
+          </Fade>
+        ) : null}
       </View>
 
       <View style={[s.footer, { paddingBottom: Math.max(insetBottom, spacing.base) }]}>
@@ -450,14 +513,35 @@ function PricePage({
 
 
 
-/** The billing timeline. Addresses the fear instead of listing features. */
-const STEPS = [
-  { day: 'Today', text: 'Full access. You are not charged.' },
-  { day: 'Day 2', text: 'We remind you before the trial ends.' },
-  { day: 'Day 3', text: 'Trial ends. Cancel any time before this.' },
-];
+/**
+ * The billing timeline. Addresses the fear instead of listing features.
+ *
+ * Built from the trial the STORE is actually offering, never a constant. The
+ * trial length lives in App Store Connect and Play Console, and changing it
+ * there takes effect without an app release -- so any number hardcoded here
+ * silently becomes a lie the first time that happens, on the screen where a
+ * wrong promise costs the most.
+ */
+function buildSteps(trialDays: number) {
+  const steps = [{ day: 'Today', text: 'Full access. You are not charged.' }];
+  // The reminder lands the day before the charge, wherever that falls. With a
+  // trial too short for a distinct reminder day, the middle row is dropped
+  // rather than collapsed onto a day that already says something else.
+  if (trialDays >= 3) {
+    steps.push({
+      day: `Day ${trialDays - 1}`,
+      text: 'We remind you before the trial ends.',
+    });
+  }
+  steps.push({
+    day: `Day ${trialDays}`,
+    text: 'Trial ends. Cancel any time before this.',
+  });
+  return steps;
+}
 
-function Timeline() {
+function Timeline({ trialDays }: { trialDays: number }) {
+  const STEPS = buildSteps(trialDays);
   return (
     <View style={{ gap: spacing.base }}>
       {STEPS.map((st, i) => (
