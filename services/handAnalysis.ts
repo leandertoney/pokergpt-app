@@ -32,7 +32,7 @@ Return JSON only with this structure:
     "action": "what action hero faces"
   },
   "analysis": {
-    "recommendedAction": "clear action like Call, Fold, Raise to $X",
+    "recommendedAction": "ONE action, already decided, with a real number: \"Call\", \"Fold\", \"Raise to $60\". Never a placeholder, never \"or\".",
     "confidence": number 60-95,
     "reasoning": "2-3 sentence explanation",
     "gtoLine": "what GTO theory suggests",
@@ -41,7 +41,15 @@ Return JSON only with this structure:
     "potOdds": number like 2.5 for 2.5:1 or null,
     "riskLevel": "low" | "medium" | "high"
   }
-}`;
+}
+
+RULES
+- recommendedAction must name ONE action you have already decided on, sized in
+  real dollars when it is a bet or raise. "Call or Raise to $X" is not an
+  answer -- it copies this schema's example instead of reading the hand, and it
+  is the first thing a new player ever sees the coach say.
+- When the hand is short on detail, still commit, and carry the assumption in
+  reasoning ("assuming he opens wide from there"). Hedging reads as no answer.`;
 
 export type ParsedHand = {
   handData: Partial<HandData>;
