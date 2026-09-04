@@ -1,0 +1,67 @@
+{
+  "project_info": {
+    "project_number": "992685477598",
+    "project_id": "universole-c5b3d",
+    "storage_bucket": "universole-c5b3d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:992685477598:android:834f8779ac11d70d547c4f",
+        "android_client_info": {
+          "package_name": "co.courtcrowd"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyATMM-GPag6un0QAPEjYUABgeA_TxmzWY4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:992685477598:android:fab2bcfb2ff84c56547c4f",
+        "android_client_info": {
+          "package_name": "com.highlythoughtful.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyATMM-GPag6un0QAPEjYUABgeA_TxmzWY4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:992685477598:android:4c3b4b2c39d81e32547c4f",
+        "android_client_info": {
+          "package_name": "com.pokergpt.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyATMM-GPag6un0QAPEjYUABgeA_TxmzWY4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
