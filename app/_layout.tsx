@@ -4,6 +4,7 @@ import * as SplashScreen from "expo-splash-screen";
 import * as Updates from "expo-updates";
 import React, { useEffect, useState, useCallback } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { View, Text, StyleSheet } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { PokerFlowProvider } from "@/hooks/usePokerFlow";
@@ -47,6 +48,45 @@ function useProtectedRoute() {
     }
   }, [isAuthenticated, isLoading, segments, router]);
 }
+
+
+/**
+ * Header title that names the app above the screen name.
+ *
+ * Two lines rather than one so the screen keeps its own label: "Analysis"
+ * still reads as Analysis, it just sits under "Poker Hands Coach" in gold.
+ * Screens that pass no title render the app name alone.
+ */
+function BrandedHeaderTitle({ title }: { title: string }) {
+  return (
+    <View style={headerStyles.wrap}>
+      <Text style={headerStyles.brand} numberOfLines={1}>
+        Poker Hands Coach
+      </Text>
+      {!!title && (
+        <Text style={headerStyles.screen} numberOfLines={1}>
+          {title}
+        </Text>
+      )}
+    </View>
+  );
+}
+
+const headerStyles = StyleSheet.create({
+  wrap: { alignItems: 'center' },
+  brand: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: colors.accent.gold,
+    letterSpacing: 0.2,
+  },
+  screen: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.text.primary,
+    marginTop: 1,
+  },
+});
 
 function RootLayoutNav() {
   useProtectedRoute();
@@ -105,6 +145,14 @@ function RootLayoutNav() {
         headerTitleStyle: {
           color: colors.text.primary,
         },
+        // Every screen names the app above its own title.
+        //
+        // Screen recordings are the content: a clip of "Hand History" or
+        // "Analysis" could be any poker app, and a video where the app is
+        // never named converts at roughly nothing. Home and the voice coach
+        // already carried the name; this puts it on the other eight screens
+        // without changing what each one is called.
+        headerTitle: ({ children }) => <BrandedHeaderTitle title={String(children ?? '')} />,
         contentStyle: {
           backgroundColor: colors.background.primary,
         },
@@ -194,6 +242,15 @@ function RootLayoutNav() {
           headerShown: true,
           title: "Daily Review",
           presentation: 'modal',
+        }}
+      />
+      {/* Was never registered, so it fell through to a default header and
+          rendered the raw route name. */}
+      <Stack.Screen
+        name="full-hand-review"
+        options={{
+          headerShown: true,
+          title: "Hand Review",
         }}
       />
       <Stack.Screen
