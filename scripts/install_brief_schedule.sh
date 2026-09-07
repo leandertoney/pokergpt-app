@@ -37,7 +37,7 @@ cat > "$PLIST" <<PLIST_EOF
   <array>
     <string>/bin/bash</string>
     <string>-lc</string>
-    <string>cd "$ROOT" &amp;&amp; /usr/bin/python3 scripts/poker_brief.py &gt; "$OUT/\$(date +%Y-%m-%d).txt" 2&gt;&amp;1</string>
+    <string>cd "$ROOT" &amp;&amp; /usr/bin/python3 scripts/poker_brief.py &gt; "$OUT/\$(date +%Y-%m-%d).txt" 2&gt;&amp;1; /usr/bin/python3 scripts/email_brief.py &gt;&gt; /tmp/$LABEL.err 2&gt;&amp;1</string>
   </array>
   <key>StartCalendarInterval</key>
   <dict><key>Hour</key><integer>7</integer><key>Minute</key><integer>12</integer></dict>
@@ -51,7 +51,7 @@ launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || true
 launchctl bootstrap "gui/$(id -u)" "$PLIST"
 
 echo "installed $LABEL — runs 07:12 daily"
-echo "writes to $OUT/<date>.txt"
+echo "writes to $OUT/<date>.txt, then emails it"
 echo
 echo "check:   launchctl list | grep pokerbrief"
 echo "run now: launchctl kickstart -k gui/$(id -u)/$LABEL"
