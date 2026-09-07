@@ -49,3 +49,4 @@ TRIAL_ANALYSIS_*.md
 # Pulled by `eas metadata:pull`. store.config.json is tracked; the screenshot
 # binaries it downloads are duplicates of store-assets/ and are not.
 store/apple/screenshot/
+store-assets/carousels/briefs/
