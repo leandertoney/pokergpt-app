@@ -50,3 +50,8 @@ TRIAL_ANALYSIS_*.md
 # binaries it downloads are duplicates of store-assets/ and are not.
 store/apple/screenshot/
 store-assets/carousels/briefs/
+
+# Removed from history in the 2026-09 public cleanup; keep them out.
+store-assets/
+coverage/
+supabase/.temp/
